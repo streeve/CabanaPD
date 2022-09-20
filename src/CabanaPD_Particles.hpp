@@ -352,7 +352,7 @@ class Particles
         size = _aosoa_x.size();
     };
 
-    // protected:
+  protected:
     aosoa_x_type _aosoa_x;
     aosoa_u_type _aosoa_u;
     aosoa_f_type _aosoa_f;
@@ -360,6 +360,9 @@ class Particles
     aosoa_theta_type _aosoa_theta;
     aosoa_m_type _aosoa_m;
     aosoa_other_type _aosoa_other;
+
+    friend class Comm<typename memory_space::device_type,
+                      Particles<memory_space>>;
 };
 
 } // namespace CabanaPD
