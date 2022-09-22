@@ -48,8 +48,8 @@ int main( int argc, char* argv[] )
         std::array<double, 3> high_corner = { 0.5 * height, 0.5 * width,
                                               0.5 * thickness };
 
-        double t_final = 70e-6;
-        double dt = 0.133e-6;
+        double dt = 0.0002 * dx;
+	double t_final = 100 * dt;
         int output_frequency = 10;
         std::cout << high_corner[0] - low_corner[0] << " "
                   << high_corner[1] - low_corner[1] << " "
