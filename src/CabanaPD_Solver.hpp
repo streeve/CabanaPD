@@ -230,12 +230,12 @@ class SolverElastic
                                          neigh_iter_tag() );
 
                 step_output( step, W );
-                particle_output( step );
             }
             other_time += other_timer.seconds();
         }
 
         // Final output and timings
+	particle_output( 1 );
         final_output();
     }
 
@@ -281,7 +281,7 @@ class SolverElastic
     {
         Cajita::Experimental::SiloParticleOutput::writePartialRangeTimeStep(
             "particles", particles->local_grid->globalGrid(),
-            step / output_frequency, step * inputs->timestep, 0,
+            step, step * inputs->timestep, 0,
             particles->n_local, particles->slice_x(), particles->slice_W(),
             particles->slice_f(), particles->slice_u(), particles->slice_v() );
     }
@@ -419,12 +419,12 @@ class SolverFracture : public SolverElastic<DeviceType, ForceModel>
                                          neigh_iter_tag() );
 
                 this->step_output( step, W );
-                particle_output( step );
             }
             other_time += other_timer.seconds();
         }
 
         // Final output and timings
+	particle_output( 1 );
         this->final_output();
     }
 
@@ -432,7 +432,7 @@ class SolverFracture : public SolverElastic<DeviceType, ForceModel>
     {
         Cajita::Experimental::SiloParticleOutput::writePartialRangeTimeStep(
             "particles", particles->local_grid->globalGrid(),
-            step / output_frequency, step * inputs->timestep, 0,
+            step, step * inputs->timestep, 0,
             particles->n_local, particles->slice_x(), particles->slice_W(),
             particles->slice_f(), particles->slice_u(), particles->slice_v(),
             particles->slice_phi(), particles->slice_theta(),

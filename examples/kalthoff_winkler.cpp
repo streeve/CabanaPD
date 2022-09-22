@@ -35,18 +35,25 @@ int main( int argc, char* argv[] )
         double width = 0.2;       // [m] (200 mm)
         double thickness = 0.009; // [m] (  9 mm)
 
-        // Domain
-        // This is a relatively large example for CPU - reduce the number of
-        // cells and increase delta if needed. Note this is also a relatively
-        // small example for GPU.
-        std::array<int, 3> num_cell = { 151, 301, 14 };
+        double dx = std::stod( argv[1] );
+        std::array<int, 3> num_cell = { static_cast<int>( height / dx ),
+                                        static_cast<int>( width / dx ),
+                                        static_cast<int>( thickness / dx ) };
+        std::cout << num_cell[0] << " " << num_cell[1] << " " << num_cell[2]
+                  << std::endl;
+        double m = std::stoi( argv[2] );
+
         std::array<double, 3> low_corner = { -0.5 * height, -0.5 * width,
                                              -0.5 * thickness };
         std::array<double, 3> high_corner = { 0.5 * height, 0.5 * width,
                                               0.5 * thickness };
+
         double t_final = 70e-6;
         double dt = 0.133e-6;
         int output_frequency = 10;
+        std::cout << high_corner[0] - low_corner[0] << " "
+                  << high_corner[1] - low_corner[1] << " "
+                  << high_corner[2] - low_corner[2] << std::endl;
 
         // Material constants
         double E = 191e+9;                           // [Pa]
@@ -54,7 +61,7 @@ int main( int argc, char* argv[] )
         double K = E / ( 3.0 * ( 1.0 - 2.0 * nu ) ); // [Pa]
         double rho0 = 8000;                          // [kg/m^3]
         double G0 = 42408;                           // [J/m^2]
-        // double G = E / ( 2.0 * ( 1.0 + nu ) ); // Only for LPS.
+	double G = E / ( 2.0 * ( 1.0 + nu ) ); // Only for LPS.
 
         double v0 = 16;              // [m/sec] (Half impactor's velocity)
         double L_prenotch = 0.05;    // [m] (50 mm)
@@ -70,16 +77,18 @@ int main( int argc, char* argv[] )
                                                                        p02 };
         CabanaPD::Prenotch<2> prenotch( v1, v2, notch_positions );
 
-        double delta = 0.0020000001;
-        int m = std::floor(
-            delta / ( ( high_corner[0] - low_corner[0] ) / num_cell[0] ) );
+        double delta = 
+	  ( high_corner[2] - low_corner[2] ) / num_cell[2] * m + 1e-10;
         int halo_width = m + 1; // Just to be safe.
 
         // Choose force model type.
-        CabanaPD::PMBDamageModel force_model( delta, K, G0 );
-        // CabanaPD::LPSDamageModel force_model( delta, K, G, G0 );
+        //CabanaPD::PMBDamageModel force_model( delta, K, G0 );
+	CabanaPD::LPSDamageModel force_model( delta, K, G, G0 );
         CabanaPD::Inputs inputs( num_cell, low_corner, high_corner, t_final, dt,
                                  output_frequency );
+
+        std::cout << ( high_corner[0] - low_corner[0] ) / num_cell[0] << " "
+                  << dx << " " << m << " " << delta << std::endl;
         inputs.read_args( argc, argv );
 
         // Create particles from mesh.
@@ -94,8 +103,6 @@ int main( int argc, char* argv[] )
         auto f = particles->slice_f();
         auto rho = particles->slice_rho();
 
-        double dx = particles->dx;
-
         double x_bc = -0.5 * height;
         CabanaPD::RegionBoundary plane(
             x_bc - dx, x_bc + dx * 1.25, y_prenotch1 - dx * 0.25,
@@ -103,7 +110,6 @@ int main( int argc, char* argv[] )
 
         auto bc = createBoundaryCondition( exec_space{}, *particles, plane,
                                            CabanaPD::ForceBCTag{} );
-
         auto init_functor = KOKKOS_LAMBDA( const int pid )
         {
             rho( pid ) = rho0;
