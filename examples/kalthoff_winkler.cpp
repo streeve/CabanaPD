@@ -39,8 +39,6 @@ int main( int argc, char* argv[] )
         std::array<int, 3> num_cell = { static_cast<int>( height / dx ),
                                         static_cast<int>( width / dx ),
                                         static_cast<int>( thickness / dx ) };
-        std::cout << num_cell[0] << " " << num_cell[1] << " " << num_cell[2]
-                  << std::endl;
         double m = std::stoi( argv[2] );
 
         std::array<double, 3> low_corner = { -0.5 * height, -0.5 * width,
@@ -51,9 +49,6 @@ int main( int argc, char* argv[] )
         double dt = 0.0002 * dx;
 	double t_final = 100 * dt;
         int output_frequency = 10;
-        std::cout << high_corner[0] - low_corner[0] << " "
-                  << high_corner[1] - low_corner[1] << " "
-                  << high_corner[2] - low_corner[2] << std::endl;
 
         // Material constants
         double E = 191e+9;                           // [Pa]
@@ -86,9 +81,6 @@ int main( int argc, char* argv[] )
 	CabanaPD::LPSDamageModel force_model( delta, K, G, G0 );
         CabanaPD::Inputs inputs( num_cell, low_corner, high_corner, t_final, dt,
                                  output_frequency );
-
-        std::cout << ( high_corner[0] - low_corner[0] ) / num_cell[0] << " "
-                  << dx << " " << m << " " << delta << std::endl;
         inputs.read_args( argc, argv );
 
         // Create particles from mesh.
