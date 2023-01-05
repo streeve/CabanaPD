@@ -171,6 +171,7 @@ class SolverElastic
 
     void init_force()
     {
+        init_timer.reset();
         // These are split and called here to facilitate the alternating
         // compute/communicate for LPS.
         // Compute weighted volume for LPS (does nothing for PMB).
@@ -187,6 +188,7 @@ class SolverElastic
         compute_energy( *force, *particles, *neighbors, neigh_iter_tag() );
 
         particle_output( 0 );
+        init_time += init_timer.seconds();
     }
 
     void run()
@@ -230,7 +232,7 @@ class SolverElastic
                                          neigh_iter_tag() );
 
                 step_output( step, W );
-                particle_output( step );
+		particle_output( step );
             }
             other_time += other_timer.seconds();
         }
@@ -337,6 +339,7 @@ class SolverFracture : public SolverElastic<DeviceType, ForceModel>
         : base_type( _inputs, _particles, force_model )
         , boundary_condition( bc )
     {
+        init_timer.reset();
         std::ofstream out( inputs->output_file, std::ofstream::app );
         std::ofstream err( inputs->error_file, std::ofstream::app );
 
@@ -350,10 +353,12 @@ class SolverFracture : public SolverElastic<DeviceType, ForceModel>
 
         // Create prenotch.
         prenotch.create( exec_space{}, mu, *particles, *neighbors );
+        init_time += init_timer.seconds();
     }
 
     void init_force()
     {
+        init_timer.reset();
         // Compute weighted volume for LPS (does nothing for PMB).
         force->compute_weighted_volume( *particles, *neighbors, mu );
         comm->gatherWeightedVolume();
@@ -370,6 +375,7 @@ class SolverFracture : public SolverElastic<DeviceType, ForceModel>
         boundary_condition.apply( exec_space(), *particles );
 
         particle_output( 0 );
+        init_time += init_timer.seconds();
     }
 
     void run()
@@ -419,7 +425,7 @@ class SolverFracture : public SolverElastic<DeviceType, ForceModel>
                                          neigh_iter_tag() );
 
                 this->step_output( step, W );
-                particle_output( step );
+		particle_output( step );
             }
             other_time += other_timer.seconds();
         }
@@ -432,7 +438,7 @@ class SolverFracture : public SolverElastic<DeviceType, ForceModel>
     {
         Cajita::Experimental::SiloParticleOutput::writePartialRangeTimeStep(
             "particles", particles->local_grid->globalGrid(),
-            step / output_frequency, step * inputs->timestep, 0,
+	    step / output_frequency, step * inputs->timestep, 0,
             particles->n_local, particles->slice_x(), particles->slice_W(),
             particles->slice_f(), particles->slice_u(), particles->slice_v(),
             particles->slice_phi(), particles->slice_theta(),

@@ -30,22 +30,26 @@ int main( int argc, char* argv[] )
         using exec_space = Kokkos::DefaultExecutionSpace;
         using memory_space = typename exec_space::memory_space;
 
-        std::array<int, 3> num_cell = { 41, 41, 41 };
+        double dx = std::stod(argv[1]);
         std::array<double, 3> low_corner = { -0.5, -0.5, -0.5 };
         std::array<double, 3> high_corner = { 0.5, 0.5, 0.5 };
-        double t_final = 0.6;
-        double dt = 0.01;
-        int output_frequency = 5;
+	double height = high_corner[0] - low_corner[0];
+	int nc = static_cast<int>(height / dx);
+	std::array<int, 3> num_cell = { nc, nc, nc };
+
+	double dt = 0.0002 * dx;
+	double t_final = 100 * dt;
+	int output_frequency = 5;
         double K = 1.0;
         double G = 0.5;
-        double delta = 0.075;
-        int m = std::floor(
-            delta / ( ( high_corner[0] - low_corner[0] ) / num_cell[0] ) );
+
+	double m = std::stoi(argv[2]);
         int halo_width = m + 1; // Just to be safe.
+	double delta = dx * m + 1e-10;
 
         // Choose force model type.
-        // CabanaPD::PMBModel force_model( delta, K );
-        CabanaPD::LinearLPSModel force_model( delta, K, G );
+        //CabanaPD::PMBModel force_model( delta, K );
+        CabanaPD::LPSModel force_model( delta, K, G );
 
         CabanaPD::Inputs inputs( num_cell, low_corner, high_corner, t_final, dt,
                                  output_frequency );
