@@ -169,7 +169,8 @@ class SolverElastic
 	    log( out, "#Timestep/Total-steps Simulation-time Total-strain-energy "
 		 "Run-Time(s) Force-Time(s) Comm-Time(s) Int-Time(s) "
 		 "Other-Time(s) Init-Time(s) Particle*steps/s" );
-	}
+            out.close();
+        }
         init_time += init_timer.seconds();
     }
 
@@ -261,9 +262,9 @@ class SolverElastic
 		 " ", W, " ", std::fixed, total_time, " ", force_time, " ",
 		 comm_time, " ", integrate_time, " ", other_time, " ",
 		 init_time " ", std::scientific, rate );
-	}
-        last_time = total_time;
-        out.close();
+            last_time = total_time;
+            out.close();
+        }
     }
 
     void final_output()
@@ -354,8 +355,8 @@ class SolverFracture : public SolverElastic<DeviceType, ForceModel>
         : base_type( _inputs, _particles, force_model )
         , boundary_condition( bc )
     {
-
         init_timer.reset();
+
         // Create View to track broken bonds.
         int max_neighbors =
             Cabana::NeighborList<neighbor_type>::maxNeighbor( *neighbors );
