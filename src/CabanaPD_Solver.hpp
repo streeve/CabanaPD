@@ -293,9 +293,11 @@ class SolverElastic
 
     void particle_output( const int step )
     {
-        Cajita::Experimental::SiloParticleOutput::writePartialRangeTimeStep(
-            "particles", particles->local_grid->globalGrid(),
-            step / output_frequency, step * inputs->timestep, 0,
+        Cabana::Experimental::HDF5ParticleOutput::HDF5Config h5_config;
+        h5_config.collective = true;
+        Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
+	    h5_config, "particles", MPI_COMM_WORLD,
+	    step / output_frequency, step * inputs->timestep,
             particles->n_local, particles->slice_x(), particles->slice_W(),
             particles->slice_f(), particles->slice_u(), particles->slice_v() );
     }
@@ -447,9 +449,11 @@ class SolverFracture : public SolverElastic<DeviceType, ForceModel>
 
     void particle_output( const int step )
     {
-        Cajita::Experimental::SiloParticleOutput::writePartialRangeTimeStep(
-            "particles", particles->local_grid->globalGrid(),
-	    step / output_frequency, step * inputs->timestep, 0,
+        Cabana::Experimental::HDF5ParticleOutput::HDF5Config h5_config;
+        h5_config.collective = true;
+        Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
+            h5_config, "particles", MPI_COMM_WORLD,
+	    step / output_frequency, step * inputs->timestep,
             particles->n_local, particles->slice_x(), particles->slice_W(),
             particles->slice_f(), particles->slice_u(), particles->slice_v(),
             particles->slice_phi(), particles->slice_theta(),
