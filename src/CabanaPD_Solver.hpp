@@ -162,15 +162,14 @@ class SolverElastic
             log( out, "CabanaPD ", std::ctime( &time ), "\n" );
             exec_space().print_configuration( out );
 
-            log( out, "Local particles, Ghosted particles, Global particles\n",
-                 particles->n_local, ", ", particles->n_ghost, ", ",
-                 particles->n_global );
-            log( out, "Maximum local neighbors: ", max_neighbors, "\n" );
-            log( out,
-                 "#Timestep/Total-steps Simulation-time Total-strain-energy "
-                 "Run-Time(s) Particle*steps/s" );
-            out.close();
-        }
+	    log( out, "Local particles, Ghosted particles, Global particles\n",
+		 particles->n_local, ", ", particles->n_ghost, ", ",
+		 particles->n_global );
+	    log( out, "Maximum local neighbors: ", max_neighbors, "\n" );
+	    log( out, "#Timestep/Total-steps Simulation-time Total-strain-energy "
+		 "Run-Time(s) Force-Time(s) Comm-Time(s) Int-Time(s) "
+		 "Other-Time(s) Init-Time(s) Particle*steps/s" );
+	}
         init_time += init_timer.seconds();
     }
 
@@ -257,13 +256,14 @@ class SolverElastic
             total_time = total_timer.seconds();
             double rate = 1.0 * particles->n_global * output_frequency /
                           ( total_time - last_time );
-            log( out, std::fixed, std::setprecision( 6 ), step, "/", num_steps,
-                 " ", std::scientific, std::setprecision( 2 ),
-                 step * inputs->timestep, " ", W, " ", std::fixed, total_time,
-                 " ", std::scientific, rate );
-            last_time = total_time;
-            out.close();
-        }
+	    log( out, std::fixed, std::setprecision( 6 ), step, "/", num_steps, " ",
+		 std::scientific, std::setprecision( 2 ), step * inputs->timestep,
+		 " ", W, " ", std::fixed, total_time, " ", force_time, " ",
+		 comm_time, " ", integrate_time, " ", other_time, " ",
+		 init_time " ", std::scientific, rate );
+	}
+        last_time = total_time;
+        out.close();
     }
 
     void final_output()
