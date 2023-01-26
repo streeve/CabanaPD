@@ -47,8 +47,8 @@ int main( int argc, char* argv[] )
                                               0.5 * thickness };
 
         double dt = 0.0002 * dx;
-	double t_final = 100 * dt;
-        int output_frequency = 10;
+	double t_final = 70e-6; //100 * dt;
+        int output_frequency = t_final / dt / 100; // Print 100
 
         // Material constants
         double E = 191e+9;                           // [Pa]
