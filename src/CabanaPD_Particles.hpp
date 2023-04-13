@@ -97,7 +97,7 @@ class Particles
     using scalar_type = Cabana::MemberTypes<double>;
     // type, W, v, rho, damage
     using other_types =
-        Cabana::MemberTypes<int, double, double[dim], double, double>;
+        Cabana::MemberTypes<int, double, double[dim], double, double, int>;
     // Potentially needed later: body force (b), ID
 
     // FIXME: add vector length
@@ -234,6 +234,8 @@ class Particles
         Cabana::deep_copy( theta, 0.0 );
         auto m = slice_m();
         Cabana::deep_copy( m, 0.0 );
+        auto n = slice_n();
+        Cabana::deep_copy( n, 0.0 );
 
         auto created = Kokkos::View<bool*, memory_space>(
             Kokkos::ViewAllocateWithoutInitializing( "particle_created" ),
@@ -341,6 +343,7 @@ class Particles
     {
         return Cabana::slice<0>( _aosoa_m, "weighted_volume" );
     }
+    auto slice_n() { return Cabana::slice<5>( _aosoa_other, "n_neigh" ); }
 
     void resize( int new_local, int new_ghost )
     {

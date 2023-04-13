@@ -140,8 +140,17 @@ class SolverElastic
                                particles->ghost_mesh_hi[2] };
         auto x = particles->slice_x();
         neighbors = std::make_shared<neighbor_type>( x, 0, particles->n_local,
-                                                     force_model.delta, 1.0,
-                                                     mesh_min, mesh_max );
+                                                     force_model.delta + 1e-14,
+                                                     1.0, mesh_min, mesh_max );
+        auto n = particles->slice_n();
+        Kokkos::RangePolicy<exec_space> policy( 0, particles->n_local );
+        Kokkos::parallel_for(
+            "CabanaPD::Particles::n_neigh", policy,
+            KOKKOS_LAMBDA( const int pid ) {
+                n( pid ) = Cabana::NeighborList<neighbor_type>::numNeighbor(
+                    *neighbors, pid );
+            } );
+
         int max_neighbors =
             Cabana::NeighborList<neighbor_type>::maxNeighbor( *neighbors );
 
@@ -311,7 +320,8 @@ class SolverElastic
             "particles", particles->local_grid->globalGrid(),
             step / output_frequency, step * inputs->timestep, 0,
             particles->n_local, particles->slice_x(), particles->slice_W(),
-            particles->slice_f(), particles->slice_u(), particles->slice_v() );
+            particles->slice_f(), particles->slice_u(), particles->slice_v(),
+            particles->slice_n() );
     }
 
     int num_steps;
@@ -476,7 +486,7 @@ class SolverFracture : public SolverElastic<DeviceType, ForceModel>
             particles->n_local, particles->slice_x(), particles->slice_W(),
             particles->slice_f(), particles->slice_u(), particles->slice_v(),
             particles->slice_phi(), particles->slice_theta(),
-            particles->slice_m() );
+            particles->slice_m(), particles->slice_n() );
     }
 
     using base_type::num_steps;
