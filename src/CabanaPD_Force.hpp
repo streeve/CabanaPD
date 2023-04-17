@@ -79,8 +79,6 @@ struct BaseForceModel
     BaseForceModel(){};
     BaseForceModel( const double _delta )
         : delta( _delta ){};
-
-    BaseForceModel( const BaseForceModel& model ) { delta = model.delta; }
 };
 
 template <typename ModelType, typename DamageType>

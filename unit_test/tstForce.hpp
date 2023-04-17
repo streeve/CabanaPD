@@ -374,7 +374,7 @@ computeReferenceForceX( QuadraticTag,
 // System creation.
 //---------------------------------------------------------------------------//
 template <class ModelType>
-auto createParticles( ModelType, LinearTag, const double dx, const double s0 )
+CabanaPD::Particles<TEST_DEVICE,  typename ModelType::base_model> createParticles( ModelType, LinearTag, const double dx, const double s0 )
 {
     std::array<double, 3> box_min = { -1.0, -1.0, -1.0 };
     std::array<double, 3> box_max = { 1.0, 1.0, 1.0 };
@@ -402,7 +402,7 @@ auto createParticles( ModelType, LinearTag, const double dx, const double s0 )
 }
 
 template <class ModelType>
-auto createParticles( ModelType, QuadraticTag, const double dx,
+CabanaPD::Particles<TEST_DEVICE,  typename ModelType::base_model> createParticles( ModelType, QuadraticTag, const double dx,
                       const double s0 )
 {
     std::array<double, 3> box_min = { -1.0, -1.0, -1.0 };
@@ -412,7 +412,7 @@ auto createParticles( ModelType, QuadraticTag, const double dx,
 
     // Create particles based on the mesh.
     using ptype =
-        CabanaPD::Particles<TEST_MEMSPACE, typename ModelType::base_model>;
+        CabanaPD::Particles<TEST_DEVICE, typename ModelType::base_model>;
     ptype particles( TEST_EXECSPACE{}, box_min, box_max, num_cells, 0 );
     auto x = particles.slice_x();
     auto u = particles.slice_u();
