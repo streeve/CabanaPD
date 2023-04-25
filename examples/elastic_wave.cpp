@@ -30,26 +30,31 @@ int main( int argc, char* argv[] )
         using exec_space = Kokkos::DefaultExecutionSpace;
         using memory_space = typename exec_space::memory_space;
 
-        std::array<int, 3> num_cell = { 41, 41, 41 };
         std::array<double, 3> low_corner = { -0.5, -0.5, -0.5 };
         std::array<double, 3> high_corner = { 0.5, 0.5, 0.5 };
-        double t_final = 0.6;
-        double dt = 0.01;
-        int output_frequency = 5;
+        int output_frequency = 1e6;
         double K = 1.0;
-        double G = 0.5;
-        double delta = 0.075;
-        int m = std::floor(
-            delta / ( ( high_corner[0] - low_corner[0] ) / num_cell[0] ) );
+	double G = 0.5;
+
+        double dx = std::stod( argv[1] );
+	double height = high_corner[0] - low_corner[0];
+	int nc = static_cast<int>(height / dx);
+	std::array<int, 3> num_cell = { nc, nc, nc };
+
+	double dt = 0.0002 * dx;
+	double t_final = 1000 * dt;
+        double m = std::stoi( argv[2] );
+        double delta =
+          ( high_corner[2] - low_corner[2] ) / num_cell[2] * m + 1e-10;
         int halo_width = m + 1; // Just to be safe.
 
         // Choose force model type.
-        // using model_type =
-        //    CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
-        // model_type force_model( delta, K );
+        //using model_type =
+        //  CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
+	//model_type force_model( delta, K );
         using model_type =
-            CabanaPD::ForceModel<CabanaPD::LinearLPS, CabanaPD::Elastic>;
-        model_type force_model( delta, K, G );
+            CabanaPD::ForceModel<CabanaPD::LPS, CabanaPD::Elastic>;
+	model_type force_model( delta, K, G );
 
         CabanaPD::Inputs inputs( num_cell, low_corner, high_corner, t_final, dt,
                                  output_frequency );

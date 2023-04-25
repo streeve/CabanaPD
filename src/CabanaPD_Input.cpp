@@ -130,11 +130,6 @@ void Inputs::read_args( int argc, char* argv[] )
             device_type = argv[i + 1];
             ++i;
         }
-
-        else if ( ( strstr( argv[i], "--kokkos-" ) == NULL ) )
-        {
-            log_err( std::cout, "Unknown command line argument: ", argv[i] );
-        }
     }
 }
 
