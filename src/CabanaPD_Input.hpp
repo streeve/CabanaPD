@@ -31,12 +31,13 @@ class Inputs
     double final_time;
     double timestep;
     int output_frequency;
+    bool output_reference;
 
     bool half_neigh = false;
 
     Inputs( const std::array<int, 3> nc, std::array<double, 3> lc,
             std::array<double, 3> hc, const double t_f, const double dt,
-            const int output_freq );
+            const int output_freq, const bool output_ref );
     ~Inputs();
     void read_args( int argc, char* argv[] );
 };
