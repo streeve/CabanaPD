@@ -157,13 +157,14 @@ class Particles<MemorySpace, PMB, Dimension>
     template <class ExecSpace>
     Particles( const ExecSpace& exec_space, std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
-               const std::array<int, dim> num_cells, const int max_halo_width )
+               const std::array<int, dim> num_cells, const int max_halo_width,
+               const bool build_cylinder = false )
         : halo_width( max_halo_width )
         , _plist_x( "positions" )
         , _plist_f( "forces" )
     {
         createDomain( low_corner, high_corner, num_cells );
-        createParticles( exec_space );
+        createParticles( exec_space, build_cylinder );
     }
 
     // Constructor which initializes particles on regular grid with
@@ -220,6 +221,7 @@ class Particles<MemorySpace, PMB, Dimension>
         }
     }
 
+    // FIXME: extra option here only meant for quick route to disk impact.
     template <class ExecSpace>
     void createParticles( const ExecSpace& exec_space )
     {
@@ -385,7 +387,7 @@ class Particles<MemorySpace, PMB, Dimension>
     auto getForce() { return _plist_f; }
     auto getReferencePosition() { return _plist_x; }
 
-    void updateCurrentPosition()
+    void updateCurrentPosition() const
     {
         // Not using slice function because this is called inside.
         auto y = Cabana::slice<0>( _aosoa_y, "current_positions" );
