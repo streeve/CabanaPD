@@ -322,8 +322,8 @@ struct ForceModel<LinearPMB, Fracture> : public ForceModel<PMB, Fracture>
 template <class PosType>
 KOKKOS_INLINE_FUNCTION void
 getDistanceComponents( const PosType& x, const PosType& u, const int i,
-                       const int j, double& xi, double& r, double& s,
-                       double& rx, double& ry, double& rz )
+                       const int j, double& xi2, double& r2, double& rx,
+                       double& ry, double& rz )
 {
     // Get the reference positions and displacements.
     const double xi_x = x( j, 0 ) - x( i, 0 );
@@ -335,18 +335,23 @@ getDistanceComponents( const PosType& x, const PosType& u, const int i,
     rx = xi_x + eta_u;
     ry = xi_y + eta_v;
     rz = xi_z + eta_w;
-    r = sqrt( rx * rx + ry * ry + rz * rz );
-    xi = sqrt( xi_x * xi_x + xi_y * xi_y + xi_z * xi_z );
-    s = ( r - xi ) / xi;
+    r2 = rx * rx + ry * ry + rz * rz;
+    xi2 = xi_x * xi_x + xi_y * xi_y + xi_z * xi_z;
+}
+
+KOKKOS_INLINE_FUNCTION void getStretch( const double xi2, const double r2,
+                                        double& s )
+{
+    s = sqrt( r2 / xi2 ) - 1.0;
 }
 
 template <class PosType>
 KOKKOS_INLINE_FUNCTION void getDistance( const PosType& x, const PosType& u,
-                                         const int i, const int j, double& xi,
-                                         double& r, double& s )
+                                         const int i, const int j, double& xi2,
+                                         double& r2 )
 {
     double rx, ry, rz;
-    getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+    getDistanceComponents( x, u, i, j, xi2, r2, rx, ry, rz );
 }
 
 template <class PosType>
@@ -412,9 +417,10 @@ class Force<ExecutionSpace, ForceModel<LPS, Elastic>>
         auto weighted_volume = KOKKOS_LAMBDA( const int i, const int j )
         {
             // Get the reference positions and displacements.
-            double xi, r, s;
-            getDistance( x, u, i, j, xi, r, s );
-            double m_j = model.influence_function( xi ) * xi * xi * vol( j );
+            double xi2, r2;
+            getDistance( x, u, i, j, xi2, r2 );
+            double xi = sqrt( xi2 );
+            double m_j = model.influence_function( xi ) * xi2 * vol( j );
             m( i ) += m_j;
         };
 
@@ -441,10 +447,13 @@ class Force<ExecutionSpace, ForceModel<LPS, Elastic>>
         auto dilatation = KOKKOS_LAMBDA( const int i, const int j )
         {
             // Get the bond distance, displacement, and stretch.
-            double xi, r, s;
-            getDistance( x, u, i, j, xi, r, s );
+            double xi2, r2;
+            getDistance( x, u, i, j, xi2, r2 );
+            double s;
+            getStretch( xi2, r2, s );
+            double xi = sqrt( xi2 );
             double theta_i =
-                model.influence_function( xi ) * s * xi * xi * vol( j );
+                model.influence_function( xi ) * s * xi2 * vol( j );
             theta( i ) += 3.0 * theta_i / m( i );
         };
 
@@ -474,13 +483,17 @@ class Force<ExecutionSpace, ForceModel<LPS, Elastic>>
             double fy_i = 0.0;
             double fz_i = 0.0;
 
-            double xi, r, s;
+            double xi2, r2;
             double rx, ry, rz;
-            getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+            getDistanceComponents( x, u, i, j, xi2, r2, rx, ry, rz );
+            double s;
+            getStretch( xi2, r2, s );
+            double xi = sqrt( xi2 );
             const double coeff =
                 ( theta_coeff * ( theta( i ) / m( i ) + theta( j ) / m( j ) ) +
                   s_coeff * s * ( 1.0 / m( i ) + 1.0 / m( j ) ) ) *
                 model.influence_function( xi ) * xi * vol( j );
+            double r = sqrt( r2 );
             fx_i = coeff * rx / r;
             fy_i = coeff * ry / r;
             fz_i = coeff * rz / r;
@@ -515,17 +528,20 @@ class Force<ExecutionSpace, ForceModel<LPS, Elastic>>
         auto energy_full =
             KOKKOS_LAMBDA( const int i, const int j, double& Phi )
         {
-            double xi, r, s;
-            getDistance( x, u, i, j, xi, r, s );
+            double xi2, r2;
+            getDistance( x, u, i, j, xi2, r2 );
+            double s;
+            getStretch( xi2, r2, s );
 
             double num_neighbors = static_cast<double>(
                 Cabana::NeighborList<NeighListType>::numNeighbor( neigh_list,
                                                                   i ) );
 
+            double xi = sqrt( xi2 );
             double w = ( 1.0 / num_neighbors ) * 0.5 * theta_coeff / 3.0 *
                            ( theta( i ) * theta( i ) ) +
                        0.5 * ( s_coeff / m( i ) ) *
-                           model.influence_function( xi ) * s * s * xi * xi *
+                           model.influence_function( xi ) * s * s * xi2 *
                            vol( j );
             W( i ) += w;
             Phi += w * vol( i );
@@ -586,11 +602,14 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
                         neigh_list, i, n );
 
                 // Get the reference positions and displacements.
-                double xi, r, s;
-                getDistance( x, u, i, j, xi, r, s );
+                double xi2, r2;
+                getDistance( x, u, i, j, xi2, r2 );
+                double s;
+                getStretch( xi2, r2, s );
+                double xi = sqrt( xi2 );
                 // mu is included to account for bond breaking.
-                double m_j = mu( i, n ) * model.influence_function( xi ) * xi *
-                             xi * vol( j );
+                double m_j = mu( i, n ) * model.influence_function( xi ) * xi2 *
+                             vol( j );
                 m( i ) += m_j;
             }
         };
@@ -626,11 +645,14 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
                         neigh_list, i, n );
 
                 // Get the bond distance, displacement, and stretch.
-                double xi, r, s;
-                getDistance( x, u, i, j, xi, r, s );
+                double xi2, r2;
+                getDistance( x, u, i, j, xi2, r2 );
+                double s;
+                getStretch( xi2, r2, s );
+                double xi = sqrt( xi2 );
                 // mu is included to account for bond breaking.
                 double theta_i = mu( i, n ) * model.influence_function( xi ) *
-                                 s * xi * xi * vol( j );
+                                 s * xi2 * vol( j );
                 // Check if all bonds are broken (m=0) to avoid dividing by
                 // zero. Alternatively, one could check if this bond mu(i,n) is
                 // broken, beacuse m=0 only occurs when all bonds are broken.
@@ -676,27 +698,30 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
                         neigh_list, i, n );
 
                 // Get the reference positions and displacements.
-                double xi, r, s;
+                double xi2, r2;
                 double rx, ry, rz;
-                getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+                getDistanceComponents( x, u, i, j, xi2, r2, rx, ry, rz );
 
                 // Break if beyond critical stretch unless in no-fail zone.
-                if ( r * r >= break_coeff * xi * xi && !nofail( i ) &&
-                     !nofail( i ) )
+                if ( r2 >= break_coeff * xi2 && !nofail( i ) && !nofail( i ) )
                 {
                     mu( i, n ) = 0;
                 }
-                // Check if this bond is broken (mu=0) to ensure m(i) and m(j)
-                // are both >0 (m=0 only occurs when all bonds are broken) to
-                // avoid dividing by zero.
+                // Check if this bond is broken (mu=0) to ensure m(i) and
+                // m(j) are both >0 (m=0 only occurs when all bonds are
+                // broken) to avoid dividing by zero.
                 else if ( mu( i, n ) > 0 )
                 {
+                    double s;
+                    getStretch( xi2, r2, s );
+                    double xi = sqrt( xi2 );
                     const double coeff =
                         ( theta_coeff *
                               ( theta( i ) / m( i ) + theta( j ) / m( j ) ) +
                           s_coeff * s * ( 1.0 / m( i ) + 1.0 / m( j ) ) ) *
                         model.influence_function( xi ) * xi * vol( j );
                     double muij = mu( i, n );
+                    double r = sqrt( r2 );
                     fx_i = muij * coeff * rx / r;
                     fy_i = muij * coeff * ry / r;
                     fz_i = muij * coeff * rz / r;
@@ -745,15 +770,18 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
                     Cabana::NeighborList<NeighListType>::getNeighbor(
                         neigh_list, i, n );
                 // Get the bond distance, displacement, and stretch.
-                double xi, r, s;
-                getDistance( x, u, i, j, xi, r, s );
+                double xi2, r2;
+                getDistance( x, u, i, j, xi2, r2 );
+                double s;
+                getStretch( xi2, r2, s );
+                double xi = sqrt( xi2 );
 
                 double w =
                     mu( i, n ) * ( ( 1.0 / num_bonds ) * 0.5 * theta_coeff /
                                        3.0 * ( theta( i ) * theta( i ) ) +
                                    0.5 * ( s_coeff / m( i ) ) *
                                        model.influence_function( xi ) * s * s *
-                                       xi * xi * vol( j ) );
+                                       xi2 * vol( j ) );
                 W( i ) += w;
 
                 phi_i += mu( i, n ) * vol( j );
@@ -933,10 +961,13 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
             double fy_i = 0.0;
             double fz_i = 0.0;
 
-            double xi, r, s;
+            double xi2, r2;
             double rx, ry, rz;
-            getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+            getDistanceComponents( x, u, i, j, xi2, r2, rx, ry, rz );
+            double s;
+            getStretch( xi2, r2, s );
             const double coeff = c * s * vol( j );
+            double r = sqrt( r2 );
             fx_i = coeff * rx / r;
             fy_i = coeff * ry / r;
             fz_i = coeff * rz / r;
@@ -967,11 +998,14 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
             KOKKOS_LAMBDA( const int i, const int j, double& Phi )
         {
             // Get the bond distance, displacement, and stretch.
-            double xi, r, s;
-            getDistance( x, u, i, j, xi, r, s );
+            double xi2, r2;
+            getDistance( x, u, i, j, xi2, r2 );
+            double s;
+            getStretch( xi2, r2, s );
 
             // 0.25 factor is due to 1/2 from outside the integral and 1/2 from
             // the integrand (pairwise potential).
+            double xi = sqrt( xi2 );
             double w = 0.25 * c * s * s * xi * vol( j );
             W( i ) += w;
             Phi += w * vol( i );
@@ -1034,21 +1068,24 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
                         neigh_list, i, n );
 
                 // Get the reference positions and displacements.
-                double xi, r, s;
+                double xi2, r2;
                 double rx, ry, rz;
-                getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+                getDistanceComponents( x, u, i, j, xi2, r2, rx, ry, rz );
 
-                // Break if beyond critical stretch unless in no-fail zone.
-                if ( r * r >= break_coeff * xi * xi && !nofail( i ) &&
-                     !nofail( j ) )
+                // Break if beyond critical stretch unless in no-fail
+                // zone.
+                if ( r2 >= break_coeff * xi2 && !nofail( i ) && !nofail( j ) )
                 {
                     mu( i, n ) = 0;
                 }
                 // Else if statement is only for performance.
                 else if ( mu( i, n ) > 0 )
                 {
+                    double s;
+                    getStretch( xi2, r2, s );
                     const double coeff = c * s * vol( j );
                     double muij = mu( i, n );
+                    double r = sqrt( r2 );
                     fx_i = muij * coeff * rx / r;
                     fy_i = muij * coeff * ry / r;
                     fz_i = muij * coeff * rz / r;
@@ -1088,11 +1125,14 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
                     Cabana::NeighborList<NeighListType>::getNeighbor(
                         neigh_list, i, n );
                 // Get the bond distance, displacement, and stretch.
-                double xi, r, s;
-                getDistance( x, u, i, j, xi, r, s );
+                double xi2, r2;
+                getDistance( x, u, i, j, xi2, r2 );
+                double s;
+                getStretch( xi2, r2, s );
 
                 // 0.25 factor is due to 1/2 from outside the integral and 1/2
                 // from the integrand (pairwise potential).
+                double xi = sqrt( xi2 );
                 double w = mu( i, n ) * 0.25 * c * s * s * xi * vol( j );
                 W( i ) += w;
 
