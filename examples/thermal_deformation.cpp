@@ -42,6 +42,7 @@ int main( int argc, char* argv[] )
 
         std::array<double, 3> low_corner = inputs["low_corner"];
         std::array<double, 3> high_corner = inputs["high_corner"];
+        double radius = 0.1;
         std::array<int, 3> num_cells = inputs["num_cells"];
         int m = std::floor(
             delta / ( ( high_corner[0] - low_corner[0] ) / num_cells[0] ) );
@@ -60,7 +61,15 @@ int main( int argc, char* argv[] )
         // Does not set displacements, velocities, etc.
         auto particles = std::make_shared<
             CabanaPD::Particles<memory_space, typename model_type::base_model>>(
-            exec_space(), low_corner, high_corner, num_cells, halo_width );
+            low_corner, high_corner, num_cells, halo_width );
+        // Do not create particles in the center.
+        auto init_op = KOKKOS_LAMBDA( const int, const double x[3] )
+        {
+            if ( ( x[0] * x[0] + x[1] * x[1] ) < radius * radius )
+                return false;
+            return true;
+        };
+        particles->createParticles( exec_space(), init_op );
 
         // Define particle initialization.
         auto x = particles->sliceReferencePosition();
@@ -93,12 +102,8 @@ int main( int argc, char* argv[] )
         auto bc =
             createBoundaryCondition( bc_op, exec_space{}, *particles, domain );
 
-        auto init_functor = KOKKOS_LAMBDA( const int pid )
-        {
-            // temp( pid ) = 5000 * x( pid, 1 ) * t_final;
-            rho( pid ) = rho0;
-        };
-        particles->updateParticles( exec_space{}, init_functor );
+        auto init_op_2 = KOKKOS_LAMBDA( const int pid ) { rho( pid ) = rho0; };
+        particles->updateParticles( exec_space{}, init_op_2 );
 
         auto cabana_pd = CabanaPD::createSolverElastic<memory_space>(
             inputs, particles, force_model, bc );
