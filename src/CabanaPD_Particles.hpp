@@ -218,6 +218,18 @@ class Particles<MemorySpace, PMB, Dimension>
                 local_mesh.highCorner( Cabana::Grid::Ghost(), d );
             local_mesh_ext[d] = local_mesh.extent( Cabana::Grid::Own(), d );
         }
+
+        // Allocate the owned space for later particle creation.
+        // TODO: Consider moving to a separate function for more control over
+        // allocation.
+        auto owned_cells = local_grid->indexSpace(
+            Cajita::Own(), Cajita::Cell(), Cajita::Local() );
+
+        int particles_per_cell = 1;
+        int num_particles = particles_per_cell * owned_cells.size();
+
+        // Use default aosoa construction and resize.
+        resize( num_particles, 0 );
     }
 
     template <class ExecSpace>
@@ -233,16 +245,6 @@ class Particles<MemorySpace, PMB, Dimension>
     template <class ExecSpace, class UserFunctor>
     void createParticles( const ExecSpace& exec_space, UserFunctor user_create )
     {
-        // Create a local mesh and owned space.
-        auto owned_cells = local_grid->indexSpace(
-            Cabana::Grid::Own(), Cabana::Grid::Cell(), Cabana::Grid::Local() );
-
-        int particles_per_cell = 1;
-        int num_particles = particles_per_cell * owned_cells.size();
-
-        // Use default aosoa construction and resize.
-        resize( num_particles, 0 );
-
         auto x = sliceReferencePosition();
         auto v = sliceVelocity();
         auto f = sliceForce();
@@ -289,7 +291,7 @@ class Particles<MemorySpace, PMB, Dimension>
                                                  exec_space, create_functor,
                                                  _plist_x, 1, *local_grid );
         resize( n_local, 0 );
-        size = _plist_x.size();
+        shrink();
 
         // Not using Allreduce because global count is only used for printing.
         MPI_Reduce( &n_local, &n_global, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0,
@@ -424,6 +426,18 @@ class Particles<MemorySpace, PMB, Dimension>
         _plist_f.aosoa().resize( new_local );
         _aosoa_other.resize( new_local );
         _aosoa_nofail.resize( new_local + new_ghost );
+        size = _plist_x.size();
+    };
+
+    void shrink()
+    {
+        _plist_x.aosoa().shrinkToFit();
+        _aosoa_u.shrinkToFit();
+        _aosoa_y.shrinkToFit();
+        _aosoa_vol.shrinkToFit();
+        _plist_f.aosoa().shrinkToFit();
+        _aosoa_other.shrinkToFit();
+        _aosoa_nofail.shrinkToFit();
         size = _plist_x.size();
     };
 
