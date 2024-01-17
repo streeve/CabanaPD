@@ -77,7 +77,9 @@ int main( int argc, char* argv[] )
         std::vector<CabanaPD::RegionBoundary> domain = { domain1 };
 
         // This really shouldn't be applied as a BC.
-        auto bc_op = KOKKOS_LAMBDA( const int pid )
+        auto particles_t = particles->getTemperature();
+        auto particles_x = particles->getReferencePosition();
+        auto bc_op = KOKKOS_LAMBDA( const int pid, const double t )
         {
             // Get a modifiable copy of temperature.
             auto p_t = particles_t.getParticleView( pid );
@@ -85,7 +87,8 @@ int main( int argc, char* argv[] )
             auto p_x = particles_x.getParticle( pid );
             auto yref =
                 Cabana::get( p_x, CabanaPD::Field::ReferencePosition(), 1 );
-            temp( pid ) += 5000 * yref * t;
+            Cabana::get( p_t, CabanaPD::Field::Temperature() ) +=
+                5000 * yref * t;
         };
         auto bc =
             createBoundaryCondition( bc_op, exec_space{}, *particles, domain );

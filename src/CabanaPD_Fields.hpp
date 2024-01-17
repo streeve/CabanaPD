@@ -26,6 +26,11 @@ struct NoFail : Cabana::Field::Scalar<int>
     static std::string label() { return "no_fail"; }
 };
 
+struct Temperature : Cabana::Field::Scalar<double>
+{
+    static std::string label() { return "temperature"; }
+};
+
 } // namespace Field
 } // namespace CabanaPD
 

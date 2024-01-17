@@ -100,9 +100,9 @@ class Particles<MemorySpace, PMB, Dimension>
     using scalar_type = Cabana::MemberTypes<double>;
     // no-fail.
     using int_type = Cabana::MemberTypes<int>;
-    // v, W, rho, damage, temperature, type.
+    // v, W, rho, damage, type.
     using other_types =
-        Cabana::MemberTypes<double[dim], double, double, double, double, int>;
+        Cabana::MemberTypes<double[dim], double, double, double, int>;
     // Potentially needed later: body force (b), ID.
 
     // FIXME: add vector length.
@@ -118,6 +118,8 @@ class Particles<MemorySpace, PMB, Dimension>
                                    CabanaPD::Field::ReferencePosition>;
     using plist_f_type =
         Cabana::ParticleList<memory_space, 1, CabanaPD::Field::Force>;
+    using plist_t_type =
+        Cabana::ParticleList<memory_space, 1, CabanaPD::Field::Temperature>;
 
     // Per type.
     int n_types = 1;
@@ -161,6 +163,7 @@ class Particles<MemorySpace, PMB, Dimension>
         : halo_width( max_halo_width )
         , _plist_x( "positions" )
         , _plist_f( "forces" )
+        , _plist_t( "temperature" )
     {
         createDomain( low_corner, high_corner, num_cells );
         createParticles( exec_space );
@@ -347,8 +350,8 @@ class Particles<MemorySpace, PMB, Dimension>
     {
         return Cabana::slice<0>( _aosoa_vol, "volume" );
     }
-    auto sliceType() { return Cabana::slice<5>( _aosoa_other, "type" ); }
-    auto sliceType() const { return Cabana::slice<5>( _aosoa_other, "type" ); }
+    auto sliceType() { return Cabana::slice<4>( _aosoa_other, "type" ); }
+    auto sliceType() const { return Cabana::slice<4>( _aosoa_other, "type" ); }
     auto sliceStrainEnergy()
     {
         return Cabana::slice<1>( _aosoa_other, "strain_energy" );
@@ -377,11 +380,11 @@ class Particles<MemorySpace, PMB, Dimension>
     }
     auto sliceTemperature()
     {
-        return Cabana::slice<4>( _aosoa_other, "temperature" );
+        return _plist_t.slice( CabanaPD::Field::Temperature() );
     }
     auto sliceTemperature() const
     {
-        return Cabana::slice<4>( _aosoa_other, "temperature" );
+        return _plist_t.slice( CabanaPD::Field::Temperature() );
     }
     auto sliceNoFail()
     {
@@ -394,6 +397,7 @@ class Particles<MemorySpace, PMB, Dimension>
 
     auto getForce() { return _plist_f; }
     auto getReferencePosition() { return _plist_x; }
+    auto getTemperature() { return _plist_t; }
 
     void updateCurrentPosition()
     {
@@ -469,6 +473,7 @@ class Particles<MemorySpace, PMB, Dimension>
 
     plist_x_type _plist_x;
     plist_f_type _plist_f;
+    plist_t_type _plist_t;
 
 #ifdef Cabana_ENABLE_HDF5
     Cabana::Experimental::HDF5ParticleOutput::HDF5Config h5_config;
