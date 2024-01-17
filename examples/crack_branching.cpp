@@ -98,7 +98,7 @@ int main( int argc, char* argv[] )
         auto particles_f = particles->getForce();
         auto particles_x = particles->getReferencePosition();
         // Create a symmetric force BC in the y-direction.
-        auto bc_op = KOKKOS_LAMBDA( const int pid )
+        auto bc_op = KOKKOS_LAMBDA( const int pid, const double )
         {
             // Get a modifiable copy of force.
             auto p_f = particles_f.getParticleView( pid );
