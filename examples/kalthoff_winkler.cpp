@@ -36,7 +36,7 @@ int main( int argc, char* argv[] )
         double K = E / ( 3.0 * ( 1.0 - 2.0 * nu ) );
         double rho0 = inputs["density"];
         double G0 = inputs["fracture_energy"];
-        double G = E / ( 2.0 * ( 1.0 + nu ) );       // Only for LPS.
+        double G = E / ( 2.0 * ( 1.0 + nu ) ); // Only for LPS.
 
         // PD horizon
         double delta = inputs["horizon"];
@@ -83,7 +83,8 @@ int main( int argc, char* argv[] )
         // Does not set displacements, velocities, etc.
         auto particles = std::make_shared<
             CabanaPD::Particles<memory_space, typename model_type::base_model>>(
-            exec_space(), low_corner, high_corner, num_cells, halo_width );
+            low_corner, high_corner, num_cells, halo_width );
+        particles->createParticles( exec_space() );
 
         // Define particle initialization.
         auto x = particles->sliceReferencePosition();

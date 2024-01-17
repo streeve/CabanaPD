@@ -156,8 +156,7 @@ class Particles<MemorySpace, PMB, Dimension>
     }
 
     // Constructor which initializes particles on regular grid.
-    template <class ExecSpace>
-    Particles( const ExecSpace& exec_space, std::array<double, dim> low_corner,
+    Particles( std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
                const std::array<int, dim> num_cells, const int max_halo_width )
         : halo_width( max_halo_width )
@@ -166,13 +165,12 @@ class Particles<MemorySpace, PMB, Dimension>
         , _plist_t( "temperature" )
     {
         createDomain( low_corner, high_corner, num_cells );
-        createParticles( exec_space );
     }
 
     // Constructor which initializes particles on regular grid with
     // customization.
-    template <class ExecSpace, class UserFunctor>
-    Particles( const ExecSpace& exec_space, std::array<double, dim> low_corner,
+    template <class UserFunctor>
+    Particles( std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
                const std::array<int, dim> num_cells, const int max_halo_width,
                UserFunctor user_create )
@@ -181,7 +179,6 @@ class Particles<MemorySpace, PMB, Dimension>
         , _plist_f( "forces" )
     {
         createDomain( low_corner, high_corner, num_cells );
-        createParticles( exec_space, user_create );
     }
 
     void createDomain( std::array<double, dim> low_corner,
@@ -529,12 +526,10 @@ class Particles<MemorySpace, LPS, Dimension>
     }
 
     // Constructor which initializes particles on regular grid.
-    template <class ExecSpace>
-    Particles( const ExecSpace& exec_space, std::array<double, dim> low_corner,
+    Particles( std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
                const std::array<int, dim> num_cells, const int max_halo_width )
-        : base_type( exec_space, low_corner, high_corner, num_cells,
-                     max_halo_width )
+        : base_type( low_corner, high_corner, num_cells, max_halo_width )
     {
         _aosoa_m = aosoa_m_type( "Particle Weighted Volumes", n_local );
         _aosoa_theta = aosoa_theta_type( "Particle Dilatations", n_local );
@@ -545,6 +540,14 @@ class Particles<MemorySpace, LPS, Dimension>
     void createParticles( const ExecSpace& exec_space )
     {
         base_type::createParticles( exec_space );
+        _aosoa_m.resize( 0 );
+        _aosoa_theta.resize( 0 );
+    }
+
+    template <class ExecSpace, class UserFunctor>
+    void createParticles( const ExecSpace& exec_space, UserFunctor user_create )
+    {
+        base_type::createParticles( exec_space, user_create );
         _aosoa_m.resize( 0 );
         _aosoa_theta.resize( 0 );
     }

@@ -75,7 +75,8 @@ int main( int argc, char* argv[] )
         // Does not set displacements, velocities, etc.
         auto particles = std::make_shared<
             CabanaPD::Particles<memory_space, typename model_type::base_model>>(
-            exec_space(), low_corner, high_corner, num_cells, halo_width );
+            low_corner, high_corner, num_cells, halo_width );
+        particles->createParticles( exec_space() );
 
         // Define particle initialization.
         auto x = particles->sliceReferencePosition();
