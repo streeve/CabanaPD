@@ -172,8 +172,7 @@ class Particles<MemorySpace, PMB, Dimension>
     template <class UserFunctor>
     Particles( std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
-               const std::array<int, dim> num_cells, const int max_halo_width,
-               UserFunctor user_create )
+               const std::array<int, dim> num_cells, const int max_halo_width )
         : halo_width( max_halo_width )
         , _plist_x( "positions" )
         , _plist_f( "forces" )
@@ -223,7 +222,7 @@ class Particles<MemorySpace, PMB, Dimension>
         // TODO: Consider moving to a separate function for more control over
         // allocation.
         auto owned_cells = local_grid->indexSpace(
-            Cajita::Own(), Cajita::Cell(), Cajita::Local() );
+            Cabana::Grid::Own(), Cabana::Grid::Cell(), Cabana::Grid::Local() );
 
         int particles_per_cell = 1;
         int num_particles = particles_per_cell * owned_cells.size();
