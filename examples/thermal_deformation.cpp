@@ -36,13 +36,13 @@ int main( int argc, char* argv[] )
         double K = E / ( 3 * ( 1 - 2 * nu ) ); // [Pa]
         double delta = inputs["horizon"];
 
-        double alpha = 7.5e-6; // [1/oC]
+        double alpha = inputs["thermal_coeff"]; // [1/oC]
         // Reference temperature
         // double temp0 = 0.0;
 
         std::array<double, 3> low_corner = inputs["low_corner"];
         std::array<double, 3> high_corner = inputs["high_corner"];
-        double radius = 0.1;
+        double radius = 0.0085;
         std::array<int, 3> num_cells = inputs["num_cells"];
         int m = std::floor(
             delta / ( ( high_corner[0] - low_corner[0] ) / num_cells[0] ) );
@@ -63,9 +63,13 @@ int main( int argc, char* argv[] )
             CabanaPD::Particles<memory_space, typename model_type::base_model>>(
             low_corner, high_corner, num_cells, halo_width );
         // Do not create particles in the center.
+        double x_center = 0.0;
+        double y_center = -0.0005;
         auto init_op = KOKKOS_LAMBDA( const int, const double x[3] )
         {
-            if ( ( x[0] * x[0] + x[1] * x[1] ) < radius * radius )
+            if ( ( ( x[0] - x_center ) * ( x[0] - x_center ) +
+                   ( x[1] - y_center ) * ( x[1] - y_center ) ) <
+                 radius * radius )
                 return false;
             return true;
         };
@@ -96,7 +100,7 @@ int main( int argc, char* argv[] )
             auto p_x = particles_x.getParticle( pid );
             auto yref =
                 Cabana::get( p_x, CabanaPD::Field::ReferencePosition(), 1 );
-            Cabana::get( p_t, CabanaPD::Field::Temperature() ) +=
+            Cabana::get( p_t, CabanaPD::Field::Temperature() ) =
                 5000 * yref * t;
         };
         auto bc =
