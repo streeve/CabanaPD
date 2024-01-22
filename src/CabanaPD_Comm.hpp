@@ -273,10 +273,11 @@ class Comm<ParticleType, PMB>
                                             halo_ids._destinations, topology );
 
         particles.resize( halo->numLocal(), halo->numGhost() );
-
+        std::cout << halo->numLocal() << " " << halo->numGhost() << std::endl;
         // Only use this interface because we don't need to recommunicate
         // positions, volumes, or no-fail region.
-        Cabana::gather( *halo, particles.getReferencePosition().aosoa() );
+        positions = particles.sliceReferencePosition();
+        Cabana::gather( *halo, positions );
         Cabana::gather( *halo, particles._aosoa_vol );
 
         gather_u = std::make_shared<gather_u_type>( *halo, particles._aosoa_u );
