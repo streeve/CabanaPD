@@ -16,6 +16,8 @@
 
 #include <Cabana_Core.hpp>
 
+// #include <CabanaPD_Input.hpp>
+
 namespace CabanaPD
 {
 
@@ -196,6 +198,7 @@ struct BoundaryCondition<BCIndexSpace, TempBCTag>
     {
         auto temp = particles.sliceTemperature();
         auto x = particles.sliceReferencePosition();
+        // std::array<double, 3> low_corner = inputs["low_corner"];
         auto value = _value;
         auto index_space = _index_space._view;
         Kokkos::RangePolicy<ExecSpace> policy( 0, index_space.size() );
@@ -203,7 +206,8 @@ struct BoundaryCondition<BCIndexSpace, TempBCTag>
             "CabanaPD::BC::apply", policy, KOKKOS_LAMBDA( const int b ) {
                 auto pid = index_space( b );
                 // This is specifically for the thermal deformation problem
-                temp( pid ) = value * x( pid, 1 ) * t;
+                temp( pid ) = value * (x( pid, 1 ) - (-0.15)) * t;
+                // temp( pid ) = value * (x( pid, 1 ) -  low_corner[0]) * t;
             } );
     }
 };
