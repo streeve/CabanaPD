@@ -23,22 +23,31 @@ int main( int argc, char* argv[] )
     MPI_Init( &argc, &argv );
 
     {
+        // ====================================================
+        //                      ???
+        // ====================================================
         Kokkos::ScopeGuard scope_guard( argc, argv );
 
         // FIXME: change backend at compile time for now.
         using exec_space = Kokkos::DefaultExecutionSpace;
         using memory_space = typename exec_space::memory_space;
 
+        // ====================================================
+        //                Material parameters
+        // ====================================================
         CabanaPD::Inputs inputs( argv[1] );
-        double E = inputs["elastic_modulus"];
         double rho0 = inputs["density"];
-        double nu = 0.25;                      // unitless
-        double K = E / ( 3 * ( 1 - 2 * nu ) ); // [Pa]
+        double E = inputs["elastic_modulus"];
+        double nu = 0.25;                      
+        double K = E / ( 3 * ( 1 - 2 * nu ) ); 
         double delta = inputs["horizon"];
-        double alpha = inputs["thermal_coeff"]; // [1/oC]
+        double alpha = inputs["thermal_coeff"];
         // Reference temperature
         // double temp0 = 0.0;
 
+        // ====================================================
+        //               Discretization parameters
+        // ====================================================
         std::array<double, 3> low_corner = inputs["low_corner"];
         std::array<double, 3> high_corner = inputs["high_corner"];
         std::array<int, 3> num_cells = inputs["num_cells"];
@@ -46,6 +55,9 @@ int main( int argc, char* argv[] )
             delta / ( ( high_corner[0] - low_corner[0] ) / num_cells[0] ) );
         int halo_width = m + 1; // Just to be safe.
 
+        // ====================================================
+        //                    Force model
+        // ====================================================
         // Choose force model type.
         using model_type =
             CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
@@ -55,6 +67,9 @@ int main( int argc, char* argv[] )
         //     CabanaPD::ForceModel<CabanaPD::LinearLPS, CabanaPD::Elastic>;
         // model_type force_model( delta, K, G );
 
+        // ====================================================
+        //                  Grid generation
+        // ====================================================
         // Create particles from mesh.
         // Does not set displacements, velocities, etc.
         auto particles = std::make_shared<
@@ -62,14 +77,20 @@ int main( int argc, char* argv[] )
             exec_space(), low_corner, high_corner, num_cells, halo_width );     
         particles->createParticles( exec_space());
 
+        // ====================================================
+        //             Particle fields initialization
+        // ====================================================
         // Define particle initialization.
+        auto rho = particles->sliceDensity();
         auto x = particles->sliceReferencePosition();
         auto u = particles->sliceDisplacement();
-        auto f = particles->sliceForce();
         auto v = particles->sliceVelocity();
-        auto rho = particles->sliceDensity();
+        auto f = particles->sliceForce();
         // auto temp = particles->sliceTemperature();
 
+        // ====================================================
+        //                Boundary conditions
+        // ====================================================
         // Domain to apply b.c.
         CabanaPD::RegionBoundary domain1( low_corner[0], high_corner[0],
                                           low_corner[1], high_corner[1],
@@ -79,17 +100,26 @@ int main( int argc, char* argv[] )
         auto bc = createBoundaryCondition( CabanaPD::TempBCTag{}, 5000.0,
                                            exec_space{}, *particles, domain );
 
+        // ====================================================
+        //               Particle fields setting
+        // ====================================================
         auto init_functor = KOKKOS_LAMBDA( const int pid )
         {
             rho( pid ) = rho0;
         };
         particles->updateParticles( exec_space{}, init_functor );
 
+        // ====================================================
+        //                    Problem run
+        // ====================================================
         auto cabana_pd = CabanaPD::createSolverElastic<memory_space>(
             inputs, particles, force_model, bc );
         cabana_pd->init_force();
         cabana_pd->run();
 
+        // ====================================================
+        //                     Outputs
+        // ====================================================
         double num_cell_x = num_cells[0];
         auto profile = Kokkos::View<double* [2], memory_space>(
             Kokkos::ViewAllocateWithoutInitializing( "displacement_profile" ),
@@ -97,6 +127,34 @@ int main( int argc, char* argv[] )
         int mpi_rank;
         MPI_Comm_rank( MPI_COMM_WORLD, &mpi_rank );
         Kokkos::View<int*, memory_space> count( "c", 1 );
+
+        double dx = particles->dx[0];
+        auto measure_profile = KOKKOS_LAMBDA( const int pid )
+        {
+            if ( x( pid, 1 ) < dx / 2.0 && x( pid, 1 ) > -dx / 2.0 &&
+                 x( pid, 2 ) < dx / 2.0 && x( pid, 2 ) > -dx / 2.0 )
+            {
+                auto c = Kokkos::atomic_fetch_add( &count( 0 ), 1 );
+                profile( c, 0 ) = x( pid, 0 );
+                profile( c, 1 ) = u( pid, 0 );
+            }
+        };
+        Kokkos::RangePolicy<exec_space> policy( 0, x.size() );
+        Kokkos::parallel_for( "displacement_profile", policy, measure_profile );
+        auto count_host =
+            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, count );
+        auto profile_host =
+            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, profile );
+        std::fstream fout;
+        std::string file_name = "displacement_profile.txt";
+        fout.open( file_name, std::ios::app );
+        for ( int p = 0; p < count_host( 0 ); p++ )
+        {
+            fout << mpi_rank << " " << profile_host( p, 0 ) << " "
+                 << profile_host( p, 1 ) << std::endl;
+        }
+
+
     }
 
     MPI_Finalize();
