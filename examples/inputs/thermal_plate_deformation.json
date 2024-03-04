@@ -1,7 +1,6 @@
 {
     "num_cells"       : {"value": [101, 31, 3]},
     "system_size"     : {"value": [1.0, 0.3, 0.03], "unit": "m"},
-    "radius"          : {"value": 0.0085, "unit": "m"},
     "density"         : {"value": 3980,  "unit": "kg/m^3"},
     "elastic_modulus" : {"value": 370e+9, "unit": "Pa"},
     "thermal_coeff"   : {"value": 7.5E-6, "unit": "oC^{-1}"},

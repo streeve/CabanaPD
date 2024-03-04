@@ -24,7 +24,7 @@ int main( int argc, char* argv[] )
 
     {
         // ====================================================
-        //                      ???
+        //                      
         // ====================================================
         Kokkos::ScopeGuard scope_guard( argc, argv );
 
@@ -125,15 +125,17 @@ int main( int argc, char* argv[] )
         //                      Outputs
         // ====================================================
         
+        // ------------------------------------
         // Displacement profiles in x-direction
+        // ------------------------------------
 
         double num_cell_x = num_cells[0];
-        auto profile = Kokkos::View<double* [3], memory_space>(
+        auto profile_x = Kokkos::View<double* [3], memory_space>(
             Kokkos::ViewAllocateWithoutInitializing( "displacement_profile" ),
             num_cell_x );
         int mpi_rank;
         MPI_Comm_rank( MPI_COMM_WORLD, &mpi_rank );
-        Kokkos::View<int*, memory_space> count( "c", 1 );
+        Kokkos::View<int*, memory_space> count_x( "c", 1 );
 
         double dx = particles->dx[0];
 
@@ -142,40 +144,38 @@ int main( int argc, char* argv[] )
             if ( x( pid, 1 ) < dx / 2.0 && x( pid, 1 ) > -dx / 2.0 &&
                  x( pid, 2 ) < dx / 2.0 && x( pid, 2 ) > -dx / 2.0 )
             {
-                auto c = Kokkos::atomic_fetch_add( &count( 0 ), 1 );
-                profile( c, 0 ) = x( pid, 0 );
-                profile( c, 1 ) = u( pid, 1 );
-                profile( c, 2 ) = std::sqrt(u( pid, 0 )*u( pid, 0 ) + u( pid, 1 )*u( pid, 1 ) + u( pid, 2 )*u( pid, 2 ));
+                auto c = Kokkos::atomic_fetch_add( &count_x( 0 ), 1 );
+                profile_x( c, 0 ) = x( pid, 0 );
+                profile_x( c, 1 ) = u( pid, 1 );
+                profile_x( c, 2 ) = std::sqrt(u( pid, 0 )*u( pid, 0 ) + u( pid, 1 )*u( pid, 1 ) + u( pid, 2 )*u( pid, 2 ));
             }
         };
         Kokkos::RangePolicy<exec_space> policy( 0, x.size() );
         Kokkos::parallel_for( "displacement_profile", policy, measure_profile );
-        auto count_host =
-            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, count );
-        auto profile_host =
-            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, profile );
-        std::fstream fout;
+        auto count_host_x =
+            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, count_x );
+        auto profile_host_x =
+            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, profile_x );
+        std::fstream fout_x;
 
-        std::string file_name = "displacement_profile_x_direction.txt";
-        fout.open( file_name, std::ios::app );
-        for ( int p = 0; p < count_host( 0 ); p++ )
+        std::string file_name_x = "displacement_profile_x_direction.txt";
+        fout_x.open( file_name_x, std::ios::app );
+        for ( int p = 0; p < count_host_x( 0 ); p++ )
         {
-            fout << mpi_rank << " " << profile_host( p, 0 ) << " "
-                 << profile_host( p, 1 ) << " "
-                 << profile_host( p, 2 ) << std::endl;
+            fout_x << mpi_rank << " " << profile_host_x( p, 0 ) << " "
+                 << profile_host_x( p, 1 ) << " "
+                 << profile_host_x( p, 2 ) << std::endl;
         }
 
+        // ------------------------------------
         // Displacement profiles in y-direction
+        // ------------------------------------
 
-        // double num_cell_x = num_cells[0];
         auto profile_y = Kokkos::View<double* [3], memory_space>(
             Kokkos::ViewAllocateWithoutInitializing( "displacement_profile" ),
             num_cell_x );
-        // int mpi_rank;
         MPI_Comm_rank( MPI_COMM_WORLD, &mpi_rank );
         Kokkos::View<int*, memory_space> count_y( "c", 1 );
-
-        // double dx = particles->dx[0];
 
         auto measure_profile_y = KOKKOS_LAMBDA( const int pid )
         {
