@@ -33,9 +33,13 @@ int main( int argc, char* argv[] )
         using memory_space = typename exec_space::memory_space;
 
         // ====================================================
-        //                Material parameters
+        //                   Read inputs
         // ====================================================
         CabanaPD::Inputs inputs( argv[1] );
+
+        // ====================================================
+        //                Material parameters
+        // ====================================================
         double rho0 = inputs["density"];
         double E = inputs["elastic_modulus"];
         double nu = 0.25;                      
@@ -46,7 +50,7 @@ int main( int argc, char* argv[] )
         // double temp0 = 0.0;
 
         // ====================================================
-        //               Discretization parameters
+        //                  Discretization
         // ====================================================
         std::array<double, 3> low_corner = inputs["low_corner"];
         std::array<double, 3> high_corner = inputs["high_corner"];
@@ -110,7 +114,7 @@ int main( int argc, char* argv[] )
         particles->updateParticles( exec_space{}, init_functor );
 
         // ====================================================
-        //                    Problem run
+        //                   Simulation run
         // ====================================================
         auto cabana_pd = CabanaPD::createSolverElastic<memory_space>(
             inputs, particles, force_model, bc );
@@ -118,10 +122,13 @@ int main( int argc, char* argv[] )
         cabana_pd->run();
 
         // ====================================================
-        //                     Outputs
+        //                      Outputs
         // ====================================================
+        
+        // Displacement profiles in x-direction
+
         double num_cell_x = num_cells[0];
-        auto profile = Kokkos::View<double* [2], memory_space>(
+        auto profile = Kokkos::View<double* [3], memory_space>(
             Kokkos::ViewAllocateWithoutInitializing( "displacement_profile" ),
             num_cell_x );
         int mpi_rank;
@@ -129,6 +136,7 @@ int main( int argc, char* argv[] )
         Kokkos::View<int*, memory_space> count( "c", 1 );
 
         double dx = particles->dx[0];
+
         auto measure_profile = KOKKOS_LAMBDA( const int pid )
         {
             if ( x( pid, 1 ) < dx / 2.0 && x( pid, 1 ) > -dx / 2.0 &&
@@ -136,7 +144,8 @@ int main( int argc, char* argv[] )
             {
                 auto c = Kokkos::atomic_fetch_add( &count( 0 ), 1 );
                 profile( c, 0 ) = x( pid, 0 );
-                profile( c, 1 ) = u( pid, 0 );
+                profile( c, 1 ) = u( pid, 1 );
+                profile( c, 2 ) = std::sqrt(u( pid, 0 )*u( pid, 0 ) + u( pid, 1 )*u( pid, 1 ) + u( pid, 2 )*u( pid, 2 ));
             }
         };
         Kokkos::RangePolicy<exec_space> policy( 0, x.size() );
@@ -146,14 +155,55 @@ int main( int argc, char* argv[] )
         auto profile_host =
             Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, profile );
         std::fstream fout;
-        std::string file_name = "displacement_profile.txt";
+
+        std::string file_name = "displacement_profile_x_direction.txt";
         fout.open( file_name, std::ios::app );
         for ( int p = 0; p < count_host( 0 ); p++ )
         {
             fout << mpi_rank << " " << profile_host( p, 0 ) << " "
-                 << profile_host( p, 1 ) << std::endl;
+                 << profile_host( p, 1 ) << " "
+                 << profile_host( p, 2 ) << std::endl;
         }
 
+        // Displacement profiles in y-direction
+
+        // double num_cell_x = num_cells[0];
+        auto profile_y = Kokkos::View<double* [3], memory_space>(
+            Kokkos::ViewAllocateWithoutInitializing( "displacement_profile" ),
+            num_cell_x );
+        // int mpi_rank;
+        MPI_Comm_rank( MPI_COMM_WORLD, &mpi_rank );
+        Kokkos::View<int*, memory_space> count_y( "c", 1 );
+
+        // double dx = particles->dx[0];
+
+        auto measure_profile_y = KOKKOS_LAMBDA( const int pid )
+        {
+            if ( x( pid, 0 ) < dx / 2.0 && x( pid, 0 ) > -dx / 2.0 &&
+                 x( pid, 2 ) < dx / 2.0 && x( pid, 2 ) > -dx / 2.0 )
+            {
+                auto c = Kokkos::atomic_fetch_add( &count_y( 0 ), 1 );
+                profile_y( c, 0 ) = x( pid, 1 );
+                profile_y( c, 1 ) = u( pid, 1 );
+                profile_y( c, 2 ) = std::sqrt(u( pid, 0 )*u( pid, 0 ) + u( pid, 1 )*u( pid, 1 ) + u( pid, 2 )*u( pid, 2 ));
+            }
+        };
+        Kokkos::RangePolicy<exec_space> policy_y( 0, x.size() );
+        Kokkos::parallel_for( "displacement_profile", policy_y, measure_profile_y );
+        auto count_host_y =
+            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, count_y );
+        auto profile_host_y =
+            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, profile_y );
+        std::fstream fout_y;
+
+        std::string file_name_y = "displacement_profile_y_direction.txt";
+        fout_y.open( file_name_y, std::ios::app );
+        for ( int p = 0; p < count_host_y( 0 ); p++ )
+        {
+            fout_y << mpi_rank << " " << profile_host_y( p, 0 ) << " "
+                 << profile_host_y( p, 1 ) << " "
+                 << profile_host_y( p, 2 ) << std::endl;
+        }
 
     }
 
