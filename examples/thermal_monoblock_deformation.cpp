@@ -76,6 +76,21 @@ int main( int argc, char* argv[] )
         auto particles = std::make_shared<
             CabanaPD::Particles<memory_space, typename model_type::base_model>>(
             exec_space(), low_corner, high_corner, num_cells, halo_width );
+
+        // Do not create particles within given cylindrical region
+        auto x = particles->sliceReferencePosition();
+        double x_center = inputs["cylindrical_hole"][0];
+        double y_center = inputs["cylindrical_hole"][1];
+        double radius = inputs["cylindrical_hole"][2];
+        auto init_op = KOKKOS_LAMBDA( const int, const double x[3] )
+        {
+            if ( ( ( x[0] - x_center ) * ( x[0] - x_center ) +
+                   ( x[1] - y_center ) * ( x[1] - y_center ) ) <
+                 radius * radius )
+                return false;
+            return true;
+        };
+
         particles->createParticles( exec_space() );
 
         // ====================================================
@@ -93,7 +108,7 @@ int main( int argc, char* argv[] )
         //            Custom particle initialization
         // ====================================================
         auto rho = particles->sliceDensity();
-        auto x = particles->sliceReferencePosition();
+        // auto x = particles->sliceReferencePosition();
         auto u = particles->sliceDisplacement();
         auto v = particles->sliceVelocity();
         auto f = particles->sliceForce();
