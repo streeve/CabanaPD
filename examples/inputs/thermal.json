@@ -9,6 +9,6 @@
     "horizon"         : {"value": 8.4E-4, "unit": ""},  
     "final_time"      : {"value": 0.0093, "unit": ""},
     "timestep"        : {"value": 7.5E-7,  "unit": ""},
-    "output_frequency": {"value": 10},
+    "output_frequency": {"value": 200},
     "output_reference": {"value": true}
 }

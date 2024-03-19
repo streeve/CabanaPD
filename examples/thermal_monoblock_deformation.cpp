@@ -91,7 +91,7 @@ int main( int argc, char* argv[] )
             return true;
         };
 
-        particles->createParticles( exec_space() );
+        particles->createParticles( exec_space(), init_op );
 
         // ====================================================
         //                Boundary conditions
