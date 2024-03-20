@@ -144,12 +144,13 @@ int main( int argc, char* argv[] )
         MPI_Comm_rank( MPI_COMM_WORLD, &mpi_rank );
         Kokkos::View<int*, memory_space> count_x( "c", 1 );
 
-        double dx = particles->dx[0];
+        double dy = particles->dx[1];
+        double dz = particles->dx[2];
 
         auto measure_profile = KOKKOS_LAMBDA( const int pid )
         {
-            if ( x( pid, 1 ) < dx / 2.0 && x( pid, 1 ) > -dx / 2.0 &&
-                 x( pid, 2 ) < dx / 2.0 && x( pid, 2 ) > -dx / 2.0 )
+            if ( x( pid, 1 ) < dy / 2.0 && x( pid, 1 ) > -dy / 2.0 &&
+                 x( pid, 2 ) < dz / 2.0 && x( pid, 2 ) > -dz / 2.0 )
             {
                 auto c = Kokkos::atomic_fetch_add( &count_x( 0 ), 1 );
                 profile_x( c, 0 ) = x( pid, 0 );
@@ -180,16 +181,19 @@ int main( int argc, char* argv[] )
         // Displacement profiles in y-direction
         // ------------------------------------
 
+        double num_cell_y = num_cells[1];
         auto profile_y = Kokkos::View<double* [3], memory_space>(
             Kokkos::ViewAllocateWithoutInitializing( "displacement_profile" ),
-            num_cell_x );
+            num_cell_y );
         MPI_Comm_rank( MPI_COMM_WORLD, &mpi_rank );
         Kokkos::View<int*, memory_space> count_y( "c", 1 );
+
+        double dx = particles->dx[0];
 
         auto measure_profile_y = KOKKOS_LAMBDA( const int pid )
         {
             if ( x( pid, 0 ) < dx / 2.0 && x( pid, 0 ) > -dx / 2.0 &&
-                 x( pid, 2 ) < dx / 2.0 && x( pid, 2 ) > -dx / 2.0 )
+                 x( pid, 2 ) < dz / 2.0 && x( pid, 2 ) > -dz / 2.0 )
             {
                 auto c = Kokkos::atomic_fetch_add( &count_y( 0 ), 1 );
                 profile_y( c, 0 ) = x( pid, 1 );
