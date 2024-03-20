@@ -101,7 +101,7 @@ int main( int argc, char* argv[] )
                                           low_corner[2], high_corner[2] );
         std::vector<CabanaPD::RegionBoundary> domain = { domain1 };
 
-        auto bc = createBoundaryCondition( CabanaPD::TempBCTag{}, 5000.0,
+        auto bc = createBoundaryCondition( CabanaPD::TempBCTag{}, 2.0E+6,
                                            exec_space{}, *particles, domain );
 
         // ====================================================
