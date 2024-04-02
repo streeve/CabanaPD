@@ -1067,8 +1067,13 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
                 double rx, ry, rz;
                 getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
 
+                // NEED TO READ temp_ref from inputs
                 // assume temp0 = 0 for now
-                double T_av = 0.5 * ( temp( i ) + temp( j ) );
+                double temp_ref = 300;
+
+                double T_av = 0.5 * ( ( temp( i ) - temp_ref ) +
+                                      ( temp( j ) - temp_ref ) );
+                // double T_av = 0.5 * ( temp( i ) + temp( j ) );
 
                 // Break if beyond critical stretch unless in no-fail zone.
                 if ( r * r >= ( 1.0 + s0 + alpha * T_av ) *

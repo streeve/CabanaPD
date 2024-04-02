@@ -45,6 +45,7 @@ int main( int argc, char* argv[] )
         double K = E / ( 3 * ( 1 - 2 * nu ) );
         double delta = inputs["horizon"];
         double alpha = inputs["thermal_coeff"];
+        double G0 = inputs["fracture_energy"];
         // Reference temperature
         // double temp0 = 0.0;
 
@@ -61,13 +62,12 @@ int main( int argc, char* argv[] )
         // ====================================================
         //                    Force model
         // ====================================================
-
-        // NOTE: DOES THIS MODEL COVER FRACTURE?
-
         using model_type =
-            CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
+            CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Fracture>;
+        // CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
         // model_type force_model( delta, K );
-        model_type force_model( delta, K, alpha );
+        // model_type force_model( delta, K, alpha );
+        model_type force_model( delta, K, alpha, G0 );
         // using model_type =
         //     CabanaPD::ForceModel<CabanaPD::LinearLPS, CabanaPD::Elastic>;
         // model_type force_model( delta, K, G );
@@ -116,8 +116,11 @@ int main( int argc, char* argv[] )
 
         // NOTE: DOES THIS COVER FRACTURE?
 
-        auto cabana_pd = CabanaPD::createSolverElastic<memory_space>(
-            inputs, particles, force_model, bc );
+        CabanaPD::Prenotch<1> prenotch;
+
+        // auto cabana_pd = CabanaPD::createSolverElastic<memory_space>(
+        auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
+            inputs, particles, force_model, bc, prenotch );
         cabana_pd->init_force();
         cabana_pd->run();
 

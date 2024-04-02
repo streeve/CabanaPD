@@ -250,14 +250,14 @@ struct BoundaryCondition<BCIndexSpace, TempBCTag>
                 temp( pid ) =
                     ThetaInf +
                     ( Theta0 - ThetaInf ) *
-                        ( 1 - std::pow(
-                                  std::abs( ( 2 * x( pid, 0 ) - ( X0 + Xn ) ) /
-                                            ( Xn - X0 ) ),
-                                  1 / sx ) ) *
-                        ( 1 - std::pow(
-                                  std::abs( ( 2 * x( pid, 1 ) - ( Y0 + Yn ) ) /
-                                            ( Yn - Y0 ) ),
-                                  1 / sy ) );
+                        ( 1 - Kokkos::pow( Kokkos::abs( ( 2 * x( pid, 0 ) -
+                                                          ( X0 + Xn ) ) /
+                                                        ( Xn - X0 ) ),
+                                           1 / sx ) ) *
+                        ( 1 - Kokkos::pow( Kokkos::abs( ( 2 * x( pid, 1 ) -
+                                                          ( Y0 + Yn ) ) /
+                                                        ( Yn - Y0 ) ),
+                                           1 / sy ) );
             } );
     }
 };
