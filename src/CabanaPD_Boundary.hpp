@@ -207,29 +207,57 @@ struct BoundaryCondition<BCIndexSpace, TempBCTag>
                 // This is specifically for the thermal deformation problem
                 // temp( pid ) = value * ( x( pid, 1 ) - ( -0.15 ) ) * t;
 
-                // This is specifically for the thermal deformation monoblock problem
-                //temp( pid ) = value * ( x( pid, 1 ) - ( -0.014 ) ) * t;
+                // This is specifically for the thermal deformation monoblock
+                // problem
+                // temp( pid ) = value * ( x( pid, 1 ) - ( -0.014 ) ) * t;
 
-                // This is specifically for the thermal crack problem
-                double Theta_0 = 300; // oC
-                double Theta_W = 20; // oC
+                // --------------------------------------------------
+                // This is specifically for the thermal crack problem:
+                // --------------------------------------------------
+
+                // We need to read these from input
+                double Theta0 = 300;   // oC
+                double ThetaW = 20;    // oC
                 double t_ramp = 0.001; // s
-                if (t <= t_ramp){
-                    double Theta_inf = Theta_0 - ((Theta_0 - Theta_W)*t/t_ramp);
-                }elseif(t > t_ramp && t < 2*t_ramp) {
-                    double Theta_inf = Theta_W + (Theta_0 - Theta_W)*(t-t_ramp)/t_ramp;
-                }else{
-                    double Theta_inf = Theta_0
+
+                double ThetaInf = Theta0;
+
+                if ( t <= t_ramp )
+                {
+                    double ThetaInf =
+                        Theta0 - ( ( Theta0 - ThetaW ) * t / t_ramp );
                 }
-                temp( pid ) = value * ( x( pid, 1 ) - ( -0.014 ) ) * t;
+                else if ( t > t_ramp && t < 2 * t_ramp )
+                {
+                    double ThetaInf =
+                        ThetaW + ( Theta0 - ThetaW ) * ( t - t_ramp ) / t_ramp;
+                }
+                else
+                {
+                    double ThetaInf = Theta0;
+                }
 
-                // DEFINE FUNCTION
-                // f(x, s) = 1 - |x|^1/s.
+                // We need to read these from input
+                double X0 = -0.05 / 2;
+                double Xn = 0.05 / 2;
 
-                // Thetafunc = @(x,y,t) Thetainfty(t) + (Thetao-Thetainfty(t))*ffunc(xi(x),sx)
-.*ffunc(eta(y),sy);
+                double Y0 = -0.01 / 2;
+                double Yn = 0.01 / 2;
 
-                // temp( pid ) = value * (x( pid, 1 ) -  low_corner[0]) * t;
+                double sx = 1 / 50;
+                double sy = 1 / 10;
+
+                temp( pid ) =
+                    ThetaInf +
+                    ( Theta0 - ThetaInf ) *
+                        ( 1 - std::pow(
+                                  std::abs( ( 2 * x( pid, 0 ) - ( X0 + Xn ) ) /
+                                            ( Xn - X0 ) ),
+                                  1 / sx ) ) *
+                        ( 1 - std::pow(
+                                  std::abs( ( 2 * x( pid, 1 ) - ( Y0 + Yn ) ) /
+                                            ( Yn - Y0 ) ),
+                                  1 / sy ) );
             } );
     }
 };

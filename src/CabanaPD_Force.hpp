@@ -951,8 +951,13 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
             // It should be:
             //     double T_av = 0.5*( temp( i ) + temp( j ) ) - temp0;
 
+            // NEED TO READ temp_ref from inputs
             // assume temp0 = 0 for now
-            double T_av = 0.5 * ( temp( i ) + temp( j ) );
+            double temp_ref = 300;
+
+            double T_av =
+                0.5 * ( ( temp( i ) - temp_ref ) + ( temp( j ) - temp_ref ) );
+            // double T_av = 0.5 * ( temp( i ) + temp( j ) );
 
             // Add thermal stretch
             s -= alpha * T_av;

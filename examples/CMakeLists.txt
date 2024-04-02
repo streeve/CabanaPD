@@ -16,4 +16,8 @@ target_link_libraries(ThermalMonoblockDeformation LINK_PUBLIC CabanaPD)
 add_executable(ThermalDeformation thermal_deformation.cpp)
 target_link_libraries(ThermalDeformation LINK_PUBLIC CabanaPD)
 
-install(TARGETS ElasticWave KalthoffWinkler CrackBranching ThermalPlateDeformation ThermalMonoblockDeformation ThermalDeformation DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_executable(ThermalCrackPlate thermal_crack_plate.cpp)
+target_link_libraries(ThermalCrackPlate LINK_PUBLIC CabanaPD)
+
+
+install(TARGETS ElasticWave KalthoffWinkler CrackBranching ThermalPlateDeformation ThermalMonoblockDeformation ThermalDeformation ThermalCrackPlate DESTINATION ${CMAKE_INSTALL_BINDIR})
