@@ -206,7 +206,29 @@ struct BoundaryCondition<BCIndexSpace, TempBCTag>
                 auto pid = index_space( b );
                 // This is specifically for the thermal deformation problem
                 // temp( pid ) = value * ( x( pid, 1 ) - ( -0.15 ) ) * t;
+
+                // This is specifically for the thermal deformation monoblock problem
+                //temp( pid ) = value * ( x( pid, 1 ) - ( -0.014 ) ) * t;
+
+                // This is specifically for the thermal crack problem
+                double Theta_0 = 300; // oC
+                double Theta_W = 20; // oC
+                double t_ramp = 0.001; // s
+                if (t <= t_ramp){
+                    double Theta_inf = Theta_0 - ((Theta_0 - Theta_W)*t/t_ramp);
+                }elseif(t > t_ramp && t < 2*t_ramp) {
+                    double Theta_inf = Theta_W + (Theta_0 - Theta_W)*(t-t_ramp)/t_ramp;
+                }else{
+                    double Theta_inf = Theta_0
+                }
                 temp( pid ) = value * ( x( pid, 1 ) - ( -0.014 ) ) * t;
+
+                // DEFINE FUNCTION
+                // f(x, s) = 1 - |x|^1/s.
+
+                // Thetafunc = @(x,y,t) Thetainfty(t) + (Thetao-Thetainfty(t))*ffunc(xi(x),sx)
+.*ffunc(eta(y),sy);
+
                 // temp( pid ) = value * (x( pid, 1 ) -  low_corner[0]) * t;
             } );
     }
