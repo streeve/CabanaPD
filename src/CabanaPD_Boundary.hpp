@@ -198,7 +198,7 @@ struct BoundaryCondition<BCIndexSpace, TempBCTag>
     {
         auto temp = particles.sliceTemperature();
         auto x = particles.sliceReferencePosition();
-        auto value = _value;
+        // auto value = _value;
         auto index_space = _index_space._view;
         Kokkos::RangePolicy<ExecSpace> policy( 0, index_space.size() );
         Kokkos::parallel_for(
@@ -224,17 +224,16 @@ struct BoundaryCondition<BCIndexSpace, TempBCTag>
 
                 if ( t <= t_ramp )
                 {
-                    double ThetaInf =
-                        Theta0 - ( ( Theta0 - ThetaW ) * t / t_ramp );
+                    ThetaInf = Theta0 - ( ( Theta0 - ThetaW ) * t / t_ramp );
                 }
                 else if ( t > t_ramp && t < 2 * t_ramp )
                 {
-                    double ThetaInf =
+                    ThetaInf =
                         ThetaW + ( Theta0 - ThetaW ) * ( t - t_ramp ) / t_ramp;
                 }
                 else
                 {
-                    double ThetaInf = Theta0;
+                    ThetaInf = Theta0;
                 }
 
                 // We need to read these from input
