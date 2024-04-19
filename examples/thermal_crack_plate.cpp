@@ -136,18 +136,12 @@ int main( int argc, char* argv[] )
                                            ( Yn - Y0 ) ),
                               1 / sy ) );
         };
-        auto temp = CabanaPD::createBodyTerm( temp_func );
+        auto body_term = CabanaPD::createBodyTerm( temp_func );
 
         // ====================================================
         //            Custom particle initialization
         // ====================================================
         auto rho = particles->sliceDensity();
-        auto x = particles->sliceReferencePosition();
-        auto u = particles->sliceDisplacement();
-        auto v = particles->sliceVelocity();
-        auto f = particles->sliceForce();
-        // auto temp = particles->sliceTemperature();
-
         auto init_functor = KOKKOS_LAMBDA( const int pid )
         {
             rho( pid ) = rho0;
@@ -159,7 +153,7 @@ int main( int argc, char* argv[] )
         // ====================================================
         CabanaPD::Prenotch<1> prenotch;
         auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
-            inputs, particles, force_model, temp, prenotch );
+            inputs, particles, force_model, body_term, prenotch );
         cabana_pd->init_force();
         cabana_pd->run();
     }

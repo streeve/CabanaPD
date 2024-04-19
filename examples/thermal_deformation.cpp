@@ -75,32 +75,23 @@ int main( int argc, char* argv[] )
         };
         particles->createParticles( exec_space(), init_op );
 
-        // Define particle initialization.
+        auto temp = particles->sliceTemperature();
         auto x = particles->sliceReferencePosition();
-        auto u = particles->sliceDisplacement();
-        auto f = particles->sliceForce();
-        auto v = particles->sliceVelocity();
+        auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
+        {
+            temp( pid ) = 5000.0 * ( x( pid, 1 ) - ( -0.15 ) ) * t;
+        };
+        auto body_term = CabanaPD::createBodyTerm( temp_func );
+
         auto rho = particles->sliceDensity();
-        // auto temp = particles->sliceTemperature();
-
-        // Domain to apply b.c.
-        CabanaPD::RegionBoundary domain1( low_corner[0], high_corner[0],
-                                          low_corner[1], high_corner[1],
-                                          low_corner[2], high_corner[2] );
-        std::vector<CabanaPD::RegionBoundary> domain = { domain1 };
-
-        auto bc = createBoundaryCondition( CabanaPD::TempBCTag{}, 5000.0,
-                                           exec_space{}, *particles, domain );
-
         auto init_functor = KOKKOS_LAMBDA( const int pid )
         {
-            // temp( pid ) = 5000 * x( pid, 1 ) * t_final;
             rho( pid ) = rho0;
         };
         particles->updateParticles( exec_space{}, init_functor );
 
         auto cabana_pd = CabanaPD::createSolverElastic<memory_space>(
-            inputs, particles, force_model, bc );
+            inputs, particles, force_model, body_term );
         cabana_pd->init_force();
         cabana_pd->run();
 

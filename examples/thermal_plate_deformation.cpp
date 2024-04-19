@@ -81,24 +81,18 @@ int main( int argc, char* argv[] )
         // ====================================================
         //                Boundary conditions
         // ====================================================
-        CabanaPD::RegionBoundary domain1( low_corner[0], high_corner[0],
-                                          low_corner[1], high_corner[1],
-                                          low_corner[2], high_corner[2] );
-        std::vector<CabanaPD::RegionBoundary> domain = { domain1 };
-
-        auto bc = createBoundaryCondition( CabanaPD::TempBCTag{}, 5000.0,
-                                           exec_space{}, *particles, domain );
+        auto temp = particles->sliceTemperature();
+        auto x = particles->sliceReferencePosition();
+        auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
+        {
+            temp( pid ) = 5000.0 * ( x( pid, 1 ) - ( -0.15 ) ) * t;
+        };
+        auto body_term = CabanaPD::createBodyTerm( temp_func );
 
         // ====================================================
         //            Custom particle initialization
         // ====================================================
         auto rho = particles->sliceDensity();
-        auto x = particles->sliceReferencePosition();
-        auto u = particles->sliceDisplacement();
-        auto v = particles->sliceVelocity();
-        auto f = particles->sliceForce();
-        // auto temp = particles->sliceTemperature();
-
         auto init_functor = KOKKOS_LAMBDA( const int pid )
         {
             rho( pid ) = rho0;
@@ -109,7 +103,7 @@ int main( int argc, char* argv[] )
         //                   Simulation run
         // ====================================================
         auto cabana_pd = CabanaPD::createSolverElastic<memory_space>(
-            inputs, particles, force_model, bc );
+            inputs, particles, force_model, body_term );
         cabana_pd->init_force();
         cabana_pd->run();
 
@@ -132,6 +126,7 @@ int main( int argc, char* argv[] )
         double dy = particles->dx[1];
         double dz = particles->dx[2];
 
+        auto u = particles->sliceDisplacement();
         auto measure_profile = KOKKOS_LAMBDA( const int pid )
         {
             if ( x( pid, 1 ) < dy / 2.0 && x( pid, 1 ) > -dy / 2.0 &&
