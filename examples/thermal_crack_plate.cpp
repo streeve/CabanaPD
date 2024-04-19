@@ -89,10 +89,54 @@ int main( int argc, char* argv[] )
                                           low_corner[2], high_corner[2] );
         std::vector<CabanaPD::RegionBoundary> domain = { domain1 };
 
-        // NEED TO CHANGE BC!
+        auto temp = particles->sliceTemperature();
+        auto x = particles->sliceReferencePosition();
+        auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
+        {
+            // We need to read these from input
+            double Theta0 = 300;   // oC
+            double ThetaW = 20;    // oC
+            double t_ramp = 0.001; // s
 
-        auto bc = createBoundaryCondition( CabanaPD::TempBCTag{}, 5000.0,
-                                           exec_space{}, *particles, domain );
+            double ThetaInf = Theta0;
+
+            if ( t <= t_ramp )
+            {
+                ThetaInf = Theta0 - ( ( Theta0 - ThetaW ) * t / t_ramp );
+            }
+            else if ( t > t_ramp && t < 2 * t_ramp )
+            {
+                ThetaInf =
+                    ThetaW + ( Theta0 - ThetaW ) * ( t - t_ramp ) / t_ramp;
+            }
+            else
+            {
+                ThetaInf = Theta0;
+            }
+
+            // We need to read these from input
+            double X0 = -0.05 / 2;
+            double Xn = 0.05 / 2;
+
+            double Y0 = -0.01 / 2;
+            double Yn = 0.01 / 2;
+
+            double sx = 1 / 50;
+            double sy = 1 / 10;
+
+            temp( pid ) =
+                ThetaInf +
+                ( Theta0 - ThetaInf ) *
+                    ( 1 - Kokkos::pow(
+                              Kokkos::abs( ( 2 * x( pid, 0 ) - ( X0 + Xn ) ) /
+                                           ( Xn - X0 ) ),
+                              1 / sx ) ) *
+                    ( 1 - Kokkos::pow(
+                              Kokkos::abs( ( 2 * x( pid, 1 ) - ( Y0 + Yn ) ) /
+                                           ( Yn - Y0 ) ),
+                              1 / sy ) );
+        };
+        auto temp = CabanaPD::createBodyTerm( temp_func );
 
         // ====================================================
         //            Custom particle initialization
@@ -113,113 +157,11 @@ int main( int argc, char* argv[] )
         // ====================================================
         //                   Simulation run
         // ====================================================
-
-        // NOTE: DOES THIS COVER FRACTURE?
-
         CabanaPD::Prenotch<1> prenotch;
-
-        // auto cabana_pd = CabanaPD::createSolverElastic<memory_space>(
         auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
-            inputs, particles, force_model, bc, prenotch );
+            inputs, particles, force_model, temp, prenotch );
         cabana_pd->init_force();
         cabana_pd->run();
-
-        // ====================================================
-        //                      Outputs
-        // ====================================================
-
-        // NOTE: WE DO NOT NEED THIS OUTPUTS
-        /*
-
-        // ------------------------------------
-        // Displacement profiles in x-direction
-        // ------------------------------------
-
-        double num_cell_x = num_cells[0];
-        auto profile_x = Kokkos::View<double* [3], memory_space>(
-            Kokkos::ViewAllocateWithoutInitializing( "displacement_profile" ),
-            num_cell_x );
-        int mpi_rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &mpi_rank );
-        Kokkos::View<int*, memory_space> count_x( "c", 1 );
-
-        double dy = particles->dx[1];
-        double dz = particles->dx[2];
-
-        auto measure_profile = KOKKOS_LAMBDA( const int pid )
-        {
-            if ( x( pid, 1 ) < dy / 2.0 && x( pid, 1 ) > -dy / 2.0 &&
-                 x( pid, 2 ) < dz / 2.0 && x( pid, 2 ) > -dz / 2.0 )
-            {
-                auto c = Kokkos::atomic_fetch_add( &count_x( 0 ), 1 );
-                profile_x( c, 0 ) = x( pid, 0 );
-                profile_x( c, 1 ) = u( pid, 1 );
-                profile_x( c, 2 ) = std::sqrt( u( pid, 0 ) * u( pid, 0 ) +
-                                               u( pid, 1 ) * u( pid, 1 ) +
-                                               u( pid, 2 ) * u( pid, 2 ) );
-            }
-        };
-        Kokkos::RangePolicy<exec_space> policy( 0, x.size() );
-        Kokkos::parallel_for( "displacement_profile", policy, measure_profile );
-        auto count_host_x =
-            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, count_x );
-        auto profile_host_x = Kokkos::create_mirror_view_and_copy(
-            Kokkos::HostSpace{}, profile_x );
-        std::fstream fout_x;
-
-        std::string file_name_x = "displacement_profile_x_direction.txt";
-        fout_x.open( file_name_x, std::ios::app );
-        for ( int p = 0; p < count_host_x( 0 ); p++ )
-        {
-            fout_x << mpi_rank << " " << profile_host_x( p, 0 ) << " "
-                   << profile_host_x( p, 1 ) << " " << profile_host_x( p, 2 )
-                   << std::endl;
-        }
-
-        // ------------------------------------
-        // Displacement profiles in y-direction
-        // ------------------------------------
-
-        double num_cell_y = num_cells[1];
-        auto profile_y = Kokkos::View<double* [3], memory_space>(
-            Kokkos::ViewAllocateWithoutInitializing( "displacement_profile" ),
-            num_cell_y );
-        MPI_Comm_rank( MPI_COMM_WORLD, &mpi_rank );
-        Kokkos::View<int*, memory_space> count_y( "c", 1 );
-
-        double dx = particles->dx[0];
-
-        auto measure_profile_y = KOKKOS_LAMBDA( const int pid )
-        {
-            if ( x( pid, 0 ) < dx / 2.0 && x( pid, 0 ) > -dx / 2.0 &&
-                 x( pid, 2 ) < dz / 2.0 && x( pid, 2 ) > -dz / 2.0 )
-            {
-                auto c = Kokkos::atomic_fetch_add( &count_y( 0 ), 1 );
-                profile_y( c, 0 ) = x( pid, 1 );
-                profile_y( c, 1 ) = u( pid, 1 );
-                profile_y( c, 2 ) = std::sqrt( u( pid, 0 ) * u( pid, 0 ) +
-                                               u( pid, 1 ) * u( pid, 1 ) +
-                                               u( pid, 2 ) * u( pid, 2 ) );
-            }
-        };
-        Kokkos::RangePolicy<exec_space> policy_y( 0, x.size() );
-        Kokkos::parallel_for( "displacement_profile", policy_y,
-                              measure_profile_y );
-        auto count_host_y =
-            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, count_y );
-        auto profile_host_y = Kokkos::create_mirror_view_and_copy(
-            Kokkos::HostSpace{}, profile_y );
-        std::fstream fout_y;
-
-        std::string file_name_y = "displacement_profile_y_direction.txt";
-        fout_y.open( file_name_y, std::ios::app );
-        for ( int p = 0; p < count_host_y( 0 ); p++ )
-        {
-            fout_y << mpi_rank << " " << profile_host_y( p, 0 ) << " "
-                   << profile_host_y( p, 1 ) << " " << profile_host_y( p, 2 )
-                   << std::endl;
-        }
-        */
     }
 
     MPI_Finalize();

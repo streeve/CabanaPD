@@ -133,10 +133,6 @@ struct ForceUpdateBCTag
 {
 };
 
-struct TempBCTag
-{
-};
-
 struct ZeroBCTag
 {
 };
@@ -170,93 +166,6 @@ struct BoundaryCondition
             "CabanaPD::BC::apply", policy, KOKKOS_LAMBDA( const int b ) {
                 auto pid = index_space( b );
                 user( pid );
-            } );
-    }
-};
-
-template <class BCIndexSpace>
-struct BoundaryCondition<BCIndexSpace, TempBCTag>
-{
-    double _value;
-    BCIndexSpace _index_space;
-
-    BoundaryCondition( const double value, BCIndexSpace bc_index_space )
-        : _value( value )
-        , _index_space( bc_index_space )
-    {
-    }
-
-    template <class ExecSpace, class Particles>
-    void update( ExecSpace exec_space, Particles particles,
-                 RegionBoundary plane )
-    {
-        _index_space.update( exec_space, particles, plane );
-    }
-
-    template <class ExecSpace, class ParticleType>
-    void apply( ExecSpace, ParticleType& particles, double t )
-    {
-        auto temp = particles.sliceTemperature();
-        auto x = particles.sliceReferencePosition();
-        // auto value = _value;
-        auto index_space = _index_space._view;
-        Kokkos::RangePolicy<ExecSpace> policy( 0, index_space.size() );
-        Kokkos::parallel_for(
-            "CabanaPD::BC::apply", policy, KOKKOS_LAMBDA( const int b ) {
-                auto pid = index_space( b );
-                // This is specifically for the thermal deformation problem
-                // temp( pid ) = value * ( x( pid, 1 ) - ( -0.15 ) ) * t;
-
-                // This is specifically for the thermal deformation monoblock
-                // problem
-                // temp( pid ) = value * ( x( pid, 1 ) - ( -0.014 ) ) * t;
-
-                // --------------------------------------------------
-                // This is specifically for the thermal crack problem:
-                // --------------------------------------------------
-
-                // We need to read these from input
-                double Theta0 = 300;   // oC
-                double ThetaW = 20;    // oC
-                double t_ramp = 0.001; // s
-
-                double ThetaInf = Theta0;
-
-                if ( t <= t_ramp )
-                {
-                    ThetaInf = Theta0 - ( ( Theta0 - ThetaW ) * t / t_ramp );
-                }
-                else if ( t > t_ramp && t < 2 * t_ramp )
-                {
-                    ThetaInf =
-                        ThetaW + ( Theta0 - ThetaW ) * ( t - t_ramp ) / t_ramp;
-                }
-                else
-                {
-                    ThetaInf = Theta0;
-                }
-
-                // We need to read these from input
-                double X0 = -0.05 / 2;
-                double Xn = 0.05 / 2;
-
-                double Y0 = -0.01 / 2;
-                double Yn = 0.01 / 2;
-
-                double sx = 1 / 50;
-                double sy = 1 / 10;
-
-                temp( pid ) =
-                    ThetaInf +
-                    ( Theta0 - ThetaInf ) *
-                        ( 1 - Kokkos::pow( Kokkos::abs( ( 2 * x( pid, 0 ) -
-                                                          ( X0 + Xn ) ) /
-                                                        ( Xn - X0 ) ),
-                                           1 / sx ) ) *
-                        ( 1 - Kokkos::pow( Kokkos::abs( ( 2 * x( pid, 1 ) -
-                                                          ( Y0 + Yn ) ) /
-                                                        ( Yn - Y0 ) ),
-                                           1 / sy ) );
             } );
     }
 };
