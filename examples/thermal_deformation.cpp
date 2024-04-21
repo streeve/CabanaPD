@@ -51,7 +51,8 @@ int main( int argc, char* argv[] )
         using model_type =
             CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
         // model_type force_model( delta, K );
-        model_type force_model( delta, K, alpha );
+        // model_type force_model( delta, K, alpha );
+        model_type force_model( delta, K, alpha, 0.0 );
         // using model_type =
         //     CabanaPD::ForceModel<CabanaPD::LinearLPS, CabanaPD::Elastic>;
         // model_type force_model( delta, K, G );

@@ -69,9 +69,9 @@
 
 namespace CabanaPD
 {
-/******************************************************************************
-  Force models
-******************************************************************************/
+// ====================================================
+//             Force models definitions
+// ====================================================
 struct BaseForceModel
 {
     double delta;
@@ -86,7 +86,9 @@ struct BaseForceModel
 template <typename ModelType, typename DamageType>
 struct ForceModel;
 
-/* LPS */
+// ----------------------------------------------------
+//                   LPS: Elastic
+// ----------------------------------------------------
 template <>
 struct ForceModel<LPS, Elastic> : public BaseForceModel
 {
@@ -131,6 +133,9 @@ struct ForceModel<LPS, Elastic> : public BaseForceModel
     }
 };
 
+// ----------------------------------------------------
+//                   LPS: Fracture
+// ----------------------------------------------------
 template <>
 struct ForceModel<LPS, Fracture> : public ForceModel<LPS, Elastic>
 {
@@ -173,6 +178,9 @@ struct ForceModel<LPS, Fracture> : public ForceModel<LPS, Elastic>
     }
 };
 
+// ----------------------------------------------------
+//               Linear LPS: Elastic
+// ----------------------------------------------------
 template <>
 struct ForceModel<LinearLPS, Elastic> : public ForceModel<LPS, Elastic>
 {
@@ -190,6 +198,9 @@ struct ForceModel<LinearLPS, Elastic> : public ForceModel<LPS, Elastic>
     using base_type::theta_coeff;
 };
 
+// ----------------------------------------------------
+//               Linear LPS: Fracture
+// ----------------------------------------------------
 template <>
 struct ForceModel<LinearLPS, Fracture> : public ForceModel<LPS, Fracture>
 {
@@ -211,7 +222,9 @@ struct ForceModel<LinearLPS, Fracture> : public ForceModel<LPS, Fracture>
     using base_type::s0;
 };
 
-/* PMB */
+// ----------------------------------------------------
+//                   PMB: Elastic
+// ----------------------------------------------------
 template <>
 struct ForceModel<PMB, Elastic> : public BaseForceModel
 {
@@ -224,12 +237,15 @@ struct ForceModel<PMB, Elastic> : public BaseForceModel
     double c;
     double K;
     double alpha;
+    double temp_ref;
 
     ForceModel(){};
-    ForceModel( const double delta, const double K, const double alpha )
+    // ForceModel( const double delta, const double K, const double alpha )
+    ForceModel( const double delta, const double K, const double alpha, const double temp_ref )
         : base_type( delta )
     {
-        set_param( delta, K, alpha );
+        //set_param( delta, K, alpha );
+        set_param( delta, K, alpha, temp_ref );
     }
 
     ForceModel( const ForceModel& model )
@@ -238,17 +254,22 @@ struct ForceModel<PMB, Elastic> : public BaseForceModel
         c = model.c;
         K = model.K;
         alpha = model.alpha;
+        temp_ref = model.temp_ref;
     }
 
-    void set_param( const double _delta, const double _K, const double _alpha )
+    void set_param( const double _delta, const double _K, const double _alpha, const double _temp_ref )
     {
         delta = _delta;
         K = _K;
         alpha = _alpha;
+        temp_ref = _temp_ref;
         c = 18.0 * K / ( 3.141592653589793 * delta * delta * delta * delta );
     }
 };
 
+// ----------------------------------------------------
+//                   PMB: Fracture
+// ----------------------------------------------------
 template <>
 struct ForceModel<PMB, Fracture> : public ForceModel<PMB, Elastic>
 {
@@ -257,6 +278,7 @@ struct ForceModel<PMB, Fracture> : public ForceModel<PMB, Elastic>
     using fracture_type = Fracture;
 
     using base_type::alpha;
+    using base_type::temp_ref;
     using base_type::c;
     using base_type::delta;
     using base_type::K;
@@ -265,11 +287,19 @@ struct ForceModel<PMB, Fracture> : public ForceModel<PMB, Elastic>
     double bond_break_coeff;
 
     ForceModel() {}
+    /*
     ForceModel( const double delta, const double K, const double alpha,
                 const double G0 )
         : base_type( delta, K, alpha )
     {
         set_param( delta, K, alpha, G0 );
+    }
+    */
+    ForceModel( const double delta, const double K, const double alpha, const double temp_ref, 
+                const double G0 )
+        : base_type( delta, K, alpha, temp_ref )
+    {
+        set_param( delta, K, alpha, temp_ref, G0 );
     }
 
     ForceModel( const ForceModel& model )
@@ -280,6 +310,7 @@ struct ForceModel<PMB, Fracture> : public ForceModel<PMB, Elastic>
         bond_break_coeff = model.bond_break_coeff;
     }
 
+/*
     void set_param( const double _delta, const double _K, const double _alpha,
                     const double _G0 )
     {
@@ -288,8 +319,20 @@ struct ForceModel<PMB, Fracture> : public ForceModel<PMB, Elastic>
         s0 = sqrt( 5.0 * G0 / 9.0 / K / delta );
         bond_break_coeff = ( 1.0 + s0 ) * ( 1.0 + s0 );
     }
+*/
+    void set_param( const double _delta, const double _K, const double _alpha, const double _temp_ref, 
+                    const double _G0 )
+    {
+        base_type::set_param( _delta, _K, _alpha, _temp_ref );
+        G0 = _G0;
+        s0 = sqrt( 5.0 * G0 / 9.0 / K / delta );
+        bond_break_coeff = ( 1.0 + s0 ) * ( 1.0 + s0 );
+    }
 };
 
+// ----------------------------------------------------
+//               Linear PMB: Elastic
+// ----------------------------------------------------
 template <>
 struct ForceModel<LinearPMB, Elastic> : public ForceModel<PMB, Elastic>
 {
@@ -300,11 +343,15 @@ struct ForceModel<LinearPMB, Elastic> : public ForceModel<PMB, Elastic>
     using base_type::base_type;
 
     using base_type::alpha;
+    using base_type::temp_ref;
     using base_type::c;
     using base_type::delta;
     using base_type::K;
 };
 
+// ----------------------------------------------------
+//               Linear PMB: Fracture
+// ----------------------------------------------------
 template <>
 struct ForceModel<LinearPMB, Fracture> : public ForceModel<PMB, Fracture>
 {
@@ -315,6 +362,7 @@ struct ForceModel<LinearPMB, Fracture> : public ForceModel<PMB, Fracture>
     using base_type::base_type;
 
     using base_type::alpha;
+    using base_type::temp_ref;
     using base_type::c;
     using base_type::delta;
     using base_type::K;
@@ -324,9 +372,13 @@ struct ForceModel<LinearPMB, Fracture> : public ForceModel<PMB, Fracture>
     using base_type::s0;
 };
 
-/******************************************************************************
-  Force helper functions.
-******************************************************************************/
+// ====================================================
+//             Force helper functions
+// ====================================================
+
+// ----------------------------------------------------
+//                Distance components
+// ----------------------------------------------------
 template <class PosType>
 KOKKOS_INLINE_FUNCTION void
 getDistanceComponents( const PosType& x, const PosType& u, const int i,
@@ -348,6 +400,9 @@ getDistanceComponents( const PosType& x, const PosType& u, const int i,
     s = ( r - xi ) / xi;
 }
 
+// ----------------------------------------------------
+//                     Distance 
+// ----------------------------------------------------
 template <class PosType>
 KOKKOS_INLINE_FUNCTION void getDistance( const PosType& x, const PosType& u,
                                          const int i, const int j, double& xi,
@@ -357,6 +412,9 @@ KOKKOS_INLINE_FUNCTION void getDistance( const PosType& x, const PosType& u,
     getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
 }
 
+// ----------------------------------------------------
+//            Linearized distance components
+// ----------------------------------------------------
 template <class PosType>
 KOKKOS_INLINE_FUNCTION void getLinearizedDistanceComponents(
     const PosType& x, const PosType& u, const int i, const int j, double& xi,
@@ -373,6 +431,9 @@ KOKKOS_INLINE_FUNCTION void getLinearizedDistanceComponents(
     s = ( xi_x * eta_u + xi_y * eta_v + xi_z * eta_w ) / ( xi * xi );
 }
 
+// ----------------------------------------------------
+//                Linearized distance 
+// ----------------------------------------------------
 template <class PosType>
 KOKKOS_INLINE_FUNCTION void
 getLinearizedDistance( const PosType& x, const PosType& u, const int i,
@@ -382,9 +443,13 @@ getLinearizedDistance( const PosType& x, const PosType& u, const int i,
     getLinearizedDistanceComponents( x, u, i, j, xi, s, xi_x, xi_y, xi_z );
 }
 
-/******************************************************************************
-  Force computation LPS
-******************************************************************************/
+// ====================================================
+//                 Force computation
+// ====================================================
+
+// ----------------------------------------------------
+//                   LPS: Elastic
+// ----------------------------------------------------
 template <class ExecutionSpace, class ForceType>
 class Force;
 
@@ -404,6 +469,9 @@ class Force<ExecutionSpace, ForceModel<LPS, Elastic>>
     {
     }
 
+    // ------------------------------
+    // LPS: Elastic - Weighted volume 
+    // ------------------------------
     template <class ParticleType, class NeighListType, class ParallelType>
     void computeWeightedVolume( ParticleType& particles,
                                 const NeighListType& neigh_list,
@@ -432,6 +500,10 @@ class Force<ExecutionSpace, ForceModel<LPS, Elastic>>
             neigh_op_tag, "CabanaPD::ForceLPS::computeWeightedVolume" );
     }
 
+
+    // ------------------------------
+    // LPS: Elastic - Dilatation 
+    // ------------------------------
     template <class ParticleType, class NeighListType, class ParallelType>
     void computeDilatation( ParticleType& particles,
                             const NeighListType& neigh_list,
@@ -462,6 +534,9 @@ class Force<ExecutionSpace, ForceModel<LPS, Elastic>>
             neigh_op_tag, "CabanaPD::ForceLPS::computeDilatation" );
     }
 
+    // ------------------------------
+    // LPS: Elastic - Force 
+    // ------------------------------
     template <class ForceType, class PosType, class ParticleType,
               class NeighListType, class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
@@ -504,6 +579,9 @@ class Force<ExecutionSpace, ForceModel<LPS, Elastic>>
             neigh_op_tag, "CabanaPD::ForceLPS::computeFull" );
     }
 
+    // ------------------------------
+    // LPS: Elastic - Energy 
+    // ------------------------------
     template <class PosType, class WType, class ParticleType,
               class NeighListType, class ParallelType>
     double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
@@ -551,6 +629,9 @@ class Force<ExecutionSpace, ForceModel<LPS, Elastic>>
     }
 };
 
+// ----------------------------------------------------
+//                   LPS: Fracture
+// ----------------------------------------------------
 template <class ExecutionSpace>
 class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
     : public Force<ExecutionSpace, ForceModel<LPS, Elastic>>
@@ -569,6 +650,9 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
     {
     }
 
+    // -------------------------------
+    // LPS: Fracture - Weighted volume 
+    // -------------------------------
     template <class ParticleType, class NeighListType, class MuView>
     void computeWeightedVolume( ParticleType& particles,
                                 const NeighListType& neigh_list,
@@ -608,6 +692,9 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
                               policy, weighted_volume );
     }
 
+    // -------------------------------
+    // LPS: Fracture - Dilatation 
+    // -------------------------------
     template <class ParticleType, class NeighListType, class MuView>
     void computeDilatation( ParticleType& particles,
                             const NeighListType& neigh_list,
@@ -652,6 +739,9 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
                               policy, dilatation );
     }
 
+    // -------------------------------
+    // LPS: Fracture - Force 
+    // -------------------------------
     template <class ForceType, class PosType, class ParticleType,
               class NeighListType, class MuView, class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
@@ -721,6 +811,9 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
                               force_full );
     }
 
+    // -------------------------------
+    // LPS: Fracture - Energy 
+    // -------------------------------
     template <class PosType, class WType, class DamageType, class ParticleType,
               class NeighListType, class MuView, class ParallelType>
     double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
@@ -780,6 +873,9 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
     }
 };
 
+// ----------------------------------------------------
+//               Linear LPS: Elastic
+// ----------------------------------------------------
 template <class ExecutionSpace>
 class Force<ExecutionSpace, ForceModel<LinearLPS, Elastic>>
     : public Force<ExecutionSpace, ForceModel<LPS, Elastic>>
@@ -798,6 +894,9 @@ class Force<ExecutionSpace, ForceModel<LinearLPS, Elastic>>
     {
     }
 
+    // -------------------------------
+    // Linear LPS: Fracture - Force 
+    // -------------------------------
     template <class ForceType, class PosType, class ParticleType,
               class NeighListType, class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
@@ -810,6 +909,8 @@ class Force<ExecutionSpace, ForceModel<LinearLPS, Elastic>>
         auto model = _model;
 
         const auto vol = particles.sliceVolume();
+
+        // HERE WE SHOULD USE THE LINEARIZED DILATATION!
         auto linear_theta = particles.sliceDilatation();
         // Using weighted volume from base LPS class.
         auto m = particles.sliceWeightedVolume();
@@ -846,6 +947,9 @@ class Force<ExecutionSpace, ForceModel<LinearLPS, Elastic>>
             neigh_op_tag, "CabanaPD::ForceLPS::computeFull" );
     }
 
+    // -------------------------------
+    // Linear LPS: Fracture - Energy 
+    // -------------------------------
     template <class PosType, class WType, class ParticleType,
               class NeighListType, class ParallelType>
     double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
@@ -895,9 +999,9 @@ class Force<ExecutionSpace, ForceModel<LinearLPS, Elastic>>
     }
 };
 
-/******************************************************************************
-  Force computation PMB
-******************************************************************************/
+// ----------------------------------------------------
+//                   PMB: Elastic
+// ----------------------------------------------------
 template <class ExecutionSpace>
 class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
 {
@@ -914,17 +1018,22 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
     {
     }
 
+    // Empty weighted volume
     template <class ParticleType, class NeighListType, class ParallelType>
     void computeWeightedVolume( ParticleType&, const NeighListType&,
                                 const ParallelType )
     {
     }
+    // Empty dilatation
     template <class ParticleType, class NeighListType, class ParallelType>
     void computeDilatation( ParticleType&, const NeighListType&,
                             const ParallelType )
     {
     }
 
+    // ------------------------------
+    // PMB: Elastic - Force 
+    // ------------------------------
     template <class ForceType, class PosType, class ParticleType,
               class NeighListType, class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
@@ -934,6 +1043,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
     {
         auto c = _model.c;
         auto alpha = _model.alpha;
+        auto temp_ref = _model.temp_ref;
         const auto vol = particles.sliceVolume();
         const auto temp = particles.sliceTemperature();
 
@@ -945,6 +1055,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
 
             double xi, r, s;
             double rx, ry, rz;
+            // PERHAPS WE COULD CHANGE THIS FUNCTION TO getBondInformation SINCE ALSO RETURNS STRETCH
             getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
 
             // Compute average temperature
@@ -953,7 +1064,8 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
 
             // NEED TO READ temp_ref from inputs
             // assume temp0 = 0 for now
-            double temp_ref = 300;
+            // double temp_ref = 300;
+            // double temp_ref = 0;
 
             double T_av =
                 0.5 * ( ( temp( i ) - temp_ref ) + ( temp( j ) - temp_ref ) );
@@ -978,6 +1090,11 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
             neigh_op_tag, "CabanaPD::ForcePMB::computeFull" );
     }
 
+    // NEED TO CHANGE STRAIN ENERGY DENSITY TO FREE ENERGY DENSITY
+
+    // ------------------------------
+    // PMB: Elastic - Energy 
+    // ------------------------------
     template <class PosType, class WType, class ParticleType,
               class NeighListType, class ParallelType>
     double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
@@ -1014,6 +1131,9 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
     }
 };
 
+// ----------------------------------------------------
+//                   PMB: Fracture
+// ----------------------------------------------------
 template <class ExecutionSpace>
 class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
     : public Force<ExecutionSpace, ForceModel<PMB, Elastic>>
@@ -1032,6 +1152,11 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
     {
     }
 
+    // WHY WE DO NOT NEED TO HAVE EMPTY WEIGHTED VOLUME AND DILATATION HERE?
+
+    // ------------------------------
+    // PMB: Fracture - Force 
+    // ------------------------------
     template <class ForceType, class PosType, class ParticleType,
               class NeighListType, class MuView, class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
@@ -1041,6 +1166,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
     {
         auto c = _model.c;
         auto alpha = _model.alpha;
+        auto temp_ref = _model.temp_ref;
         // auto break_coeff = _model.bond_break_coeff;
         auto s0 = _model.s0;
         const auto vol = particles.sliceVolume();
@@ -1069,7 +1195,8 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
 
                 // NEED TO READ temp_ref from inputs
                 // assume temp0 = 0 for now
-                double temp_ref = 300;
+                // double temp_ref = 300;
+                //double temp_ref = 0;
 
                 double T_av = 0.5 * ( ( temp( i ) - temp_ref ) +
                                       ( temp( j ) - temp_ref ) );
@@ -1105,6 +1232,9 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
                               force_full );
     }
 
+    // ------------------------------
+    // PMB: Fracture - Energy 
+    // ------------------------------
     template <class PosType, class WType, class DamageType, class ParticleType,
               class NeighListType, class MuView, class ParallelType>
     double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
@@ -1152,6 +1282,9 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
     }
 };
 
+// ----------------------------------------------------
+//               Linear PMB: Elastic
+// ----------------------------------------------------
 template <class ExecutionSpace>
 class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic>>
     : public Force<ExecutionSpace, ForceModel<PMB, Elastic>>
@@ -1170,6 +1303,9 @@ class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic>>
     {
     }
 
+    // ------------------------------
+    // Linear PMB: Elastic - Force 
+    // ------------------------------
     template <class ForceType, class PosType, class ParticleType,
               class NeighListType, class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
@@ -1208,6 +1344,9 @@ class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic>>
             neigh_op_tag, "CabanaPD::ForceLinearPMB::computeFull" );
     }
 
+    // ------------------------------
+    // Linear PMB: Elastic - Energy 
+    // ------------------------------
     template <class PosType, class WType, class ParticleType,
               class NeighListType, class ParallelType>
     double
@@ -1242,6 +1381,10 @@ class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic>>
         return strain_energy;
     }
 };
+
+// WHAT ABOUT LINEAR PMB FRACTURE?
+
+// WHAT IS THE BELOW FOR?
 
 template <class ForceType, class ParticleType, class NeighListType,
           class ParallelType>

@@ -44,7 +44,8 @@ int main( int argc, char* argv[] )
         double nu = 0.25;
         double K = E / ( 3 * ( 1 - 2 * nu ) );
         double delta = inputs["horizon"];
-        double alpha = inputs["thermal_coeff"];
+        double alpha = inputs["thermal_coefficient"];
+        double temp_ref = inputs["reference_temperature"];
         double G0 = inputs["fracture_energy"];
         // Reference temperature
         // double temp0 = 0.0;
@@ -67,7 +68,8 @@ int main( int argc, char* argv[] )
         // CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
         // model_type force_model( delta, K );
         // model_type force_model( delta, K, alpha );
-        model_type force_model( delta, K, alpha, G0 );
+        // model_type force_model( delta, K, alpha, G0 );
+        model_type force_model( delta, K, alpha, temp_ref, G0 );
         // using model_type =
         //     CabanaPD::ForceModel<CabanaPD::LinearLPS, CabanaPD::Elastic>;
         // model_type force_model( delta, K, G );
