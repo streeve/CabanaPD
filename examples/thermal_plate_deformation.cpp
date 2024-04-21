@@ -46,10 +46,8 @@ int main( int argc, char* argv[] )
         double delta = inputs["horizon"];
         //double alpha = inputs["thermal_coeff"];
         double alpha = inputs["thermal_coefficient"];
-        // Reference temperature
         //double temp_ref = 0.0;
         double temp_ref = inputs["reference_temperature"];
-        // double temp0 = 0.0;
 
         // ====================================================
         //                  Discretization
@@ -67,7 +65,7 @@ int main( int argc, char* argv[] )
         using model_type =
             CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
         // model_type force_model( delta, K );
-        // model_type force_model( delta, K, alpha );
+        //model_type force_model( delta, K, alpha );
         model_type force_model( delta, K, alpha, temp_ref );
         // using model_type =
         //     CabanaPD::ForceModel<CabanaPD::LinearLPS, CabanaPD::Elastic>;

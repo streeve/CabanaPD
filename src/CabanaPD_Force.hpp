@@ -240,7 +240,7 @@ struct ForceModel<PMB, Elastic> : public BaseForceModel
     double temp_ref;
 
     ForceModel(){};
-    // ForceModel( const double delta, const double K, const double alpha )
+    //ForceModel( const double delta, const double K, const double alpha )
     ForceModel( const double delta, const double K, const double alpha, const double temp_ref )
         : base_type( delta )
     {
@@ -257,6 +257,8 @@ struct ForceModel<PMB, Elastic> : public BaseForceModel
         temp_ref = model.temp_ref;
     }
 
+
+    //void set_param( const double _delta, const double _K, const double _alpha )
     void set_param( const double _delta, const double _K, const double _alpha, const double _temp_ref )
     {
         delta = _delta;
@@ -295,12 +297,15 @@ struct ForceModel<PMB, Fracture> : public ForceModel<PMB, Elastic>
         set_param( delta, K, alpha, G0 );
     }
     */
+    
+    
     ForceModel( const double delta, const double K, const double alpha, const double temp_ref, 
                 const double G0 )
         : base_type( delta, K, alpha, temp_ref )
     {
         set_param( delta, K, alpha, temp_ref, G0 );
     }
+    
 
     ForceModel( const ForceModel& model )
         : base_type( model )
@@ -320,6 +325,8 @@ struct ForceModel<PMB, Fracture> : public ForceModel<PMB, Elastic>
         bond_break_coeff = ( 1.0 + s0 ) * ( 1.0 + s0 );
     }
 */
+
+
     void set_param( const double _delta, const double _K, const double _alpha, const double _temp_ref, 
                     const double _G0 )
     {
@@ -328,6 +335,7 @@ struct ForceModel<PMB, Fracture> : public ForceModel<PMB, Elastic>
         s0 = sqrt( 5.0 * G0 / 9.0 / K / delta );
         bond_break_coeff = ( 1.0 + s0 ) * ( 1.0 + s0 );
     }
+
 };
 
 // ----------------------------------------------------
@@ -1065,7 +1073,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
             // NEED TO READ temp_ref from inputs
             // assume temp0 = 0 for now
             // double temp_ref = 300;
-            // double temp_ref = 0;
+            //double temp_ref = 0;
 
             double T_av =
                 0.5 * ( ( temp( i ) - temp_ref ) + ( temp( j ) - temp_ref ) );
