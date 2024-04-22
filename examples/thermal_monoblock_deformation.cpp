@@ -104,7 +104,8 @@ int main( int argc, char* argv[] )
         auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
         {
             //temp( pid ) = 5000.0 * ( x( pid, 1 ) - ( -0.014 ) ) * t;
-            temp( pid ) = 5000.0 * ( x( pid, 1 ) - low_corner[1] ) * t;
+            // temp( pid ) = 5000.0 * ( x( pid, 1 ) - low_corner[1] ) * t;
+            temp( pid ) = 2.0e+6 * ( x( pid, 1 ) - low_corner[1] ) * t;
         };
         auto body_term = CabanaPD::createBodyTerm( temp_func );
 

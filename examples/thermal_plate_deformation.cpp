@@ -44,9 +44,7 @@ int main( int argc, char* argv[] )
         double nu = 0.25;
         double K = E / ( 3 * ( 1 - 2 * nu ) );
         double delta = inputs["horizon"];
-        //double alpha = inputs["thermal_coeff"];
         double alpha = inputs["thermal_coefficient"];
-        //double temp_ref = 0.0;
         double temp_ref = inputs["reference_temperature"];
 
         // ====================================================
@@ -65,7 +63,7 @@ int main( int argc, char* argv[] )
         using model_type =
             CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
         // model_type force_model( delta, K );
-        //model_type force_model( delta, K, alpha );
+        // model_type force_model( delta, K, alpha );
         model_type force_model( delta, K, alpha, temp_ref );
         // using model_type =
         //     CabanaPD::ForceModel<CabanaPD::LinearLPS, CabanaPD::Elastic>;
@@ -87,7 +85,6 @@ int main( int argc, char* argv[] )
         auto x = particles->sliceReferencePosition();
         auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
         {
-            //temp( pid ) = 5000.0 * ( x( pid, 1 ) - ( -0.15 ) ) * t;
             temp( pid ) = 5000.0 * ( x( pid, 1 ) - low_corner[1] ) * t;
         };
         auto body_term = CabanaPD::createBodyTerm( temp_func );
