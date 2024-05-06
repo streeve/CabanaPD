@@ -69,17 +69,19 @@
 
 namespace CabanaPD
 {
-template <class ExecutionSpace>
-class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
+template <class ExecutionSpace, class... ModelParams>
+class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
 {
-  protected:
-    bool _half_neigh;
-    ForceModel<PMB, Elastic> _model;
-
   public:
     using exec_space = ExecutionSpace;
+    using model_type = ForceModel<PMB, Elastic, ModelParams...>;
 
-    Force( const bool half_neigh, const ForceModel<PMB, Elastic> model )
+  protected:
+    bool _half_neigh;
+    model_type _model;
+
+  public:
+    Force( const bool half_neigh, const model_type model )
         : _half_neigh( half_neigh )
         , _model( model )
     {
@@ -103,7 +105,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
                            const NeighListType& neigh_list, const int n_local,
                            ParallelType& neigh_op_tag ) const
     {
-        auto c = _model.c;
+        auto model = _model;
         const auto vol = particles.sliceVolume();
 
         auto force_full = KOKKOS_LAMBDA( const int i, const int j )
@@ -115,7 +117,10 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
             double xi, r, s;
             double rx, ry, rz;
             getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
-            const double coeff = c * s * vol( j );
+
+            model.thermalStretch( s, i, j );
+
+            const double coeff = model.c * s * vol( j );
             fx_i = coeff * rx / r;
             fy_i = coeff * ry / r;
             fz_i = coeff * rz / r;
@@ -167,19 +172,22 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic>>
     }
 };
 
-template <class ExecutionSpace>
-class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
-    : public Force<ExecutionSpace, ForceModel<PMB, Elastic>>
+template <class ExecutionSpace, class... ModelParams>
+class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
+    : public Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
 {
-  protected:
-    using base_type = Force<ExecutionSpace, ForceModel<PMB, Elastic>>;
-    using base_type::_half_neigh;
-    ForceModel<PMB, Fracture> _model;
-
   public:
     using exec_space = ExecutionSpace;
+    using model_type = ForceModel<PMB, Fracture>;
 
-    Force( const bool half_neigh, const ForceModel<PMB, Fracture> model )
+  protected:
+    using base_type =
+        Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>;
+    using base_type::_half_neigh;
+    model_type _model;
+
+  public:
+    Force( const bool half_neigh, const model_type model )
         : base_type( half_neigh, model )
         , _model( model )
     {
@@ -192,7 +200,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
                            const NeighListType& neigh_list, MuView& mu,
                            const int n_local, ParallelType& ) const
     {
-        auto c = _model.c;
+        auto model = _model;
         auto break_coeff = _model.bond_break_coeff;
         const auto vol = particles.sliceVolume();
         const auto nofail = particles.sliceNoFail();
@@ -217,6 +225,8 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
                 double rx, ry, rz;
                 getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
 
+                model.thermalStretch( s, i, j );
+
                 // Break if beyond critical stretch unless in no-fail zone.
                 if ( r * r >= break_coeff * xi * xi && !nofail( i ) &&
                      !nofail( j ) )
@@ -226,7 +236,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
                 // Else if statement is only for performance.
                 else if ( mu( i, n ) > 0 )
                 {
-                    const double coeff = c * s * vol( j );
+                    const double coeff = model.c * s * vol( j );
                     double muij = mu( i, n );
                     fx_i = muij * coeff * rx / r;
                     fy_i = muij * coeff * ry / r;
@@ -291,19 +301,21 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture>>
     }
 };
 
-template <class ExecutionSpace>
-class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic>>
-    : public Force<ExecutionSpace, ForceModel<PMB, Elastic>>
+template <class ExecutionSpace, class... ModelParams>
+class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
+    : public Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
 {
+  public:
+    using exec_space = ExecutionSpace;
+    using model_type = ForceModel<LinearPMB, Elastic>;
+
   protected:
     using base_type = Force<ExecutionSpace, ForceModel<PMB, Elastic>>;
     using base_type::_half_neigh;
-    ForceModel<LinearPMB, Elastic> _model;
+    model_type _model;
 
   public:
-    using exec_space = ExecutionSpace;
-
-    Force( const bool half_neigh, const ForceModel<LinearPMB, Elastic> model )
+    Force( const bool half_neigh, const model_type model )
         : base_type( half_neigh, model )
         , _model( model )
     {
@@ -316,7 +328,7 @@ class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic>>
                            const NeighListType& neigh_list, const int n_local,
                            ParallelType& neigh_op_tag ) const
     {
-        auto c = _model.c;
+        auto model = _model;
         const auto vol = particles.sliceVolume();
 
         auto force_full = KOKKOS_LAMBDA( const int i, const int j )
@@ -331,7 +343,9 @@ class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic>>
             getLinearizedDistanceComponents( x, u, i, j, xi, linear_s, xi_x,
                                              xi_y, xi_z );
 
-            const double coeff = c * linear_s * vol( j );
+            model.thermalStretch( linear_s, i, j );
+
+            const double coeff = model.c * linear_s * vol( j );
             fx_i = coeff * xi_x / xi;
             fy_i = coeff * xi_y / xi;
             fz_i = coeff * xi_z / xi;
