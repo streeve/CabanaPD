@@ -18,11 +18,11 @@
 
 #include <CabanaPD.hpp>
 
-// Example function
+// Simulate thermally-induced deformation in a rectangular plate.
 void thermalDeformationExample( const std::string filename )
 {
     // ====================================================
-    //                  Setup Kokkos
+    //                  Use default Kokkos spaces
     // ====================================================
     using exec_space = Kokkos::DefaultExecutionSpace;
     using memory_space = typename exec_space::memory_space;
@@ -38,7 +38,7 @@ void thermalDeformationExample( const std::string filename )
     // Material parameters
     double rho0 = inputs["density"];
     double E = inputs["elastic_modulus"];
-    double nu = 0.25; 
+    double nu = 0.25;
     double K = E / ( 3 * ( 1 - 2 * nu ) );
     double delta = inputs["horizon"];
     double alpha = inputs["thermal_coefficient"];
@@ -69,7 +69,7 @@ void thermalDeformationExample( const std::string filename )
     auto particles =
         std::make_shared<CabanaPD::Particles<memory_space, model_type>>(
             exec_space(), low_corner, high_corner, num_cells, halo_width );
-  
+
     // ====================================================
     //                   Imposed field
     // ====================================================
@@ -105,7 +105,7 @@ void thermalDeformationExample( const std::string filename )
     cabana_pd->run();
 }
 
-// Main function
+// Initialize MPI+Kokkos.
 int main( int argc, char* argv[] )
 {
     MPI_Init( &argc, &argv );
