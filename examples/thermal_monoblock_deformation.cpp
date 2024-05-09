@@ -65,7 +65,7 @@ int main( int argc, char* argv[] )
         using model_type =
             CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
         // model_type force_model( delta, K );
-        //model_type force_model( delta, K, alpha );
+        // model_type force_model( delta, K, alpha );
         model_type force_model( delta, K, alpha, temp_ref );
         // using model_type =
         //     CabanaPD::ForceModel<CabanaPD::LinearLPS, CabanaPD::Elastic>;
@@ -103,8 +103,8 @@ int main( int argc, char* argv[] )
         x = particles->sliceReferencePosition();
         auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
         {
-            //temp( pid ) = 5000.0 * ( x( pid, 1 ) - ( -0.014 ) ) * t;
-            // temp( pid ) = 5000.0 * ( x( pid, 1 ) - low_corner[1] ) * t;
+            // temp( pid ) = 5000.0 * ( x( pid, 1 ) - ( -0.014 ) ) * t;
+            //  temp( pid ) = 5000.0 * ( x( pid, 1 ) - low_corner[1] ) * t;
             temp( pid ) = 2.0e+6 * ( x( pid, 1 ) - low_corner[1] ) * t;
         };
         auto body_term = CabanaPD::createBodyTerm( temp_func );
@@ -113,12 +113,6 @@ int main( int argc, char* argv[] )
         //            Custom particle initialization
         // ====================================================
         auto rho = particles->sliceDensity();
-        // auto x = particles->sliceReferencePosition();
-        auto u = particles->sliceDisplacement();
-        auto v = particles->sliceVelocity();
-        auto f = particles->sliceForce();
-        // auto temp = particles->sliceTemperature();
-
         auto init_functor = KOKKOS_LAMBDA( const int pid )
         {
             rho( pid ) = rho0;
@@ -137,94 +131,18 @@ int main( int argc, char* argv[] )
         //                      Outputs
         // ====================================================
 
-        // ------------------------------------
-        // Displacement profiles in x-direction
-        // ------------------------------------
+        // Displacement profiles
+        createDisplacementProfile( MPI_COMM_WORLD, num_cells[0], 0,
+                                   "displacement_x.txt", *particles );
+        createDisplacementProfile( MPI_COMM_WORLD, num_cells[1], 1,
+                                   "displacement_y.txt", *particles );
 
-        double num_cell_x = num_cells[0];
-        auto profile_x = Kokkos::View<double* [3], memory_space>(
-            Kokkos::ViewAllocateWithoutInitializing( "displacement_profile" ),
-            num_cell_x );
-        int mpi_rank;
-        MPI_Comm_rank( MPI_COMM_WORLD, &mpi_rank );
-        Kokkos::View<int*, memory_space> count_x( "c", 1 );
-
-        double dy = particles->dx[1];
-        double dz = particles->dx[2];
-
-        auto measure_profile = KOKKOS_LAMBDA( const int pid )
-        {
-            if ( x( pid, 1 ) < dy / 2.0 && x( pid, 1 ) > -dy / 2.0 &&
-                 x( pid, 2 ) < dz / 2.0 && x( pid, 2 ) > -dz / 2.0 )
-            {
-                auto c = Kokkos::atomic_fetch_add( &count_x( 0 ), 1 );
-                profile_x( c, 0 ) = x( pid, 0 );
-                profile_x( c, 1 ) = u( pid, 1 );
-                profile_x( c, 2 ) = std::sqrt( u( pid, 0 ) * u( pid, 0 ) +
-                                               u( pid, 1 ) * u( pid, 1 ) +
-                                               u( pid, 2 ) * u( pid, 2 ) );
-            }
-        };
-        Kokkos::RangePolicy<exec_space> policy( 0, x.size() );
-        Kokkos::parallel_for( "displacement_profile", policy, measure_profile );
-        auto count_host_x =
-            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, count_x );
-        auto profile_host_x = Kokkos::create_mirror_view_and_copy(
-            Kokkos::HostSpace{}, profile_x );
-        std::fstream fout_x;
-
-        std::string file_name_x = "displacement_profile_x_direction.txt";
-        fout_x.open( file_name_x, std::ios::app );
-        for ( int p = 0; p < count_host_x( 0 ); p++ )
-        {
-            fout_x << mpi_rank << " " << profile_host_x( p, 0 ) << " "
-                   << profile_host_x( p, 1 ) << " " << profile_host_x( p, 2 )
-                   << std::endl;
-        }
-
-        // ------------------------------------
-        // Displacement profiles in y-direction
-        // ------------------------------------
-
-        double num_cell_y = num_cells[1];
-        auto profile_y = Kokkos::View<double* [3], memory_space>(
-            Kokkos::ViewAllocateWithoutInitializing( "displacement_profile" ),
-            num_cell_y );
-        MPI_Comm_rank( MPI_COMM_WORLD, &mpi_rank );
-        Kokkos::View<int*, memory_space> count_y( "c", 1 );
-
-        double dx = particles->dx[0];
-
-        auto measure_profile_y = KOKKOS_LAMBDA( const int pid )
-        {
-            if ( x( pid, 0 ) < dx / 2.0 && x( pid, 0 ) > -dx / 2.0 &&
-                 x( pid, 2 ) < dz / 2.0 && x( pid, 2 ) > -dz / 2.0 )
-            {
-                auto c = Kokkos::atomic_fetch_add( &count_y( 0 ), 1 );
-                profile_y( c, 0 ) = x( pid, 1 );
-                profile_y( c, 1 ) = u( pid, 1 );
-                profile_y( c, 2 ) = std::sqrt( u( pid, 0 ) * u( pid, 0 ) +
-                                               u( pid, 1 ) * u( pid, 1 ) +
-                                               u( pid, 2 ) * u( pid, 2 ) );
-            }
-        };
-        Kokkos::RangePolicy<exec_space> policy_y( 0, x.size() );
-        Kokkos::parallel_for( "displacement_profile", policy_y,
-                              measure_profile_y );
-        auto count_host_y =
-            Kokkos::create_mirror_view_and_copy( Kokkos::HostSpace{}, count_y );
-        auto profile_host_y = Kokkos::create_mirror_view_and_copy(
-            Kokkos::HostSpace{}, profile_y );
-        std::fstream fout_y;
-
-        std::string file_name_y = "displacement_profile_y_direction.txt";
-        fout_y.open( file_name_y, std::ios::app );
-        for ( int p = 0; p < count_host_y( 0 ); p++ )
-        {
-            fout_y << mpi_rank << " " << profile_host_y( p, 0 ) << " "
-                   << profile_host_y( p, 1 ) << " " << profile_host_y( p, 2 )
-                   << std::endl;
-        }
+        createDisplacementMagnitudeProfile( MPI_COMM_WORLD, num_cells[0], 0,
+                                            "displacement_magnitude_x.txt",
+                                            *particles );
+        createDisplacementMagnitudeProfile( MPI_COMM_WORLD, num_cells[1], 1,
+                                            "displacement_magnitude_y.txt",
+                                            *particles );
     }
 
     MPI_Finalize();
