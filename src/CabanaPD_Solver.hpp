@@ -101,8 +101,8 @@ class SolverElastic
     using integrator_type = Integrator<exec_space>;
     using force_model_type = ForceModel;
     using force_type = Force<exec_space, force_model_type>;
-    using comm_type =
-        Comm<particle_type, typename force_model_type::base_model>;
+    using comm_type = Comm<particle_type, typename force_model_type::base_model,
+                           typename force_model_type::thermal_type>;
     using neighbor_type =
         Cabana::VerletList<memory_space, Cabana::FullNeighborTag,
                            Cabana::VerletLayout2D, Cabana::TeamOpTag>;
@@ -139,6 +139,14 @@ class SolverElastic
         // Add ghosts from other MPI ranks.
         comm = std::make_shared<comm_type>( *particles );
 
+        // Update temperature ghost size if needed.
+        if constexpr ( std::is_same<typename force_model_type::thermal_type,
+                                    TemperatureDependent>::value )
+            force_model.update( particles->sliceTemperature() );
+
+        force =
+            std::make_shared<force_type>( inputs["half_neigh"], force_model );
+
         // Create the neighbor list.
         neighbor_timer.reset();
         double mesh_min[3] = { particles->ghost_mesh_lo[0],
@@ -163,9 +171,6 @@ class SolverElastic
                     MPI_MAX, 0, MPI_COMM_WORLD );
         MPI_Reduce( &total_local_neighbors, &total_neighbors, 1,
                     MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0, MPI_COMM_WORLD );
-
-        force =
-            std::make_shared<force_type>( inputs["half_neigh"], force_model );
 
         print = print_rank();
         if ( print )
@@ -197,6 +202,11 @@ class SolverElastic
     void init_force()
     {
         init_timer.reset();
+        // Communicate temperature.
+        if constexpr ( std::is_same<typename force_model_type::thermal_type,
+                                    TemperatureDependent>::value )
+            comm->gatherTemperature();
+
         // Compute/communicate LPS weighted volume (does nothing for PMB).
         force->computeWeightedVolume( *particles, *neighbors,
                                       neigh_iter_tag{} );
@@ -223,6 +233,10 @@ class SolverElastic
         // Main timestep loop.
         for ( int step = 1; step <= num_steps; step++ )
         {
+            if constexpr ( std::is_same<typename force_model_type::thermal_type,
+                                        TemperatureDependent>::value )
+                comm->gatherTemperature();
+
             // Integrate - velocity Verlet first half.
             integrate_timer.reset();
             integrator->initialHalfStep( *particles );
