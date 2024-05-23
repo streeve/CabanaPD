@@ -50,15 +50,19 @@ void powderFillExample( const std::string filename )
     // ====================================================
     //                 Particle generation
     // ====================================================
-    double global_mesh_ext = high_corner[0] - low_corner[0];
+    // double global_mesh_ext = high_corner[0] - low_corner[0];
+    double bottom = low_corner[2] + delta;
     auto create_functor = KOKKOS_LAMBDA( const int, const double px[3] )
     {
+        /*
         auto width = global_mesh_ext / 2.0;
-        auto inner_width = global_mesh_ext / 2.0;
+        auto inner_width = global_mesh_ext / 2.0 - delta / 2.0;
         auto r2 = px[0] * px[0] + px[1] * px[1];
         if ( r2 > width * width || r2 < inner_width * inner_width )
             return false;
-
+        */
+        if ( px[2] > bottom )
+            return false;
         return true;
     };
 
@@ -68,35 +72,30 @@ void powderFillExample( const std::string filename )
         CabanaPD::Particles<memory_space, typename model_type::base_model>>(
         exec_space(), inputs["low_corner"], inputs["high_corner"],
         inputs["num_cells"], halo_width, create_functor );
-    double dx = particles->dx[0];
-    double r_c = dx * 2.0;
 
     // Define particle initialization.
-    auto v = particles->sliceVelocity();
     auto rho = particles->sliceDensity();
-    auto init_functor = KOKKOS_LAMBDA( const int pid )
-    {
-        rho( pid ) = rho0;
-        for ( int d = 0; d < 3; d++ )
-            v( pid, d ) = 0.0;
-    };
+    auto init_functor = KOKKOS_LAMBDA( const int pid ) { rho( pid ) = rho0; };
     particles->updateParticles( exec_space{}, init_functor );
+    auto init_particles = particles->n_local;
 
     // ====================================================
     //                Boundary conditions
     // ====================================================
     auto f = particles->sliceForce();
     auto vol = particles->sliceVolume();
-    auto body_functor = KOKKOS_LAMBDA( const int pid )
+    auto body_functor = KOKKOS_LAMBDA( const int pid, const double )
     {
-        f( pid, 2 ) -= 9.8 * rho( pid ) * vol( pid );
+        // Need to leave the boundary particles alone.
+        if ( pid > init_particles )
+            f( pid, 2 ) -= 9.8 * rho( pid ) * vol( pid );
     };
     auto gravity = CabanaPD::createBodyTerm( body_functor );
 
     // ====================================================
     //                   Simulation run
     // ====================================================
-    CabanaPD::NormalRepulsionModel contact_model( delta, r_c, K );
+    CabanaPD::NormalRepulsionModel contact_model( delta, delta, K );
     auto cabana_pd = CabanaPD::createSolverContact<memory_space>(
         inputs, particles, force_model, gravity, contact_model );
     cabana_pd->init_force();

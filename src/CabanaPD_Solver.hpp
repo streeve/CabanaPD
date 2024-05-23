@@ -210,7 +210,7 @@ class SolverElastic
         computeEnergy( *force, *particles, *neighbors, neigh_iter_tag() );
 
         // Add boundary condition.
-        boundary_condition.apply( exec_space(), *particles );
+        boundary_condition.apply( exec_space(), *particles, 0.0 );
 
         particles->output( 0, 0.0, output_reference );
         init_time += init_timer.seconds();
@@ -249,7 +249,7 @@ class SolverElastic
             force_time += force_timer.seconds();
 
             // Add boundary condition.
-            boundary_condition.apply( exec_space(), *particles );
+            boundary_condition.apply( exec_space(), *particles, step * dt );
 
             // Integrate - velocity Verlet second half.
             integrate_timer.reset();
@@ -449,7 +449,7 @@ class SolverFracture : public SolverElastic<MemorySpace, InputType,
         computeEnergy( *force, *particles, *neighbors, mu, neigh_iter_tag() );
 
         // Add boundary condition.
-        boundary_condition.apply( exec_space(), *particles );
+        boundary_condition.apply( exec_space(), *particles, 0.0 );
 
         particles->output( 0, 0.0, output_reference );
         init_time += init_timer.seconds();
@@ -494,7 +494,7 @@ class SolverFracture : public SolverElastic<MemorySpace, InputType,
             force_time += force_timer.seconds();
 
             // Add boundary condition.
-            boundary_condition.apply( exec_space{}, *particles );
+            boundary_condition.apply( exec_space{}, *particles, step * dt );
 
             // Integrate - velocity Verlet second half.
             integrate_timer.reset();
@@ -636,10 +636,11 @@ class SolverContact
         // Main timestep loop
         for ( int step = 1; step <= num_steps; step++ )
         {
-            inject( Kokkos::Serial{}, { 0, 0, 0 }, *particles, 100,
-                    inputs["density"], inputs["horizon"] );
-            std::cout << particles->n_local << "\n";
-
+            if ( step % output_frequency == 0 )
+            {
+                particles->inject( Kokkos::Serial{}, { 0, 0, 0 }, 1,
+                                   inputs["density"], inputs["horizon"] );
+            }
             // Integrate - velocity Verlet first half
             integrate_timer.reset();
             integrator->initialHalfStep( *particles );
@@ -675,7 +676,7 @@ class SolverContact
             computeContact( *contact, *particles, neigh_iter_tag{} );
 
             // Add boundary condition - resetting boundary forces to zero.
-            boundary_condition.apply( exec_space{}, *particles, t );
+            boundary_condition.apply( exec_space{}, *particles, step * dt );
 
             // Integrate - velocity Verlet second half
             integrate_timer.reset();
@@ -689,8 +690,7 @@ class SolverContact
                                         neigh_iter_tag() );
 
                 this->step_output( step, W );
-                particles->output( step / output_frequency,
-                                   step * inputs->timestep );
+                particles->output( step / output_frequency, step * dt );
             }
         }
 
@@ -698,6 +698,7 @@ class SolverContact
         this->final_output();
     }
 
+    using base_type::dt;
     using base_type::num_steps;
     using base_type::output_frequency;
 

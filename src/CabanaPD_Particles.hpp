@@ -295,6 +295,59 @@ class Particles<MemorySpace, PMB, Dimension>
                     MPI_COMM_WORLD );
     }
 
+    template <typename ExecutionSpace>
+    void inject( ExecutionSpace, const Kokkos::Array<double, 3> injection_point,
+                 const int num_sample, const double rho0, const double radius )
+    {
+        std::size_t previous_size = n_local;
+        resize( previous_size + num_sample, 0 );
+        // FIXME: this breaks fixed ghost list.
+        Kokkos::RangePolicy<ExecutionSpace> policy( previous_size, n_local );
+
+        const int seed = 123456;
+        Kokkos::Random_XorShift64_Pool<ExecutionSpace> pool( seed );
+        pool.init( seed, num_sample * 3 );
+
+        auto x = sliceReferencePosition();
+        auto u = sliceDisplacement();
+        auto y = sliceCurrentPosition();
+        auto f = sliceForce();
+        auto vol = sliceVolume();
+        auto v = sliceVelocity();
+        auto rho = sliceDensity();
+        auto type = sliceType();
+        auto nofail = sliceNoFail();
+        auto create_functor = KOKKOS_LAMBDA( const int pid )
+        {
+            // Set the particle position.
+            for ( int d = 0; d < 3; d++ )
+            {
+                const double min = injection_point[d] - radius * 3;
+                const double max = injection_point[d] + radius * 3;
+                auto gen = pool.get_state();
+                auto rand =
+                    Kokkos::rand<Kokkos::Random_XorShift64<ExecutionSpace>,
+                                 double>::draw( gen, min, max );
+                pool.free_state( gen );
+                x( pid, d ) = rand;
+                u( pid, d ) = 0.0;
+                y( pid, d ) = 0.0;
+                v( pid, d ) = 0.0;
+                f( pid, d ) = 0.0;
+            }
+            // Get the volume of the particle.
+            vol( pid ) = 4 / 3 * Kokkos::numbers::pi_v<double> * radius *
+                         radius * radius;
+
+            // FIXME: hardcoded.
+            type( pid ) = 0;
+            nofail( pid ) = 0;
+            rho( pid ) = rho0;
+        };
+        Kokkos::parallel_for( "CabanaPD::Particle::inject", policy,
+                              create_functor );
+    }
+
     template <class ExecSpace, class FunctorType>
     void updateParticles( const ExecSpace, const FunctorType init_functor )
     {
@@ -605,50 +658,6 @@ class Particles<MemorySpace, LPS, Dimension>
     using base_type::h5_config;
 #endif
 };
-
-template <typename ExecutionSpace, typename ParticleType>
-void inject( ExecutionSpace, const Kokkos::Array<double, 3> injection_point,
-             ParticleType particles, const int num_sample, const double rho0,
-             const double radius )
-{
-    std::size_t previous_size = particles.n_local;
-    particles.resize( num_sample );
-    // FIXME: this breaks fixed ghost list.
-    Kokkos::RangePolicy<ExecutionSpace> policy( previous_size,
-                                                particles.n_local );
-
-    auto x = particles.sliceReferencePosition();
-    auto u = particles.sliceDisplacement();
-    auto y = particles.sliceCurrentPosition();
-    auto f = particles.sliceForce();
-    auto vol = particles.sliceVolume();
-    auto v = particles.sliceVelocity();
-    auto rho = particles.sliceDensity();
-    auto type = particles.sliceType();
-    auto nofail = particles.sliceNoFail();
-    auto create_functor = KOKKOS_LAMBDA( const int pid )
-    {
-        // Set the particle position.
-        for ( int d = 0; d < 3; d++ )
-        {
-            x( pid, d ) = injection_point[d];
-            u( pid, d ) = 0.0;
-            y( pid, d ) = 0.0;
-            v( pid, d ) = 0.0;
-            f( pid, d ) = 0.0;
-        }
-        // Get the volume of the cell.
-        vol( pid ) =
-            4 / 3 * Kokkos::numbers::pi_v<double> * radius * radius * radius;
-
-        // FIXME: hardcoded.
-        type( pid ) = 0;
-        nofail( pid ) = 0;
-        rho( pid ) = rho0;
-    };
-    Kokkos::parallel_for( "CabanaPD::Particle::inject", policy,
-                          create_functor );
-}
 
 } // namespace CabanaPD
 
