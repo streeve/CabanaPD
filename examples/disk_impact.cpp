@@ -8,15 +8,18 @@
 
 #include <CabanaPD.hpp>
 
-int main( int argc, char* argv[] )
+int diskImpactExample( const std::string filename )
 {
-    MPI_Init( &argc, &argv );
-
-    Kokkos::initialize( argc, argv );
-
-    // FIXME: change backend at compile time for now.
+    // ====================================================
+    //             Use default Kokkos spaces
+    // ====================================================
     using exec_space = Kokkos::DefaultExecutionSpace;
     using memory_space = typename exec_space::memory_space;
+
+    // ====================================================
+    //                   Read inputs
+    // ====================================================
+    CabanaPD::Inputs inputs( filename );
 
     // Plate dimension)
     double radius = 37.0e-3;   // [m]
@@ -47,20 +50,14 @@ int main( int argc, char* argv[] )
     // Choose force model type.
     using model_type = CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Fracture>;
     model_type force_model( delta, K, G0 );
-    CabanaPD::Inputs<3> inputs( num_cell, low_corner, high_corner, t_final, dt,
-                                output_frequency, output_reference );
-    inputs.read_args( argc, argv );
 
     auto create_functor = KOKKOS_LAMBDA( const int pid )
     {
-        if ( build_cylinder )
-        {
-            auto width = global_mesh_ext[0] / 2.0;
-            auto r2 =
-                cell_coord[0] * cell_coord[0] + cell_coord[1] * cell_coord[1];
-            if ( r2 > width * width )
-                return false;
-        }
+        auto width = global_mesh_ext[0] / 2.0;
+        auto r2 = cell_coord[0] * cell_coord[0] + cell_coord[1] * cell_coord[1];
+        if ( r2 > width * width )
+            return false;
+
         return true;
     };
 
@@ -98,6 +95,15 @@ int main( int argc, char* argv[] )
         inputs, particles, force_model, bc, prenotch, contact_model );
     cabana_pd->init_force();
     cabana_pd->run();
+}
+
+// Initialize MPI+Kokkos.
+int main( int argc, char* argv[] )
+{
+    MPI_Init( &argc, &argv );
+    Kokkos::initialize( argc, argv );
+
+    diskImpactExample( argv[1] );
 
     Kokkos::finalize();
     MPI_Finalize();

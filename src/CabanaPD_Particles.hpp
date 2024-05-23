@@ -157,14 +157,13 @@ class Particles<MemorySpace, PMB, Dimension>
     template <class ExecSpace>
     Particles( const ExecSpace& exec_space, std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
-               const std::array<int, dim> num_cells, const int max_halo_width,
-               const bool build_cylinder = false )
+               const std::array<int, dim> num_cells, const int max_halo_width )
         : halo_width( max_halo_width )
         , _plist_x( "positions" )
         , _plist_f( "forces" )
     {
         createDomain( low_corner, high_corner, num_cells );
-        createParticles( exec_space, build_cylinder );
+        createParticles( exec_space );
     }
 
     // Constructor which initializes particles on regular grid with
@@ -606,6 +605,50 @@ class Particles<MemorySpace, LPS, Dimension>
     using base_type::h5_config;
 #endif
 };
+
+template <typename ExecutionSpace, typename ParticleType>
+void inject( ExecutionSpace, const Kokkos::Array<double, 3> injection_point,
+             ParticleType particles, const int num_sample, const double rho0,
+             const double radius )
+{
+    std::size_t previous_size = particles.n_local;
+    particles.resize( num_sample );
+    // FIXME: this breaks fixed ghost list.
+    Kokkos::RangePolicy<ExecutionSpace> policy( previous_size,
+                                                particles.n_local );
+
+    auto x = particles.sliceReferencePosition();
+    auto u = particles.sliceDisplacement();
+    auto y = particles.sliceCurrentPosition();
+    auto f = particles.sliceForce();
+    auto vol = particles.sliceVolume();
+    auto v = particles.sliceVelocity();
+    auto rho = particles.sliceDensity();
+    auto type = particles.sliceType();
+    auto nofail = particles.sliceNoFail();
+    auto create_functor = KOKKOS_LAMBDA( const int pid )
+    {
+        // Set the particle position.
+        for ( int d = 0; d < 3; d++ )
+        {
+            x( pid, d ) = injection_point[d];
+            u( pid, d ) = 0.0;
+            y( pid, d ) = 0.0;
+            v( pid, d ) = 0.0;
+            f( pid, d ) = 0.0;
+        }
+        // Get the volume of the cell.
+        vol( pid ) =
+            4 / 3 * Kokkos::numbers::pi_v<double> * radius * radius * radius;
+
+        // FIXME: hardcoded.
+        type( pid ) = 0;
+        nofail( pid ) = 0;
+        rho( pid ) = rho0;
+    };
+    Kokkos::parallel_for( "CabanaPD::Particle::inject", policy,
+                          create_functor );
+}
 
 } // namespace CabanaPD
 
