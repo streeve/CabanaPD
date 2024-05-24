@@ -200,10 +200,6 @@ class SolverElastic
     void init()
     {
         init_timer.reset();
-        // Communicate temperature.
-        if constexpr ( std::is_same<typename force_model_type::thermal_type,
-                                    TemperatureDependent>::value )
-            comm->gatherTemperature();
 
         // Compute/communicate LPS weighted volume (does nothing for PMB).
         force->computeWeightedVolume( *particles, *neighbors,
@@ -218,7 +214,11 @@ class SolverElastic
         computeEnergy( *force, *particles, *neighbors, neigh_iter_tag() );
 
         // Add boundary condition.
-        boundary_condition.apply( exec_space(), *particles, 0.0 );
+        // boundary_condition.apply( exec_space(), *particles, 0.0 );
+        // Communicate temperature.
+        if constexpr ( std::is_same<typename force_model_type::thermal_type,
+                                    TemperatureDependent>::value )
+            comm->gatherTemperature();
 
         particles->output( 0, 0.0, output_reference );
         init_time += init_timer.seconds();
@@ -232,10 +232,6 @@ class SolverElastic
         // Main timestep loop.
         for ( int step = 1; step <= num_steps; step++ )
         {
-            if constexpr ( std::is_same<typename force_model_type::thermal_type,
-                                        TemperatureDependent>::value )
-                comm->gatherTemperature();
-
             // Integrate - velocity Verlet first half.
             integrate_timer.reset();
             integrator->initialHalfStep( *particles );
@@ -263,6 +259,10 @@ class SolverElastic
 
             // Add boundary condition.
             boundary_condition.apply( exec_space(), *particles, step * dt );
+
+            if constexpr ( std::is_same<typename force_model_type::thermal_type,
+                                        TemperatureDependent>::value )
+                comm->gatherTemperature();
 
             // Integrate - velocity Verlet second half.
             integrate_timer.reset();
