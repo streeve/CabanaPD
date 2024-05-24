@@ -90,7 +90,7 @@ class SolverBase
 };
 
 template <class MemorySpace, class InputType, class ParticleType,
-          class ForceModel, class BoundaryCondition>
+          class ForceModel>
 class SolverElastic
 {
   public:
@@ -108,14 +108,12 @@ class SolverElastic
                            Cabana::VerletLayout2D, Cabana::TeamOpTag>;
     using neigh_iter_tag = Cabana::SerialOpTag;
     using input_type = InputType;
-    using bc_type = BoundaryCondition;
 
     SolverElastic( input_type _inputs,
                    std::shared_ptr<particle_type> _particles,
-                   force_model_type force_model, bc_type bc )
+                   force_model_type force_model )
         : inputs( _inputs )
         , particles( _particles )
-        , boundary_condition( bc )
     {
         neighbor_time = 0;
         force_time = 0;
@@ -199,7 +197,7 @@ class SolverElastic
         init_time += init_timer.seconds();
     }
 
-    void init_force()
+    void init()
     {
         init_timer.reset();
         // Communicate temperature.
@@ -226,7 +224,8 @@ class SolverElastic
         init_time += init_timer.seconds();
     }
 
-    void run()
+    template <typename BoundaryType>
+    void run( BoundaryType boundary_condition )
     {
         init_output();
 
@@ -360,7 +359,6 @@ class SolverElastic
     std::shared_ptr<integrator_type> integrator;
     std::shared_ptr<force_type> force;
     std::shared_ptr<neighbor_type> neighbors;
-    bc_type boundary_condition;
 
     std::string output_file;
     std::string error_file;
@@ -386,14 +384,13 @@ class SolverElastic
 };
 
 template <class MemorySpace, class InputType, class ParticleType,
-          class ForceModel, class BoundaryCondition, class PrenotchType>
+          class ForceModel, class PrenotchType>
 class SolverFracture
-    : public SolverElastic<MemorySpace, InputType, ParticleType, ForceModel,
-                           BoundaryCondition>
+    : public SolverElastic<MemorySpace, InputType, ParticleType, ForceModel>
 {
   public:
-    using base_type = SolverElastic<MemorySpace, InputType, ParticleType,
-                                    ForceModel, BoundaryCondition>;
+    using base_type =
+        SolverElastic<MemorySpace, InputType, ParticleType, ForceModel>;
     using exec_space = typename base_type::exec_space;
     using memory_space = typename base_type::memory_space;
 
@@ -404,15 +401,13 @@ class SolverFracture
     using force_model_type = ForceModel;
     using force_type = typename base_type::force_type;
     using neigh_iter_tag = Cabana::SerialOpTag;
-    using bc_type = BoundaryCondition;
     using prenotch_type = PrenotchType;
     using input_type = typename base_type::input_type;
 
     SolverFracture( input_type _inputs,
                     std::shared_ptr<particle_type> _particles,
-                    force_model_type force_model, bc_type bc,
-                    prenotch_type prenotch )
-        : base_type( _inputs, _particles, force_model, bc )
+                    force_model_type force_model, prenotch_type prenotch )
+        : base_type( _inputs, _particles, force_model )
     {
         init_timer.reset();
 
@@ -426,8 +421,8 @@ class SolverFracture
 
     SolverFracture( input_type _inputs,
                     std::shared_ptr<particle_type> _particles,
-                    force_model_type force_model, bc_type bc )
-        : base_type( _inputs, _particles, force_model, bc )
+                    force_model_type force_model )
+        : base_type( _inputs, _particles, force_model )
     {
         init_timer.reset();
 
@@ -447,7 +442,7 @@ class SolverFracture
         Kokkos::deep_copy( mu, 1 );
     }
 
-    void init_force()
+    void init()
     {
         init_timer.reset();
         // Compute/communicate weighted volume for LPS (does nothing for PMB).
@@ -461,14 +456,12 @@ class SolverFracture
         computeForce( *force, *particles, *neighbors, mu, neigh_iter_tag{} );
         computeEnergy( *force, *particles, *neighbors, mu, neigh_iter_tag() );
 
-        // Add boundary condition.
-        boundary_condition.apply( exec_space(), *particles, 0 );
-
         particles->output( 0, 0.0, output_reference );
         init_time += init_timer.seconds();
     }
 
-    void run()
+    template <typename BoundaryType>
+    void run( BoundaryType boundary_condition )
     {
         this->init_output();
 
@@ -540,7 +533,6 @@ class SolverFracture
     using base_type::output_reference;
 
   protected:
-    using base_type::boundary_condition;
     using base_type::comm;
     using base_type::force;
     using base_type::inputs;
@@ -571,26 +563,25 @@ class SolverFracture
 };
 
 template <class MemorySpace, class InputsType, class ParticleType,
-          class ForceModel, class BCType>
+          class ForceModel>
 auto createSolverElastic( InputsType inputs,
                           std::shared_ptr<ParticleType> particles,
-                          ForceModel model, BCType bc )
+                          ForceModel model )
 {
-    return std::make_shared<SolverElastic<MemorySpace, InputsType, ParticleType,
-                                          ForceModel, BCType>>(
-        inputs, particles, model, bc );
+    return std::make_shared<
+        SolverElastic<MemorySpace, InputsType, ParticleType, ForceModel>>(
+        inputs, particles, model );
 }
 
 template <class MemorySpace, class InputsType, class ParticleType,
-          class ForceModel, class BCType, class PrenotchType>
+          class ForceModel, class PrenotchType>
 auto createSolverFracture( InputsType inputs,
                            std::shared_ptr<ParticleType> particles,
-                           ForceModel model, BCType bc, PrenotchType prenotch )
+                           ForceModel model, PrenotchType prenotch )
 {
-    return std::make_shared<
-        SolverFracture<MemorySpace, InputsType, ParticleType, ForceModel,
-                       BCType, PrenotchType>>( inputs, particles, model, bc,
-                                               prenotch );
+    return std::make_shared<SolverFracture<
+        MemorySpace, InputsType, ParticleType, ForceModel, PrenotchType>>(
+        inputs, particles, model, prenotch );
 }
 
 } // namespace CabanaPD
