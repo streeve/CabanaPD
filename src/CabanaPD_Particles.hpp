@@ -533,8 +533,8 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, Dimension>
     void createParticles( const ExecSpace& exec_space )
     {
         base_type::createParticles( exec_space );
-        _aosoa_m.resize( 0 );
-        _aosoa_theta.resize( 0 );
+        _aosoa_m.resize( n_local );
+        _aosoa_theta.resize( n_local );
     }
 
     auto sliceDilatation()
@@ -627,8 +627,6 @@ class Particles<MemorySpace, PMB, TemperatureDependent, Dimension>
     using base_type::n_local;
     using base_type::size;
 
-    // These are split since weighted volume only needs to be communicated once
-    // and dilatation only needs to be communicated for LPS.
     using scalar_type = typename base_type::scalar_type;
     using aosoa_temp_type = Cabana::AoSoA<scalar_type, memory_space, 1>;
 
@@ -673,7 +671,7 @@ class Particles<MemorySpace, PMB, TemperatureDependent, Dimension>
     void createParticles( const ExecSpace& exec_space )
     {
         base_type::createParticles( exec_space );
-        _aosoa_temp.resize( 0 );
+        _aosoa_temp.resize( n_local );
     }
 
     auto sliceTemperature()
@@ -689,6 +687,19 @@ class Particles<MemorySpace, PMB, TemperatureDependent, Dimension>
     {
         base_type::resize( new_local, new_ghost );
         _aosoa_temp.resize( new_local + new_ghost );
+    }
+
+    double getSum()
+    {
+        double total_temp;
+        auto temp = sliceTemperature();
+        Kokkos::RangePolicy<typename memory_space::execution_space> policy(
+            0, n_local );
+        Kokkos::parallel_reduce(
+            "CabanaPD::temp", policy,
+            KOKKOS_LAMBDA( const int p, double& t ) { t += temp( p ); },
+            total_temp );
+        return total_temp;
     }
 
     void output( [[maybe_unused]] const int output_step,
