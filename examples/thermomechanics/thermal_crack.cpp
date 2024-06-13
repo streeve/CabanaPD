@@ -45,6 +45,8 @@ void thermalDeformationExample( const std::string filename )
 
     // Problem parameters
     double temp0 = inputs["reference_temperature"];
+    double temp_w = inputs["water_temperature"];
+    double t_ramp = inputs["pulse_ramping_time"];
 
     // ====================================================
     //                  Discretization
@@ -102,8 +104,51 @@ void thermalDeformationExample( const std::string filename )
     // particles are correctly taken into account for lambda capture here.
     auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
     {
-        // Need to modify this for a tehrmal shock
-        temp( pid ) = temp0 + 5000.0 * ( x( pid, 1 ) - low_corner_y ) * t;
+        // --------------------------------------------
+        //                Thermal shock
+        // --------------------------------------------
+        // Define a time-dependent surface temperature:
+        // An inverted triangular pulse over a 2*t_ramp period
+        // starting at temp0 and linearly decreasing to temp_w within t_ramp,
+        // then linearly increasing back to temp0, and finally staying constant
+        // at temp0
+        if ( t <= t_ramp )
+        {
+            // Increasing pulse
+            double temp_infty = temp0 - ( temp0 - temp_w ) * ( t / t_ramp );
+        }
+        else if ( t < 2 * t_ramp )
+        {
+            // Decreasing pulse
+            double temp_infty =
+                temp_w + ( temp0 - temp_w ) * ( t - t_ramp ) / t_ramp;
+        }
+        else
+        {
+            // Constant value
+            double temp_infty = temp0;
+        };
+
+        // Plate limits
+        double X0 = low_corner[0];
+        double Xn = high_corner[0];
+        double Y0 = low_corner[1];
+        double Yn = high_corner[1];
+
+        // Rescale x and y particle position values
+        double xi = ( 2 * x( pid, 0 ) - ( X0 + Xn ) ) / ( Xn - X0 );
+        double eta = ( 2 * x( pid, 1 ) - ( Y0 + Yn ) ) / ( Yn - Y0 );
+
+        // Define profile powers in x- and y-directions
+        double sx = 1 / 50;
+        double sy = 1 / 10;
+
+        // Define profiles in x- and y-direcions
+        double fx = 1.0 - std::pow( std::abs( xi ), 1 / sx );
+        double fy = 1.0 - std::pow( std::abs( eta ), 1 / sy );
+
+        // Compute particle temperature
+        temp( pid ) = temp_infty + ( temp0 - temp_infty ) * fx * fy;
     };
     auto body_term = CabanaPD::createBodyTerm( temp_func, false );
 
