@@ -19,7 +19,7 @@
 #include <CabanaPD.hpp>
 
 // Simulate crack initiation and propagation in a quenched ceramic plate.
-void thermalDeformationExample( const std::string filename )
+void thermalCrackExample( const std::string filename )
 {
     // ====================================================
     //             Use default Kokkos spaces
