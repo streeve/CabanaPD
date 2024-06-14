@@ -188,13 +188,13 @@ auto createForceModel( PMB, Elastic, ParticleType particles, const double delta,
 template <typename TemperatureType>
 struct ForceModel<PMB, Fracture, TemperatureDependent, TemperatureType>
     : public ForceModel<PMB, Fracture, TemperatureIndependent>,
-      ForceModel<PMB, Elastic, TemperatureDependent, TemperatureType>
+      BaseTemperatureModel<TemperatureType>
 {
     using base_type = ForceModel<PMB, Fracture, TemperatureIndependent>;
     using base_temperature_type = BaseTemperatureModel<TemperatureType>;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
-    using thermal_type = typename base_temperature_type::thermal_type;
+    using thermal_type = TemperatureDependent;
 
     using base_type::c;
     using base_type::delta;
@@ -219,7 +219,7 @@ struct ForceModel<PMB, Fracture, TemperatureDependent, TemperatureType>
         : base_type( _delta, _K, _G0 )
         , base_temperature_type( _temp, _alpha, _temp0 )
     {
-        set_param( _delta, _K, _alpha, _temp0 );
+        set_param( _delta, _K, _G0, _alpha, _temp0 );
     }
 
     void set_param( const double _delta, const double _K, const double _G0,
