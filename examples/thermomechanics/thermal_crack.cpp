@@ -140,8 +140,8 @@ void thermalCrackExample( const std::string filename )
         double sy = 1 / 10;
 
         // Define profiles in x- and y-direcions
-        double fx = 1.0 - std::pow( std::abs( xi ), 1 / sx );
-        double fy = 1.0 - std::pow( std::abs( eta ), 1 / sy );
+        double fx = 1.0 - Kokkos::pow( Kokkos::abs( xi ), 1 / sx );
+        double fy = 1.0 - Kokkos::pow( Kokkos::abs( eta ), 1 / sy );
 
         // Compute particle temperature
         temp( pid ) = temp_infinity + ( temp0 - temp_infinity ) * fx * fy;
@@ -161,7 +161,7 @@ int main( int argc, char* argv[] )
     MPI_Init( &argc, &argv );
     Kokkos::initialize( argc, argv );
 
-    thermalDeformationExample( argv[1] );
+    thermalCrackExample( argv[1] );
 
     Kokkos::finalize();
     MPI_Finalize();
