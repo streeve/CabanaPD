@@ -175,14 +175,13 @@ struct ForceModel<PMB, Elastic, TemperatureDependent, TemperatureType>
     }
 };
 
-template <typename ModelType, typename DamageType, typename ThermalType,
-          typename ParticleType>
-auto createForceModel( ParticleType particles, const double delta,
+template <typename ParticleType>
+auto createForceModel( PMB, Elastic, ParticleType particles, const double delta,
                        const double K, const double alpha, const double temp0 )
 {
     auto temp = particles.sliceTemperature();
     using temp_type = decltype( temp );
-    return ForceModel<ModelType, DamageType, ThermalType, temp_type>(
+    return ForceModel<PMB, Elastic, TemperatureDependent, temp_type>(
         delta, K, temp, alpha, temp0 );
 }
 
@@ -241,15 +240,14 @@ struct ForceModel<PMB, Fracture, TemperatureDependent, TemperatureType>
     }
 };
 
-template <typename ModelType, typename DamageType, typename ThermalType,
-          typename ParticleType>
-auto createForceModel( ParticleType particles, const double delta,
-                       const double K, const double G0, const double alpha,
-                       const double temp0 )
+template <typename ParticleType>
+auto createForceModel( PMB, Fracture, ParticleType particles,
+                       const double delta, const double K, const double G0,
+                       const double alpha, const double temp0 )
 {
     auto temp = particles.sliceTemperature();
     using temp_type = decltype( temp );
-    return ForceModel<ModelType, DamageType, ThermalType, temp_type>(
+    return ForceModel<PMB, Fracture, TemperatureDependent, temp_type>(
         delta, K, G0, temp, alpha, temp0 );
 }
 

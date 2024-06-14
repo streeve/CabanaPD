@@ -40,6 +40,7 @@ void thermalDeformationExample( const std::string filename )
     double E = inputs["elastic_modulus"];
     double nu = 0.25;
     double K = E / ( 3 * ( 1 - 2 * nu ) );
+    double G0 = inputs["fracture_energy"];
     double delta = inputs["horizon"];
     double alpha = inputs["thermal_coefficient"];
 
@@ -84,9 +85,8 @@ void thermalDeformationExample( const std::string filename )
     //                    Force model
     // ====================================================
     auto force_model =
-        CabanaPD::createForceModel<model_type, CabanaPD::Fracture,
-                                   thermal_type>( *particles, delta, K, alpha,
-                                                  temp0 );
+        CabanaPD::createForceModel( model_type{}, CabanaPD::Fracture{},
+                                    *particles, delta, K, G0, alpha, temp0 );
 
     // ====================================================
     //                   Create solver
@@ -94,46 +94,42 @@ void thermalDeformationExample( const std::string filename )
     auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
         inputs, particles, force_model );
 
-    // ====================================================
-    //                   Imposed field
-    // ====================================================
+    // --------------------------------------------
+    //                Thermal shock
+    // --------------------------------------------
     auto x = particles->sliceReferencePosition();
     auto temp = particles->sliceTemperature();
-    const double low_corner_y = low_corner[1];
+
+    // Plate limits
+    double X0 = low_corner[0];
+    double Xn = high_corner[0];
+    double Y0 = low_corner[1];
+    double Yn = high_corner[1];
     // This is purposely delayed until after solver init so that ghosted
     // particles are correctly taken into account for lambda capture here.
     auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
     {
-        // --------------------------------------------
-        //                Thermal shock
-        // --------------------------------------------
         // Define a time-dependent surface temperature:
-        // An inverted triangular pulse over a 2*t_ramp period
-        // starting at temp0 and linearly decreasing to temp_w within t_ramp,
-        // then linearly increasing back to temp0, and finally staying constant
-        // at temp0
+        // An inverted triangular pulse over a 2*t_ramp period starting at temp0
+        // and linearly decreasing to temp_w within t_ramp, then linearly
+        // increasing back to temp0, and finally staying constant at temp0
+        double temp_infinity;
         if ( t <= t_ramp )
         {
             // Increasing pulse
-            double temp_infty = temp0 - ( temp0 - temp_w ) * ( t / t_ramp );
+            temp_infinity = temp0 - ( temp0 - temp_w ) * ( t / t_ramp );
         }
         else if ( t < 2 * t_ramp )
         {
             // Decreasing pulse
-            double temp_infty =
+            temp_infinity =
                 temp_w + ( temp0 - temp_w ) * ( t - t_ramp ) / t_ramp;
         }
         else
         {
             // Constant value
-            double temp_infty = temp0;
-        };
-
-        // Plate limits
-        double X0 = low_corner[0];
-        double Xn = high_corner[0];
-        double Y0 = low_corner[1];
-        double Yn = high_corner[1];
+            temp_infinity = temp0;
+        }
 
         // Rescale x and y particle position values
         double xi = ( 2 * x( pid, 0 ) - ( X0 + Xn ) ) / ( Xn - X0 );
@@ -148,7 +144,7 @@ void thermalDeformationExample( const std::string filename )
         double fy = 1.0 - std::pow( std::abs( eta ), 1 / sy );
 
         // Compute particle temperature
-        temp( pid ) = temp_infty + ( temp0 - temp_infty ) * fx * fy;
+        temp( pid ) = temp_infinity + ( temp0 - temp_infinity ) * fx * fy;
     };
     auto body_term = CabanaPD::createBodyTerm( temp_func, false );
 
@@ -157,17 +153,6 @@ void thermalDeformationExample( const std::string filename )
     // ====================================================
     cabana_pd->init( body_term );
     cabana_pd->run( body_term );
-
-    // ====================================================
-    //                      Outputs
-    // ====================================================
-    // Output displacement along the x-axis
-    // createDisplacementProfile( MPI_COMM_WORLD, num_cells[0], 0,
-    //                           "xdisplacement_profile.txt", *particles );
-
-    // Output displacement along the y-axis
-    // createDisplacementProfile( MPI_COMM_WORLD, num_cells[1], 1,
-    //                           "ydisplacement_profile.txt", *particles );
 }
 
 // Initialize MPI+Kokkos.
