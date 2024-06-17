@@ -778,6 +778,32 @@ class Particles<MemorySpace, PMB, TemperatureDependent, Dimension>
 #endif
 };
 
+template <class MemorySpace, class ForceModelType, class ExecutionSpace,
+          std::size_t Dimension = 3>
+auto createParticles( ExecutionSpace exec_space,
+                      std::array<double, Dimension> low_corner,
+                      std::array<double, Dimension> high_corner,
+                      const std::array<int, Dimension> num_cells,
+                      const int max_halo_width )
+{
+    return std::make_shared<
+        Particles<MemorySpace, typename ForceModelType::base_model,
+                  typename ForceModelType::thermal_type>>(
+        exec_space, low_corner, high_corner, num_cells, max_halo_width );
+}
+
+template <class MemorySpace, class ForceType, class ThermalType,
+          class ExecutionSpace, std::size_t Dimension = 3>
+auto createParticles( ExecutionSpace exec_space,
+                      std::array<double, Dimension> low_corner,
+                      std::array<double, Dimension> high_corner,
+                      const std::array<int, Dimension> num_cells,
+                      const int max_halo_width )
+{
+    return std::make_shared<Particles<MemorySpace, ForceType, ThermalType>>(
+        exec_space, low_corner, high_corner, num_cells, max_halo_width );
+}
+
 } // namespace CabanaPD
 
 #endif

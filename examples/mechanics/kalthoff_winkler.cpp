@@ -88,10 +88,8 @@ void kalthoffWinklerExample( const std::string filename )
     //                 Particle generation
     // ====================================================
     // Does not set displacements, velocities, etc.
-    auto particles = std::make_shared<
-        CabanaPD::Particles<memory_space, typename model_type::base_model,
-                            typename model_type::thermal_type>>(
-        exec_space(), low_corner, high_corner, num_cells, halo_width );
+    auto particles = CabanaPD::createParticles<memory_space, model_type>(
+        exec_space{}, low_corner, high_corner, num_cells, halo_width );
 
     // ====================================================
     //                Boundary conditions
