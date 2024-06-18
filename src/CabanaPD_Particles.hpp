@@ -88,6 +88,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
   public:
     using self_type =
         Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>;
+    using thermal_type = TemperatureIndependent;
     using memory_space = MemorySpace;
     using execution_space = typename memory_space::execution_space;
     static constexpr int dim = Dimension;
@@ -502,6 +503,7 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, Dimension>
         Particles<MemorySpace, LPS, TemperatureIndependent, Dimension>;
     using base_type =
         Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>;
+    using thermal_type = TemperatureIndependent;
     using memory_space = typename base_type::memory_space;
     using base_type::dim;
 
@@ -662,6 +664,7 @@ class Particles<MemorySpace, PMB, TemperatureDependent, Dimension>
         Particles<MemorySpace, PMB, TemperatureDependent, Dimension>;
     using base_type =
         Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>;
+    using thermal_type = TemperatureDependent;
     using memory_space = typename base_type::memory_space;
     using base_type::dim;
 
@@ -728,6 +731,14 @@ class Particles<MemorySpace, PMB, TemperatureDependent, Dimension>
     auto sliceTemperature() const
     {
         return Cabana::slice<0>( _aosoa_temp, "temperature" );
+    }
+    auto sliceTemperatureAtomic()
+    {
+        auto temp = sliceTemperature();
+        using slice_type = decltype( temp );
+        using atomic_type = typename slice_type::atomic_access_slice;
+        atomic_type temp_a = temp;
+        return temp_a;
     }
 
     void resize( int new_local, int new_ghost )
@@ -814,18 +825,20 @@ auto createParticles( const ExecSpace& exec_space,
 
 template <typename MemorySpace, typename ModelType, typename ThermalType,
           typename ExecSpace, std::size_t Dim>
-auto createParticles( const ExecSpace& exec_space,
-                      std::array<double, Dim> low_corner,
-                      std::array<double, Dim> high_corner,
-                      const std::array<int, Dim> num_cells,
-                      const int max_halo_width,
-                      typename std::enable_if<
-                          (std::is_same_v<ThermalType, TemperatureDependent> ||
-                           std::is_same_v<ThermalType, TemperatureIndependent>),
-                          int>::type* = 0 )
+auto createParticles(
+    const ExecSpace& exec_space, std::array<double, Dim> low_corner,
+    std::array<double, Dim> high_corner, const std::array<int, Dim> num_cells,
+    const int max_halo_width,
+    typename std::enable_if<
+        (std::is_same_v<ThermalType, TemperatureIndependent> ||
+         std::is_same_v<ThermalType, TemperatureDependent> ||
+         std::is_same_v<ThermalType, DynamicTemperature>),
+        int>::type* = 0 )
 {
-    return std::make_shared<
-        CabanaPD::Particles<MemorySpace, ModelType, ThermalType>>(
+    // No current particle extension for heat transfer (just uses the
+    // temperature dependent version).
+    return std::make_shared<CabanaPD::Particles<
+        MemorySpace, ModelType, typename ThermalType::base_type>>(
         exec_space, low_corner, high_corner, num_cells, max_halo_width );
 }
 

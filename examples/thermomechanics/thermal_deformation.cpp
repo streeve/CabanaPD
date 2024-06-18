@@ -61,7 +61,7 @@ void thermalDeformationExample( const std::string filename )
     //                Force model type
     // ====================================================
     using model_type = CabanaPD::PMB;
-    using thermal_type = CabanaPD::TemperatureDependent;
+    using thermal_type = CabanaPD::DynamicTemperature;
 
     // ====================================================
     //                 Particle generation
@@ -81,8 +81,11 @@ void thermalDeformationExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
+    const double kappa = 1.0;
+    const double cp = 1.0;
     auto force_model = CabanaPD::createForceModel(
-        model_type{}, CabanaPD::Elastic{}, *particles, delta, K, alpha, temp0 );
+        model_type{}, CabanaPD::Elastic{}, *particles, delta, K, kappa, cp,
+        alpha, temp0 );
 
     // ====================================================
     //                   Create solver

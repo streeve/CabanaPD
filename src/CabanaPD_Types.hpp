@@ -14,19 +14,29 @@
 
 namespace CabanaPD
 {
+// Fracture types.
 struct Elastic
 {
 };
 struct Fracture
 {
 };
+
+// Thermal types.
 struct TemperatureDependent
 {
+    using base_type = TemperatureDependent;
 };
 struct TemperatureIndependent
 {
+    using base_type = TemperatureIndependent;
+};
+struct DynamicTemperature : public TemperatureDependent
+{
+    using base_type = TemperatureDependent;
 };
 
+// Model types.
 struct PMB
 {
 };
