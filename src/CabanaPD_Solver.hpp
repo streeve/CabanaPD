@@ -631,15 +631,17 @@ class SolverContact
 
     void run()
     {
+        int init_particles = particles->n_local;
         this->init_output();
 
         // Main timestep loop
         for ( int step = 1; step <= num_steps; step++ )
         {
-            if ( step % output_frequency == 0 )
+            if ( step % 1000 == 0 || step == 1 )
             {
-                particles->inject( Kokkos::Serial{}, { 0, 0, 0 }, 1,
-                                   inputs["density"], inputs["horizon"] );
+                const int seed = 12345 + step;
+                particles->inject( Kokkos::Serial{}, { 0, 0, 0 }, 10,
+                                   inputs["density"], inputs["horizon"], seed );
             }
             // Integrate - velocity Verlet first half
             integrate_timer.reset();
@@ -672,11 +674,31 @@ class SolverContact
                           neigh_iter_tag{} );
             force_time += force_timer.seconds();
 
+            // Add boundary condition - resetting boundary forces to zero.
+            // boundary_condition.apply( exec_space{}, *particles, step * dt );
+
+            auto f = particles->sliceForce();
+            auto x = particles->sliceCurrentPosition();
+            auto rho = particles->sliceDensity();
+            auto vol = particles->sliceVolume();
+            Kokkos::RangePolicy<exec_space> policy( 0, f.size() );
+            Kokkos::parallel_for(
+                "CabanaPD::BC::apply", policy, KOKKOS_LAMBDA( const int pid ) {
+                    // Need to leave the boundary particles alone.
+                    if ( pid > init_particles )
+                    {
+                        f( pid, 2 ) -= 9.8 * rho( pid ) * vol( pid ) * 1000;
+                    }
+                    else
+                    {
+                        // Reset wall particles.
+                        for ( std::size_t d = 0; d < 3; d++ )
+                            f( pid, d ) = 0.0;
+                    }
+                } );
+
             // Compute contact forces.
             computeContact( *contact, *particles, neigh_iter_tag{} );
-
-            // Add boundary condition - resetting boundary forces to zero.
-            boundary_condition.apply( exec_space{}, *particles, step * dt );
 
             // Integrate - velocity Verlet second half
             integrate_timer.reset();
@@ -690,7 +712,8 @@ class SolverContact
                                         neigh_iter_tag() );
 
                 this->step_output( step, W );
-                particles->output( step / output_frequency, step * dt );
+                particles->output( step / output_frequency, step * dt,
+                                   output_reference );
             }
         }
 
@@ -701,6 +724,7 @@ class SolverContact
     using base_type::dt;
     using base_type::num_steps;
     using base_type::output_frequency;
+    using base_type::output_reference;
 
   protected:
     using base_type::comm;

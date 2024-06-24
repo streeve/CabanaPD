@@ -297,14 +297,14 @@ class Particles<MemorySpace, PMB, Dimension>
 
     template <typename ExecutionSpace>
     void inject( ExecutionSpace, const Kokkos::Array<double, 3> injection_point,
-                 const int num_sample, const double rho0, const double radius )
+                 const int num_sample, const double rho0, const double radius,
+                 const int seed )
     {
         std::size_t previous_size = n_local;
         resize( previous_size + num_sample, 0 );
         // FIXME: this breaks fixed ghost list.
         Kokkos::RangePolicy<ExecutionSpace> policy( previous_size, n_local );
-
-        const int seed = 123456;
+        std::cout << previous_size << " " << n_local << " " << std::endl;
         Kokkos::Random_XorShift64_Pool<ExecutionSpace> pool( seed );
         pool.init( seed, num_sample * 3 );
 
@@ -322,8 +322,8 @@ class Particles<MemorySpace, PMB, Dimension>
             // Set the particle position.
             for ( int d = 0; d < 3; d++ )
             {
-                const double min = injection_point[d] - radius * 3;
-                const double max = injection_point[d] + radius * 3;
+                const double min = injection_point[d] - radius * 5;
+                const double max = injection_point[d] + radius * 5;
                 auto gen = pool.get_state();
                 auto rand =
                     Kokkos::rand<Kokkos::Random_XorShift64<ExecutionSpace>,

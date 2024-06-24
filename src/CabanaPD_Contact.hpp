@@ -108,7 +108,6 @@ class Contact<MemorySpace, NormalRepulsionModel>
         const auto u = particles.sliceDisplacement();
         const auto y = particles.sliceCurrentPosition();
 
-        std::cout << particles.n_local << "\n";
         _neighbors->build( y, 0, particles.n_local, Rc, 1.0, mesh_min,
                            mesh_max );
 
