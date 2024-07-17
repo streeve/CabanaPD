@@ -16,12 +16,32 @@
 
 namespace CabanaPD
 {
+
+template <typename MemorySpace>
 struct BaseForceModel
 {
-    double delta;
+    using memory_space = MemorySpace;
+    using view_type = Kokkos::View<double*, memory_space>;
+    view_type delta;
 
     BaseForceModel( const double _delta )
-        : delta( _delta ){};
+        : delta( view_type( "delta", 1 ) )
+    {
+        Kokkos::deep_copy( delta, _delta );
+    };
+
+    template <typename ArrayType>
+    BaseForceModel( const ArrayType& _delta )
+        : delta( view_type( "delta", delta.size() ) )
+    {
+        auto init_func = KOKKOS_LAMBDA( const int i )
+        {
+            delta( i ) = _delta[i];
+        };
+        using exec_space = typename memory_space::execution_space;
+        Kokkos::RangePolicy<exec_space> policy( 0, _delta.size() );
+        Kokkos::parallel_for( "CabanaPD::Model::Init", policy, init_func );
+    };
 
     // No-op for temperature.
     KOKKOS_INLINE_FUNCTION
@@ -31,6 +51,7 @@ struct BaseForceModel
 template <typename TemperatureType>
 struct BaseTemperatureModel
 {
+    using memory_space = typename TemperatureType::memory_space;
     double alpha;
     double temp0;
 
@@ -43,13 +64,6 @@ struct BaseTemperatureModel
         : alpha( _alpha )
         , temp0( _temp0 )
         , temperature( _temp ){};
-
-    BaseTemperatureModel( const BaseTemperatureModel& model )
-    {
-        alpha = model.alpha;
-        temp0 = model.temp0;
-        temperature = model.temperature;
-    }
 
     void update( const TemperatureType _temp ) { temperature = _temp; }
 

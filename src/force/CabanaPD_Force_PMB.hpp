@@ -72,12 +72,12 @@ namespace CabanaPD
 {
 template <class ExecutionSpace, class... ModelParams>
 class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
-    : public Force<ExecutionSpace, BaseForceModel>
+    : public ForceBase
 {
   public:
     using exec_space = ExecutionSpace;
     using model_type = ForceModel<PMB, Elastic, ModelParams...>;
-    using base_type = Force<exec_space, BaseForceModel>;
+    using base_type = ForceBase;
 
   protected:
     using base_type::_half_neigh;
@@ -177,7 +177,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
 
 template <class ExecutionSpace, class... ModelParams>
 class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
-    : public Force<ExecutionSpace, BaseForceModel>
+    : public ForceBase
 {
   public:
     using exec_space = ExecutionSpace;
@@ -185,7 +185,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
 
   protected:
     using base_model_type = typename model_type::base_type;
-    using base_type = Force<ExecutionSpace, BaseForceModel>;
+    using base_type = ForceBase;
     using base_type::_half_neigh;
     model_type _model;
 
@@ -317,14 +317,14 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
 
 template <class ExecutionSpace, class... ModelParams>
 class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
-    : public Force<ExecutionSpace, BaseForceModel>
+    : public ForceBase
 {
   public:
     using exec_space = ExecutionSpace;
-    using model_type = ForceModel<LinearPMB, Elastic, TemperatureIndependent>;
+    using model_type = ForceModel<LinearPMB, Elastic, ModelParams...>;
 
   protected:
-    using base_type = Force<ExecutionSpace, BaseForceModel>;
+    using base_type = ForceBase;
     using base_type::_half_neigh;
     model_type _model;
 
