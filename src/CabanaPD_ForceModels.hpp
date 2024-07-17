@@ -17,31 +17,66 @@
 namespace CabanaPD
 {
 
-template <typename MemorySpace>
+template <typename... MemorySpace>
+struct BaseForceModel;
+
+template <>
+struct BaseForceModel<>
+{
+    double delta;
+
+    BaseForceModel(){};
+    BaseForceModel( const double _delta )
+        : delta( _delta ){};
+
+    auto horizon( const int ) { return delta; }
+    auto maxHorizon() { return delta; }
+
+    // No-op for temperature.
+    KOKKOS_INLINE_FUNCTION
+    void thermalStretch( double&, const int, const int ) const {}
+};
+
+template <typename... MemorySpace>
 struct BaseForceModel
 {
-    using memory_space = MemorySpace;
-    using view_type = Kokkos::View<double*, memory_space>;
-    view_type delta;
+    // Only allow one memory space.
+    using memory_space =
+        typename std::tuple_element<0, std::tuple<MemorySpace...>>::type;
+    using view_type_1d = Kokkos::View<double*, memory_space>;
+    view_type_1d delta;
+    double max_delta;
+    std::size_t num_types;
+
+    using view_type_2d = Kokkos::View<double**, memory_space>;
 
     BaseForceModel( const double _delta )
-        : delta( view_type( "delta", 1 ) )
+        : delta( view_type_1d( "delta", 1 ) )
+        , num_types( 1 )
     {
         Kokkos::deep_copy( delta, _delta );
     };
 
     template <typename ArrayType>
     BaseForceModel( const ArrayType& _delta )
-        : delta( view_type( "delta", delta.size() ) )
+        : delta( view_type_1d( "delta", _delta.size() ) )
+        , num_types( _delta.size() )
     {
-        auto init_func = KOKKOS_LAMBDA( const int i )
+        max_delta = 0;
+        auto init_func = KOKKOS_LAMBDA( const int i, double& max )
         {
             delta( i ) = _delta[i];
+            if ( delta( i ) > max )
+                max = delta( i );
         };
         using exec_space = typename memory_space::execution_space;
-        Kokkos::RangePolicy<exec_space> policy( 0, _delta.size() );
-        Kokkos::parallel_for( "CabanaPD::Model::Init", policy, init_func );
+        Kokkos::RangePolicy<exec_space> policy( 0, num_types );
+        Kokkos::parallel_reduce( "CabanaPD::Model::Init", policy, init_func,
+                                 max_delta );
     };
+
+    auto horizon( const int i ) { return delta( i ); }
+    auto maxHorizon() { return max_delta; }
 
     // No-op for temperature.
     KOKKOS_INLINE_FUNCTION
