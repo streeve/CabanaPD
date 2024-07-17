@@ -78,6 +78,8 @@ struct ForceModel<PMB, Elastic, TemperatureIndependent, ParticleType>
     ForceModel( const ArrayType& delta, const ArrayType& _K,
                 ParticleType _type )
         : base_type( delta )
+        , c( view_type_2d( "micromodulus", num_types, num_types ) )
+        , K( view_type_1d( "bulk_modulus", num_types ) )
         , type( _type )
     {
         setParameters( _K );
@@ -144,6 +146,7 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent>
     using base_type::c;
     using base_type::delta;
     using base_type::K;
+
     double G0;
     double s0;
     double bond_break_coeff;
@@ -197,6 +200,10 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent, ParticleType>
     ForceModel( const ArrayType& delta, const ArrayType& K,
                 const ArrayType& _G0, const ParticleType& _type )
         : base_type( delta, K, _type )
+        , G0( view_type_1d( "fracture_energy", num_types ) )
+        , s0( view_type_2d( "critical_stretch", num_types, num_types ) )
+        , bond_break_coeff(
+              view_type_2d( "break_coeff", num_types, num_types ) )
     {
         setParameters( _G0 );
     };
@@ -240,10 +247,10 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent, ParticleType>
     KOKKOS_INLINE_FUNCTION
     auto criticalStretch( const int i, const int j ) const
     {
-        auto s0_i = s0( i, i );
-        auto s0_j = s0( j, j );
-        auto c_i = c( i, i );
-        auto c_j = c( j, j );
+        auto s0_i = s0( type( i ), type( i ) );
+        auto s0_j = s0( type( j ), type( j ) );
+        auto c_i = c( type( i ), type( i ) );
+        auto c_j = c( type( j ), type( j ) );
         return Kokkos::sqrt( ( s0_i * s0_i * c_i + s0_j * s0_j * c_j ) /
                              ( c_i + c_j ) );
     }
@@ -252,7 +259,7 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent, ParticleType>
     bool criticalStretch( const int i, const int j, const double r,
                           const double xi ) const
     {
-        return r * r >= bond_break_coeff( i, j ) * xi * xi;
+        return r * r >= bond_break_coeff( type( i ), type( j ) ) * xi * xi;
     }
 };
 
