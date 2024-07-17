@@ -34,11 +34,19 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
     double c;
     double K;
 
-    ForceModel( const double delta, const double _K )
+    ForceModel( const double delta, const double K )
         : base_type( delta )
         , K( _K )
     {
         c = 18.0 * K / ( pi * delta * delta * delta * delta );
+    }
+
+    // Average from existing models.
+    ForceModel( const ForceModel& model1, const ForceModel& model2 )
+        : base_type( model1.delta )
+    {
+        K = ( model1.K + model2.K ) / 2.0;
+        c = ( model1.c_i + model2.c_j ) / 2.0;
     }
 
     KOKKOS_INLINE_FUNCTION
@@ -68,15 +76,26 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureIndependent>
     using base_type::c;
     using base_type::delta;
     using base_type::K;
+
     double G0;
     double s0;
     double bond_break_coeff;
 
-    ForceModel( const double delta, const double K, const double _G0 )
+    ForceModel( const double delta, const double K, const double G0 )
         : base_type( delta, K )
-        , G0( _G0 )
     {
         s0 = Kokkos::sqrt( 5.0 * G0 / 9.0 / K / delta );
+        bond_break_coeff = ( 1.0 + s0 ) * ( 1.0 + s0 );
+    }
+
+    // Average from existing models.
+    ForceModel( const ForceModel& model1, const ForceModel& model2 )
+        : base_type( model1, model2 )
+    {
+        G0 = ( model1.G0 + model2.G0 ) / 2.0;
+        s0 = Kokkos::sqrt( ( model1.s0 * model1.s0 * model1.c +
+                             model2.s0 * model2.s0 * model2.c ) /
+                           ( model1.c + model2.c ) );
         bond_break_coeff = ( 1.0 + s0 ) * ( 1.0 + s0 );
     }
 
@@ -95,7 +114,7 @@ struct ForceModel<LinearPMB, Elastic, NoFracture, TemperatureIndependent>
     using base_type = ForceModel<PMB, Elastic, NoFracture>;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
-    using thermal_type = base_type::thermal_type;
+    using thermal_type = typename base_type::thermal_type;
 
     using base_type::base_type;
 
@@ -111,7 +130,7 @@ struct ForceModel<LinearPMB, Elastic, Fracture, TemperatureIndependent>
     using base_type = ForceModel<PMB>;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
-    using thermal_type = base_type::thermal_type;
+    using thermal_type = typename base_type::thermal_type;
 
     using base_type::base_type;
 
@@ -210,6 +229,13 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureDependent, TemperatureType>
                 const double _temp0 = 0.0 )
         : base_type( _delta, _K, _G0 )
         , base_temperature_type( _temp, _alpha, _temp0 )
+    {
+    }
+
+    // Average from existing models.
+    ForceModel( const ForceModel& model1, const ForceModel& model2 )
+        : base_type( model1, model2 )
+        , base_temperature_type( model1, model2 )
     {
     }
 

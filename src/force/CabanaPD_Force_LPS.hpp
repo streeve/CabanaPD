@@ -71,10 +71,10 @@ namespace CabanaPD
 {
 template <class MemorySpace>
 class Force<MemorySpace, ForceModel<LPS, Elastic, NoFracture>>
-    : public Force<MemorySpace, BaseForceModel>
+    : public BaseForce<MemorySpace>
 {
   protected:
-    using base_type = Force<MemorySpace, BaseForceModel>;
+    using base_type = BaseForce<MemorySpace>;
     using base_type::_half_neigh;
     using model_type = ForceModel<LPS, Elastic, NoFracture>;
     model_type _model;
@@ -242,9 +242,6 @@ class Force<MemorySpace, ForceModel<LPS, Elastic, NoFracture>>
         _energy_timer.stop();
         return strain_energy;
     }
-
-    auto time() { return _timer.time(); };
-    auto timeEnergy() { return _energy_timer.time(); };
 };
 
 template <class MemorySpace>

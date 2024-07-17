@@ -105,7 +105,8 @@ class SolverNoFracture
     using force_model_type = ForceModelType;
     using force_type = Force<memory_space, force_model_type>;
     using comm_type = Comm<particle_type, typename force_model_type::base_model,
-                           typename particle_type::thermal_type>;
+                           typename force_model_type::species_type,
+                           typename force_model_type::thermal_type>;
     using neigh_iter_tag = Cabana::SerialOpTag;
     using input_type = InputType;
 
@@ -162,6 +163,10 @@ class SolverNoFracture
                     "Contact with MPI is currently disabled." );
         }
 
+        // Update optional property ghost sizes if needed.
+        if constexpr ( std::is_same<typename force_model_type::species_type,
+                                    MultiSpecies>::value )
+            force_model.update( particles->sliceType() );
         // Update temperature ghost size if needed.
         if constexpr ( is_temperature_dependent<
                            typename force_model_type::thermal_type>::value )
@@ -238,7 +243,10 @@ class SolverNoFracture
         if ( !boundary_condition.forceUpdate() )
             boundary_condition.apply( exec_space(), *particles, 0.0 );
 
-        // Communicate temperature.
+        // Communicate optional properties.
+        if constexpr ( std::is_same<typename force_model_type::species_type,
+                                    MultiSpecies>::value )
+            comm->gatherSpecies();
         if constexpr ( is_temperature_dependent<
                            typename force_model_type::thermal_type>::value )
             comm->gatherTemperature();
@@ -269,6 +277,11 @@ class SolverNoFracture
 
             // Update ghost particles.
             comm->gatherDisplacement();
+
+            // Communicate optional type.
+            if constexpr ( std::is_same<typename force_model_type::species_type,
+                                        MultiSpecies>::value )
+                comm->gatherSpecies();
 
             if constexpr ( is_heat_transfer<
                                typename force_model_type::thermal_type>::value )
@@ -321,6 +334,11 @@ class SolverNoFracture
 
             // Update ghost particles.
             comm->gatherDisplacement();
+
+            // Communicate optional properties.
+            if constexpr ( std::is_same<typename force_model_type::species_type,
+                                        MultiSpecies>::value )
+                comm->gatherSpecies();
 
             // Compute internal forces.
             updateForce();
@@ -564,7 +582,10 @@ class SolverFracture
         if ( !boundary_condition.forceUpdate() )
             boundary_condition.apply( exec_space(), *particles, 0.0 );
 
-        // Communicate temperature.
+        // Communicate optional properties.
+        if constexpr ( std::is_same<typename force_model_type::species_type,
+                                    MultiSpecies>::value )
+            comm->gatherSpecies();
         if constexpr ( is_temperature_dependent<
                            typename force_model_type::thermal_type>::value )
             comm->gatherTemperature();
@@ -612,6 +633,11 @@ class SolverFracture
             // Update ghost particles.
             comm->gatherDisplacement();
 
+            // Communicate optional type.
+            if constexpr ( std::is_same<typename force_model_type::species_type,
+                                        MultiSpecies>::value )
+                comm->gatherSpecies();
+
             // Compute internal forces.
             updateForce();
 
@@ -650,6 +676,10 @@ class SolverFracture
 
             // Update ghost particles.
             comm->gatherDisplacement();
+            // Communicate optional properties.
+            if constexpr ( std::is_same<typename force_model_type::species_type,
+                                        MultiSpecies>::value )
+                comm->gatherSpecies();
 
             // Compute internal forces.
             updateForce();

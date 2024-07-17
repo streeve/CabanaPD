@@ -12,6 +12,8 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+#include <type_traits>
+
 namespace CabanaPD
 {
 // Fracture tags.
@@ -24,6 +26,14 @@ struct Fracture
 
 // Mechanics tags.
 struct Elastic
+{
+};
+
+// Material option tags.
+struct SingleSpecies
+{
+};
+struct MultiSpecies
 {
 };
 

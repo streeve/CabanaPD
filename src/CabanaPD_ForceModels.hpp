@@ -56,6 +56,9 @@ struct ForceModels
         return Cabana::get<2>( pack );
     }
 
+    auto horizon( const int ) { return delta; }
+    auto maxHorizon() { return delta; }
+
     Cabana::ParameterPack<ModelType...> pack;
 };
 
@@ -71,8 +74,25 @@ auto createForceModels( const ModelType... models )
     }
     else
     {
+        // Create a temporary pack to extract an average.
+        auto pack2 = Cabana::makeParameterPack( models... );
+        using model_type = typename pack2<0>::value_type;
+        model_type Model12( pack2.get<0>(), pack2.get<1>() );
+        return ForceModels( models..., Model12 );
     }
 }
+
+template <typename ParticleType, typename ArrayType>
+auto createForceModel( PMB, Fracture, TemperatureIndependent,
+                       ParticleType particles, const ArrayType& delta,
+                       const ArrayType& K, const ArrayType& G0 )
+{
+    auto type = particles.sliceType();
+    using type_type = decltype( type );
+    return ForceModel<PMB, Fracture, TemperatureIndependent, type_type>(
+        delta, K, G0, type );
+}
+
 template <typename TemperatureType>
 struct BaseTemperatureModel
 {
@@ -82,18 +102,17 @@ struct BaseTemperatureModel
     // Temperature field
     TemperatureType temperature;
 
-    BaseTemperatureModel(){};
     BaseTemperatureModel( const TemperatureType _temp, const double _alpha,
                           const double _temp0 )
         : alpha( _alpha )
         , temp0( _temp0 )
         , temperature( _temp ){};
 
-    BaseTemperatureModel( const BaseTemperatureModel& model )
+    // Average from existing models.
+    BaseTemperatureModel( const ForceModel& model1, const ForceModel& model2 )
     {
-        alpha = model.alpha;
-        temp0 = model.temp0;
-        temperature = model.temperature;
+        alpha = ( model1.alpha + model2.alpha ) / 2.0;
+        temp0 = ( model1.temp0 + model2.temp0 ) / 2.0;
     }
 
     void update( const TemperatureType _temp ) { temperature = _temp; }
@@ -129,6 +148,16 @@ struct BaseDynamicTemperatureModel
         const double d3 = _delta * _delta * _delta;
         thermal_coeff = 9.0 / 2.0 * _kappa / pi / d3;
         constant_microconductivity = _constant_microconductivity;
+    }
+
+    // Average from existing models.
+    BaseDynamicTemperatureModel( const ForceModel& model1,
+                                 const ForceModel& model2 )
+    {
+        delta = ( model1.delta + model2.delta ) / 2.0;
+        kappa = ( model1.kappa + model2.kappa ) / 2.0;
+        cp = ( model1.cp + model2.cp ) / 2.0;
+        constant_microconductivity = model1.constant_microconductivity;
     }
 
     KOKKOS_INLINE_FUNCTION double microconductivity_function( double r ) const
