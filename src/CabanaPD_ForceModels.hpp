@@ -23,6 +23,7 @@ struct BaseForceModel;
 template <>
 struct BaseForceModel<>
 {
+    using species_type = SingleSpecies;
     double delta;
 
     BaseForceModel(){};
@@ -40,6 +41,8 @@ struct BaseForceModel<>
 template <typename... MemorySpace>
 struct BaseForceModel
 {
+    using species_type = MultiSpecies;
+
     // Only allow one memory space.
     using memory_space =
         typename std::tuple_element<0, std::tuple<MemorySpace...>>::type;
@@ -86,6 +89,7 @@ struct BaseForceModel
 template <typename TemperatureType>
 struct BaseTemperatureModel
 {
+    using species_type = SingleSpecies;
     using memory_space = typename TemperatureType::memory_space;
     double alpha;
     double temp0;

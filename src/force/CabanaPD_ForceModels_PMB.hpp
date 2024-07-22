@@ -23,6 +23,7 @@ struct ForceModel<PMB, Elastic, TemperatureIndependent>
     : public BaseForceModel<>
 {
     using base_type = BaseForceModel<>;
+    using species_type = typename base_type::species_type;
     using base_model = PMB;
     using fracture_type = Elastic;
     using thermal_type = TemperatureIndependent;
@@ -62,6 +63,7 @@ struct ForceModel<PMB, Elastic, TemperatureIndependent, ParticleType>
 {
     using memory_space = typename ParticleType::memory_space;
     using base_type = BaseForceModel<memory_space>;
+    using species_type = typename base_type::species_type;
     using base_model = PMB;
     using fracture_type = Elastic;
     using thermal_type = TemperatureIndependent;
@@ -121,6 +123,8 @@ struct ForceModel<PMB, Elastic, TemperatureIndependent, ParticleType>
     {
         return c( type( i ), type( j ) );
     }
+
+    void update( const ParticleType _type ) { type = _type; }
 };
 
 template <typename ParticleType>
@@ -181,6 +185,7 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent, ParticleType>
         ForceModel<PMB, Elastic, TemperatureIndependent, ParticleType>;
     using memory_space = typename base_type::memory_space;
     using base_model = typename base_type::base_model;
+    using species_type = typename base_type::species_type;
     using fracture_type = Fracture;
     using thermal_type = typename base_type::thermal_type;
 
@@ -239,18 +244,18 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent, ParticleType>
     }
 
     KOKKOS_INLINE_FUNCTION
-    auto criticalStretch( const int i )
+    auto criticalStretch( const int type_i )
     {
-        return sqrt( 5.0 * G0( i ) / 9.0 / K( i ) / delta( i ) );
+        return sqrt( 5.0 * G0( type_i ) / 9.0 / K( type_i ) / delta( type_i ) );
     }
 
     KOKKOS_INLINE_FUNCTION
-    auto criticalStretch( const int i, const int j ) const
+    auto criticalStretch( const int type_i, const int type_j ) const
     {
-        auto s0_i = s0( type( i ), type( i ) );
-        auto s0_j = s0( type( j ), type( j ) );
-        auto c_i = c( type( i ), type( i ) );
-        auto c_j = c( type( j ), type( j ) );
+        auto s0_i = s0( type_i, type_i );
+        auto s0_j = s0( type_j, type_j );
+        auto c_i = c( type_i, type_i );
+        auto c_j = c( type_j, type_j );
         return Kokkos::sqrt( ( s0_i * s0_i * c_i + s0_j * s0_j * c_j ) /
                              ( c_i + c_j ) );
     }
@@ -259,6 +264,10 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent, ParticleType>
     bool criticalStretch( const int i, const int j, const double r,
                           const double xi ) const
     {
+        // if ( type( j ) != 0 )
+        //     std::cout << bond_break_coeff.size() << " " << type( i ) << " "
+        //               << type( j ) << "\n";
+        //<< type.size() << " " << i << " " << j << "\n";
         return r * r >= bond_break_coeff( type( i ), type( j ) ) * xi * xi;
     }
 };
@@ -281,6 +290,7 @@ struct ForceModel<LinearPMB, Elastic, TemperatureIndependent, ModelParams...>
     using base_type =
         ForceModel<PMB, Elastic, TemperatureIndependent, ModelParams...>;
     using base_model = typename base_type::base_model;
+    using species_type = typename base_type::species_type;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = typename base_type::thermal_type;
 
@@ -298,6 +308,7 @@ struct ForceModel<LinearPMB, Fracture, TemperatureIndependent, ModelParams...>
     using base_type =
         ForceModel<PMB, Fracture, TemperatureIndependent, ModelParams...>;
     using base_model = typename base_type::base_model;
+    using species_type = typename base_type::species_type;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = typename base_type::thermal_type;
 
@@ -319,6 +330,7 @@ struct ForceModel<PMB, Elastic, TemperatureDependent, TemperatureType>
 {
     using memory_space = typename TemperatureType::memory_space;
     using base_type = ForceModel<PMB, Elastic, TemperatureIndependent>;
+    using species_type = typename base_type::species_type;
     using base_temperature_type = BaseTemperatureModel<TemperatureType>;
     using base_model = PMB;
     using fracture_type = Elastic;
@@ -363,6 +375,7 @@ struct ForceModel<PMB, Fracture, TemperatureDependent, TemperatureType>
 {
     using memory_space = typename TemperatureType::memory_space;
     using base_type = ForceModel<PMB, Fracture, TemperatureIndependent>;
+    using species_type = typename base_type::species_type;
     using base_temperature_type = BaseTemperatureModel<TemperatureType>;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
