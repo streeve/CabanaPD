@@ -82,8 +82,6 @@ class Integrator
         _half_dt = 0.5 * dt;
     }
 
-    ~Integrator() {}
-
     template <class ParticlesType>
     void initialHalfStep( ParticlesType& p )
     {

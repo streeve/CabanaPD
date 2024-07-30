@@ -83,12 +83,6 @@
 
 namespace CabanaPD
 {
-class SolverBase
-{
-  public:
-    virtual ~SolverBase() = default;
-    virtual void run() = 0;
-};
 
 template <class MemorySpace, class InputType, class ParticleType,
           class ForceModel>

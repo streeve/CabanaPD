@@ -286,7 +286,6 @@ class Comm<ParticleType, PMB, TemperatureIndependent>
 
         _init_timer.stop();
     }
-    ~Comm() {}
 
     // Determine which particles should be ghosted, reallocating and recounting
     // if needed.
@@ -352,7 +351,6 @@ class Comm<ParticleType, LPS, TemperatureIndependent>
         particles.resize( halo->numLocal(), halo->numGhost() );
         _init_timer.stop();
     }
-    ~Comm() {}
 
     void gatherDilatation()
     {

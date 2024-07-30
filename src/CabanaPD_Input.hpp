@@ -103,7 +103,6 @@ class Inputs
         // Not yet a user option.
         inputs["half_neigh"]["value"] = false;
     }
-    ~Inputs() {}
 
     void computeCriticalTimeStep()
     {
