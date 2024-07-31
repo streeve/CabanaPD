@@ -42,8 +42,6 @@ void thermalDeformationExample( const std::string filename )
     double K = E / ( 3 * ( 1 - 2 * nu ) );
     double delta = inputs["horizon"];
     double alpha = inputs["thermal_coefficient"];
-    double kappa = inputs["thermal_conductivity"];
-    double cp = inputs["specific_heat_capacity"];
 
     // Problem parameters
     double temp0 = inputs["reference_temperature"];
@@ -63,7 +61,7 @@ void thermalDeformationExample( const std::string filename )
     //                Force model type
     // ====================================================
     using model_type = CabanaPD::PMB;
-    using thermal_type = CabanaPD::DynamicTemperature;
+    using thermal_type = CabanaPD::TemperatureDependent;
 
     // ====================================================
     //                 Particle generation
@@ -83,11 +81,8 @@ void thermalDeformationExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    // const double kappa = 1.0;
-    // const double cp = 1.0;
     auto force_model = CabanaPD::createForceModel(
-        model_type{}, CabanaPD::Elastic{}, *particles, delta, K, kappa, cp,
-        alpha, temp0 );
+        model_type{}, CabanaPD::Elastic{}, *particles, delta, K, alpha, temp0 );
 
     // ====================================================
     //                   Create solver
@@ -98,12 +93,6 @@ void thermalDeformationExample( const std::string filename )
     // ====================================================
     //                   Imposed field
     // ====================================================
-    double dy = particles->dx[1];
-    CabanaPD::RegionBoundary plane( low_corner[0], high_corner[0],
-                                    high_corner[1] - dy, high_corner[1] + dy,
-                                    low_corner[2], high_corner[2] );
-    std::vector<CabanaPD::RegionBoundary> planes = { plane };
-
     auto x = particles->sliceReferencePosition();
     auto temp = particles->sliceTemperature();
     const double low_corner_y = low_corner[1];
