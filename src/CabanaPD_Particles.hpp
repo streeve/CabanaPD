@@ -457,7 +457,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
                 "particles", local_grid->globalGrid(), output_step, output_time,
                 0, n_local, getPosition( use_reference ), sliceStrainEnergy(),
                 sliceForce(), sliceDisplacement(), sliceVelocity(),
-                sliceDamage() );
+                sliceDamage(), sliceType() );
 #else
         log( std::cout, "No particle output enabled." );
 #endif
@@ -619,7 +619,7 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, Dimension>
                 base_type::sliceStrainEnergy(), base_type::sliceForce(),
                 base_type::sliceDisplacement(), base_type::sliceVelocity(),
                 base_type::sliceDamage(), sliceWeightedVolume(),
-                sliceDilatation() );
+                sliceDilatation(), base_type::sliceType() );
 #else
         log( std::cout, "No particle output enabled." );
 #endif
@@ -754,7 +754,8 @@ class Particles<MemorySpace, PMB, TemperatureDependent, Dimension>
                 0, n_local, base_type::getPosition( use_reference ),
                 base_type::sliceStrainEnergy(), base_type::sliceForce(),
                 base_type::sliceDisplacement(), base_type::sliceVelocity(),
-                base_type::sliceDamage(), sliceTemperature() );
+                base_type::sliceDamage(), sliceTemperature(),
+                base_type::sliceType() );
 #else
         log( std::cout, "No particle output enabled." );
 #endif
