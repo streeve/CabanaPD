@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.11)
-project(CabanaPD LANGUAGES CXX C VERSION 0.1.0)
+project(CabanaPD LANGUAGES CXX C)
+set(PROJECT_VERSION "0.2.0-dev")
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 14)
@@ -27,6 +28,17 @@ endmacro()
 
 CabanaPD_check_optional( OPTION HDF5 )
 CabanaPD_check_optional( OPTION SILO )
+
+if (${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.24")
+  cmake_policy(SET CMP0135 NEW)
+endif()
+find_package(nlohmann_json 3.10.0 QUIET)
+if(NOT NLOHMANN_JSON_FOUND)
+  include(FetchContent)
+  # Using most recent release here
+  FetchContent_Declare(json URL https://github.com/nlohmann/json/releases/download/v3.11.2/json.tar.xz)
+  FetchContent_MakeAvailable(json)
+endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/cmake/CabanaPD_Config.cmakein
   ${CMAKE_CURRENT_BINARY_DIR}/CabanaPD_Config.cmake @ONLY)

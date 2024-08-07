@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 2022-2023 by Oak Ridge National Laboratory                 *
+ * Copyright (c) 2022 by Oak Ridge National Laboratory                      *
  * All rights reserved.                                                     *
  *                                                                          *
  * This file is part of CabanaPD. CabanaPD is distributed under a           *
@@ -15,7 +15,6 @@
 #include <Kokkos_Core.hpp>
 
 #include <Cabana_Core.hpp>
-#include <Cajita.hpp>
 
 #include <cassert>
 
@@ -203,6 +202,8 @@ struct Prenotch
     Kokkos::Array<double, 3> _v2;
     Kokkos::Array<Kokkos::Array<double, 3>, num_notch> _p0_list;
 
+    Timer _timer;
+
     Prenotch() {}
 
     Prenotch( Kokkos::Array<double, 3> v1, Kokkos::Array<double, 3> v2,
@@ -218,6 +219,8 @@ struct Prenotch
     void create( ExecSpace, NeighborView& mu, Particles& particles,
                  Neighbors& neighbors )
     {
+        _timer.start();
+
         auto x = particles.sliceReferencePosition();
         Kokkos::RangePolicy<ExecSpace> policy( 0, particles.n_local );
 
@@ -251,7 +254,9 @@ struct Prenotch
             };
             Kokkos::parallel_for( "CabanaPD::Prenotch", policy, notch_functor );
         }
+        _timer.stop();
     }
+    auto time() { return _timer.time(); };
 };
 
 } // namespace CabanaPD

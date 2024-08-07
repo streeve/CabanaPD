@@ -8,7 +8,7 @@ CabanaPD has the following dependencies:
 |Dependency | Version  | Required | Details|
 |---------- | -------  |--------  |------- |
 |CMake      | 3.11+    | Yes      | Build system
-|Cabana     | 31ba70d9 | Yes      | Performance portable particle algorithms
+|Cabana     | f99c7db9 | Yes      | Performance portable particle algorithms
 |GTest      | 1.10+    | No       | Unit test framework
 
 Cabana must be built with the following in order to work with CabanaPD:
@@ -30,10 +30,10 @@ spack install cabana@master+cajita+silo
 ```
 
 Alternatively, Kokkos can be built locally, followed by Cabana:
-https://github.com/ECP-copa/Cabana/wiki/Build-Instructions
+https://github.com/ECP-copa/Cabana/wiki/1-Build-Instructions
 
 Build instructions are available for both CPU and GPU. Note that Cabana must be
-compiled with Cajita and MPI.
+compiled with MPI and the Grid sub-package.
 
 ## Obtaining CabanaPD
 
@@ -107,11 +107,17 @@ ctest
 
 ## Examples
 
-Once built and installed, CabanaPD examples can be run. Timing and energy
-information is output to file and particle output is written to files (if enabled within Cabana) that can be visualized with Paraview and similar applications. The first example is an elastic wave propagating through a cube from an initial Gaussian radial displacement profile from [1]. Assuming the build paths above, the example can be run with:
+Once built and installed, CabanaPD `examples/` can be run. Timing and energy
+information is output to file and particle output is written to files (if enabled within Cabana) that can be visualized with Paraview and similar applications. 
+New examples can be created by using any of the current cases as a template. All inputs are specified in the example JSON files within the relevant `inputs/` subdirectory.
+
+### Mechanics
+Examples which only include mechanics and fracture are with `examples/mechanics`.
+
+The first example is an elastic wave propagating through a cube from an initial Gaussian radial displacement profile from [1]. Assuming the build paths above, the example can be run with:
 
 ```
-./CabanaPD/build/install/bin/ElasticWave
+./CabanaPD/build/install/bin/ElasticWave CabanaPD/examples/mechanics/inputs/elastic_wave.json
 ```
 
 The second example is the Kalthoff-Winkler experiment [2], where an impactor
@@ -119,17 +125,35 @@ causes crack propagation at an angle from two pre-notches on a steel plate. The
 example can be run with:
 
 ```
-./CabanaPD/build/install/bin/KalthoffWinkler
+./CabanaPD/build/install/bin/KalthoffWinkler CabanaPD/examples/mechanics/inputs/kalthoff_winkler.json
 ```
 
-The third example is crack branching in soda-lime glass [3]. The example can be
-run with:
+The third example is crack branching in a pre-notched soda-lime glass plate due to traction loading [3]. The example can be run with:
 
 ```
-./CabanaPD/build/install/bin/CrackBranching
+./CabanaPD/build/install/bin/CrackBranching CabanaPD/examples/mechanics/inputs/crack_branching.json
 ```
 
-New examples can be created by using any of the current cases as a template. All inputs are currently specified in the example source files themselves.
+The fourth example is a fragmenting cylinder due to internal pressure [4]. The example can be run with:
+
+```
+./CabanaPD/build/install/bin/FragmentingCylinder CabanaPD/examples/mechanics/inputs/fragmenting_cylinder.json
+```
+
+### Thermomechanics
+Examples which demonstrate temperature-dependent mechanics and fracture are with `examples/thermomechanics`.
+
+The first example is thermoelastic deformation in a homogeneous plate due to linear thermal loading [5]. The example can be run with:
+
+```
+./CabanaPD/build/install/bin/ThermalDeformation CabanaPD/examples/thermomechanics/thermal_deformation.json
+```
+
+The second example is crack initiation and propagation in an alumina ceramic plate due to a thermal shock caused by water quenching [6]. The example can be run with:
+
+```
+./CabanaPD/build/install/bin/ThermalCrack CabanaPD/examples/thermomechanics/thermal_crack.json
+```
 
 ## References
 
@@ -144,6 +168,12 @@ Kunze, and L.W. Meyer, eds., Vol 1, DGM Informationsgesellschaft Verlag (1988)
 185-195.
 
 [3] F. Bobaru and G. Zhang, Why do cracks branch? A peridynamic investigation of dynamic brittle fracture, International Journal of Fracture 196 (2015): 59–98.
+
+[4] D.J. Littlewood, M.L. Parks, J.T. Foster, J.A. Mitchell, and P. Diehl, The peridigm meshfree peridynamics code, Journal of Peridynamics and Nonlocal Modeling 6 (2024): 118–148.  
+
+[5] D. He, D. Huang, and D. Jiang, Modeling and studies of fracture in functionally graded materials under thermal shock loading using peridynamics, Theoretical and Applied Fracture Mechanics 111 (2021): 102852.
+
+[6] C.P. Jiang, X.F. Wu, J. Li, F. Song, Y.F. Shao, X.H. Xu, and P. Yan, A study of the mechanism of formation and numerical simulations of crack patterns in ceramics subjected to thermal shock, Acta Materialia 60 (2012): 4540–4550.
 
 ## Contributing
 

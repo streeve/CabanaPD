@@ -1,5 +1,5 @@
 /****************************************************************************
- * Copyright (c) 2022-2023 by Oak Ridge National Laboratory                 *
+ * Copyright (c) 2022 by Oak Ridge National Laboratory                      *
  * All rights reserved.                                                     *
  *                                                                          *
  * This file is part of CabanaPD. CabanaPD is distributed under a           *
@@ -16,8 +16,9 @@
 
 #include "mpi.h"
 
-#include <Cajita.hpp>
+#include <Cabana_Grid.hpp>
 
+#include <CabanaPD_Timer.hpp>
 #include <CabanaPD_Types.hpp>
 
 namespace CabanaPD
@@ -31,7 +32,7 @@ auto vectorToArray( std::vector<Scalar> vector )
     return array;
 }
 
-// Functor to determine which particles should be ghosted with Cajita grid.
+// Functor to determine which particles should be ghosted with grid.
 template <class MemorySpace, class LocalGridType>
 struct HaloIds
 {
@@ -73,7 +74,7 @@ struct HaloIds
         // Check within the halo width, within the local domain.
         _min_halo = minimum_halo_width;
 
-        auto topology = Cajita::getTopology( local_grid );
+        auto topology = Cabana::Grid::getTopology( local_grid );
         _device_topology = vectorToArray<topology_size>( topology );
 
         // Get the neighboring mesh bounds (only needed once unless load
@@ -88,9 +89,9 @@ struct HaloIds
     void neighborBounds( const LocalGridType& local_grid )
     {
         const auto& local_mesh =
-            Cajita::createLocalMesh<Kokkos::HostSpace>( local_grid );
+            Cabana::Grid::createLocalMesh<Kokkos::HostSpace>( local_grid );
 
-        Kokkos::Array<Cajita::IndexSpace<4>, topology_size> index_spaces;
+        Kokkos::Array<Cabana::Grid::IndexSpace<4>, topology_size> index_spaces;
 
         // Store all neighboring shared index space mesh bounds so we only have
         // to launch one kernel during the actual ghost search.
@@ -109,14 +110,14 @@ struct HaloIds
                         if ( neighbor_rank != -1 )
                         {
                             auto sis = local_grid.sharedIndexSpace(
-                                Cajita::Own(), Cajita::Cell(), i, j, k,
-                                _min_halo );
+                                Cabana::Grid::Own(), Cabana::Grid::Cell(), i, j,
+                                k, _min_halo );
                             auto min_ind = sis.min();
                             auto max_ind = sis.max();
-                            local_mesh.coordinates( Cajita::Node(),
+                            local_mesh.coordinates( Cabana::Grid::Node(),
                                                     min_ind.data(),
                                                     _min_coord[n].data() );
-                            local_mesh.coordinates( Cajita::Node(),
+                            local_mesh.coordinates( Cabana::Grid::Node(),
                                                     max_ind.data(),
                                                     _max_coord[n].data() );
                         }
@@ -229,12 +230,12 @@ struct HaloIds
     }
 };
 
-template <class ParticleType, class ModelType>
+template <class ParticleType, class ModelType, class ThermalType>
 class Comm;
 
 // FIXME: extract model from ParticleType instead.
 template <class ParticleType>
-class Comm<ParticleType, PMB>
+class Comm<ParticleType, PMB, TemperatureIndependent>
 {
   public:
     int mpi_size = -1;
@@ -251,6 +252,7 @@ class Comm<ParticleType, PMB>
     Comm( ParticleType& particles, int max_export_guess = 100 )
         : max_export( max_export_guess )
     {
+        _init_timer.start();
         auto local_grid = particles.local_grid;
         MPI_Comm_size( local_grid->globalGrid().comm(), &mpi_size );
         MPI_Comm_rank( local_grid->globalGrid().comm(), &mpi_rank );
@@ -258,7 +260,7 @@ class Comm<ParticleType, PMB>
         auto positions = particles.sliceReferencePosition();
         // Get all 26 neighbor ranks.
         auto halo_width = local_grid->haloCellWidth();
-        auto topology = Cajita::getTopology( *local_grid );
+        auto topology = Cabana::Grid::getTopology( *local_grid );
 
         // Determine which particles need to be ghosted to neighbors.
         // FIXME: set halo width based on cutoff distance.
@@ -276,12 +278,13 @@ class Comm<ParticleType, PMB>
 
         // Only use this interface because we don't need to recommunicate
         // positions, volumes, or no-fail region.
-        Cabana::gather( *halo, particles._aosoa_x );
+        Cabana::gather( *halo, particles.getReferencePosition().aosoa() );
         Cabana::gather( *halo, particles._aosoa_vol );
-        Cabana::gather( *halo, particles._aosoa_nofail );
 
         gather_u = std::make_shared<gather_u_type>( *halo, particles._aosoa_u );
         gather_u->apply();
+
+        _init_timer.stop();
     }
     ~Comm() {}
 
@@ -298,21 +301,37 @@ class Comm<ParticleType, PMB>
 
     // We assume here that the particle count has not changed and no resize
     // is necessary.
-    void gatherDisplacement() { gather_u->apply(); }
+    void gatherDisplacement()
+    {
+        _timer.start();
+        gather_u->apply();
+        _timer.stop();
+    }
     // No-op to make solvers simpler.
     void gatherDilatation() {}
     void gatherWeightedVolume() {}
+
+    auto timeInit() { return _init_timer.time(); };
+    auto time() { return _timer.time(); };
+
+  protected:
+    Timer _init_timer;
+    Timer _timer;
 };
 
 template <class ParticleType>
-class Comm<ParticleType, LPS> : public Comm<ParticleType, PMB>
+class Comm<ParticleType, LPS, TemperatureIndependent>
+    : public Comm<ParticleType, PMB, TemperatureIndependent>
 {
   public:
-    using base_type = Comm<ParticleType, PMB>;
+    using base_type = Comm<ParticleType, PMB, TemperatureIndependent>;
     using memory_space = typename base_type::memory_space;
     using halo_type = typename base_type::halo_type;
     using base_type::gather_u;
     using base_type::halo;
+
+    using base_type::_init_timer;
+    using base_type::_timer;
 
     using gather_m_type =
         Cabana::Gather<halo_type, typename ParticleType::aosoa_m_type>;
@@ -324,14 +343,54 @@ class Comm<ParticleType, LPS> : public Comm<ParticleType, PMB>
     Comm( ParticleType& particles, int max_export_guess = 100 )
         : base_type( particles, max_export_guess )
     {
+        _init_timer.start();
+
         gather_m = std::make_shared<gather_m_type>( *halo, particles._aosoa_m );
         gather_theta = std::make_shared<gather_theta_type>(
             *halo, particles._aosoa_theta );
+
+        particles.resize( halo->numLocal(), halo->numGhost() );
+        _init_timer.stop();
     }
     ~Comm() {}
 
-    void gatherDilatation() { gather_theta->apply(); }
-    void gatherWeightedVolume() { gather_m->apply(); }
+    void gatherDilatation()
+    {
+        _timer.start();
+        gather_theta->apply();
+        _timer.stop();
+    }
+    void gatherWeightedVolume()
+    {
+        _timer.start();
+        gather_m->apply();
+        _timer.stop();
+    }
+};
+
+template <class ParticleType>
+class Comm<ParticleType, PMB, TemperatureDependent>
+    : public Comm<ParticleType, PMB, TemperatureIndependent>
+{
+  public:
+    using base_type = Comm<ParticleType, PMB, TemperatureIndependent>;
+    using memory_space = typename base_type::memory_space;
+    using halo_type = typename base_type::halo_type;
+    using base_type::halo;
+
+    using gather_temp_type =
+        Cabana::Gather<halo_type, typename ParticleType::aosoa_temp_type>;
+    std::shared_ptr<gather_temp_type> gather_temp;
+
+    Comm( ParticleType& particles, int max_export_guess = 100 )
+        : base_type( particles, max_export_guess )
+    {
+        gather_temp =
+            std::make_shared<gather_temp_type>( *halo, particles._aosoa_temp );
+        particles.resize( halo->numLocal(), halo->numGhost() );
+    }
+
+    void gatherTemperature() { gather_temp->apply(); }
 };
 
 } // namespace CabanaPD
