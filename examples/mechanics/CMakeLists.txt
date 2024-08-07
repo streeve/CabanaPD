@@ -10,4 +10,8 @@ target_link_libraries(CrackBranching LINK_PUBLIC CabanaPD)
 add_executable(FragmentingCylinder fragmenting_cylinder.cpp)
 target_link_libraries(FragmentingCylinder LINK_PUBLIC CabanaPD)
 
-install(TARGETS ElasticWave KalthoffWinkler CrackBranching FragmentingCylinder DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_executable(ReadFile read_file.cpp)
+target_link_libraries(ReadFile LINK_PUBLIC CabanaPD)
+
+install(TARGETS ElasticWave KalthoffWinkler CrackBranching FragmentingCylinder ReadFile
+        DESTINATION ${CMAKE_INSTALL_BINDIR})
