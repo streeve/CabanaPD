@@ -143,6 +143,8 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
 
     // Default constructor.
     Particles()
+        : _plist_x( "positions" )
+        , _plist_f( "forces" )
     {
         _init_timer.start();
         for ( int d = 0; d < dim; d++ )

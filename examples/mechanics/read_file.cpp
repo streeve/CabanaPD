@@ -145,15 +145,16 @@ int main( int argc, char* argv[] )
         using model_type =
             CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Fracture>;
         model_type force_model( delta, K, G0 );
-        CabanaPD::Inputs<3> inputs( t_final, dt, output_frequency, true );
-        inputs.read_args( argc, argv );
+
+        CabanaPD::Inputs inputs( argv[1] );
 
         // Default construct to then read particles.
-        auto particles = std::make_shared<CabanaPD::Particles<
-            memory_space, typename model_type::base_model, 3>>();
+        auto particles = std::make_shared<
+            CabanaPD::Particles<memory_space, typename model_type::base_model,
+                                typename model_type::thermal_type>>();
 
         // Read particles from file.
-        read_particles( inputs.input_file, *particles );
+        read_particles( inputs["input_data_file"], *particles );
         // Update after reading. Currently requires fixed cell spacing.
         particles->updateAfterRead( exec_space(), dx );
 

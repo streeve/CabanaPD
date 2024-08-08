@@ -159,16 +159,21 @@ struct BoundaryCondition<BCIndexSpace, ForceValueBCTag>
     double _time_ramp;
     double _time_end;
 
+    Timer _timer;
+
     BoundaryCondition( BCIndexSpace bc_index_space, const double value,
                        const double start = 0.0,
                        const double ramp = std::numeric_limits<double>::max(),
                        const double end = std::numeric_limits<double>::max() )
-        : _value( value )
-        , _index_space( bc_index_space )
+        : _index_space( bc_index_space )
+        , _value( value )
         , _time_start( start )
         , _time_ramp( ramp )
         , _time_end( end )
     {
+        assert( _time_ramp >= _time_start );
+        assert( _time_end >= _time_ramp );
+        assert( _time_end >= _time_start );
     }
 
     template <class ExecSpace, class Particles>
@@ -178,11 +183,13 @@ struct BoundaryCondition<BCIndexSpace, ForceValueBCTag>
         _index_space.update( exec_space, particles, plane );
     }
 
-    template <class ExecSpace, class FieldType, class PositionType>
-    void apply( ExecSpace, FieldType& f, PositionType&, const double t )
+    template <class ExecSpace, class ParticleType>
+    void apply( ExecSpace, ParticleType& particles, double t )
     {
+        _timer.start();
         auto index_space = _index_space._view;
         Kokkos::RangePolicy<ExecSpace> policy( 0, index_space.size() );
+        auto f = particles.sliceForce();
         auto value = _value;
         auto start = _time_start;
         auto end = _time_end;
@@ -205,84 +212,12 @@ struct BoundaryCondition<BCIndexSpace, ForceValueBCTag>
         _timer.stop();
     }
 
-    auto forceUpdate() { return _force_update; }
+    auto forceUpdate() { return true; }
 
     auto time() { return _timer.time(); };
     auto timeInit() { return _index_space.time(); };
 };
 
-// Increment BC (all dimensions).
-template <class BCIndexSpace>
-struct BoundaryCondition<BCIndexSpace, ForceValueBCTag>
-{
-    double _value;
-    BCIndexSpace _index_space;
-    double _time_start;
-    double _time_ramp;
-    double _time_end;
-
-    const bool _force_update = true;
-    Timer _timer;
-
-    BoundaryCondition( BCIndexSpace bc_index_space, const double value,
-                       const double start = 0.0,
-                       const double ramp = std::numeric_limits<double>::max(),
-                       const double end = std::numeric_limits<double>::max() )
-        : _value( value )
-        , _index_space( bc_index_space )
-        , _time_start( start )
-        , _time_ramp( ramp )
-        , _time_end( end )
-    {
-        assert( _time_ramp >= _time_start );
-        assert( _time_end >= _time_ramp );
-        assert( _time_end >= _time_start );
-    }
-
-    template <class ExecSpace, class Particles>
-    void update( ExecSpace exec_space, Particles particles,
-                 RegionBoundary plane )
-    {
-        _index_space.update( exec_space, particles, plane );
-    }
-
-    template <class ExecSpace, class ParticleType>
-    void apply( ExecSpace, ParticleType& particles, double t )
-    {
-        _timer.start();
-        auto f = particles.sliceForce();
-        auto index_space = _index_space._view;
-        Kokkos::RangePolicy<ExecSpace> policy( 0, index_space.size() );
-        auto value = _value;
-        auto start = _time_start;
-        auto end = _time_end;
-        auto ramp = _time_ramp;
-        Kokkos::parallel_for(
-            "CabanaPD::BC::apply", policy, KOKKOS_LAMBDA( const int b ) {
-                double current = value;
-                // Initial linear ramp.
-                if ( t < ramp )
-                {
-                    current = value * ( t - start ) / ( ramp - start );
-                }
-                if ( t > start && t < end )
-                {
-                    auto pid = index_space( b );
-                    for ( int d = 0; d < 3; d++ )
-                        f( pid, d ) += current;
-                }
-            } );
-        _timer.stop();
-    }
-
-    auto forceUpdate() { return _force_update; }
-
-    auto time() { return _timer.time(); };
-    auto timeInit() { return _index_space.time(); };
-};
-
-// Symmetric 1d BC applied with opposite sign based on position from the
-// midplane in the specified direction.
 template <class BCIndexSpace>
 struct BoundaryCondition<BCIndexSpace, ForceUpdateBCTag>
 {
@@ -335,21 +270,18 @@ struct BoundaryCondition<BCIndexSpace, ForceUpdateBCTag>
         Kokkos::RangePolicy<ExecSpace> policy( 0, index_space.size() );
         auto dim = _dim;
         auto center = _center;
-        auto value_top = _value_top;
-        auto value_bottom = _value_bottom;
+        auto value = _value;
         auto start = _time_start;
         auto end = _time_end;
         auto ramp = _time_ramp;
         Kokkos::parallel_for(
             "CabanaPD::BC::apply", policy, KOKKOS_LAMBDA( const int b ) {
-                auto current_top = value_top;
-                auto current_bottom = value_bottom;
+                auto current = value;
                 // Initial linear ramp.
                 if ( t < ramp )
                 {
                     auto t_factor = ( t - start ) / ( ramp - start );
-                    current_top = value_top * t_factor;
-                    current_bottom = value_bottom * t_factor;
+                    current = value * t_factor;
                 }
                 if ( t > start && t < end )
                 {
@@ -362,7 +294,7 @@ struct BoundaryCondition<BCIndexSpace, ForceUpdateBCTag>
         _timer.stop();
     }
 
-    auto forceUpdate() { return _force_update; }
+    auto forceUpdate() { return true; }
 
     auto time() { return _timer.time(); };
     auto timeInit() { return _index_space.time(); };
@@ -371,6 +303,7 @@ struct BoundaryCondition<BCIndexSpace, ForceUpdateBCTag>
 template <class BCIndexSpace, class UserFunctor>
 struct BoundaryCondition
 {
+    BCIndexSpace _index_space;
     UserFunctor _user_functor;
     bool _force_update;
 
@@ -398,6 +331,11 @@ struct BoundaryCondition
             } );
         _timer.stop();
     }
+
+    auto forceUpdate() { return _force_update; }
+
+    auto time() { return _timer.time(); };
+    auto timeInit() { return _index_space.time(); };
 };
 // FIXME: relatively large initial guess for allocation.
 template <class BoundaryType, class BCTag, class ExecSpace, class Particles,
@@ -416,26 +354,6 @@ auto createBoundaryCondition(
         exec_space, particles, planes, initial_guess );
     return BoundaryCondition<bc_index_type, BCTag>( bc_indices, value, start,
                                                     ramp, end );
-}
-
-// FIXME: relatively large initial guess for allocation.
-// FIXME: relatively large initial guess for allocation.
-template <class BoundaryType, class ExecSpace, class Particles>
-auto createBoundaryCondition(
-    ForceSymmetric1dBCTag, ExecSpace exec_space, Particles particles,
-    std::vector<BoundaryType> planes, const double value_top,
-    const double value_bottom, const int dim, const double center,
-    const double start = 0.0,
-    const double ramp = std::numeric_limits<double>::max(),
-    const double end = std::numeric_limits<double>::max(),
-    const double initial_guess = 0.5 )
-{
-    using memory_space = typename Particles::memory_space;
-    using bc_index_type = BoundaryIndexSpace<memory_space, BoundaryType>;
-    bc_index_type bc_indices = createBoundaryIndexSpace(
-        exec_space, particles, planes, initial_guess );
-    return BoundaryCondition<bc_index_type, ForceSymmetric1dBCTag>(
-        bc_indices, value_top, value_bottom, dim, center, start, ramp, end );
 }
 
 template <class UserFunctor, class BoundaryType, class ExecSpace,
