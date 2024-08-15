@@ -110,17 +110,13 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
 
     // FIXME: add vector length.
     // FIXME: enable variable aosoa.
+    using aosoa_f_type = Cabana::AoSoA<vector_type, memory_space, 1>;
+    using aosoa_x_type = Cabana::AoSoA<vector_type, memory_space, 1>;
     using aosoa_u_type = Cabana::AoSoA<vector_type, memory_space, 1>;
     using aosoa_y_type = Cabana::AoSoA<vector_type, memory_space, 1>;
     using aosoa_vol_type = Cabana::AoSoA<scalar_type, memory_space, 1>;
     using aosoa_nofail_type = Cabana::AoSoA<int_type, memory_space, 1>;
     using aosoa_other_type = Cabana::AoSoA<other_types, memory_space>;
-    // Using grid here for the particle init.
-    using plist_x_type =
-        Cabana::Grid::ParticleList<memory_space, 1,
-                                   CabanaPD::Field::ReferencePosition>;
-    using plist_f_type =
-        Cabana::ParticleList<memory_space, 1, CabanaPD::Field::Force>;
 
     // Per type.
     int n_types = 1;
@@ -164,8 +160,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
                std::array<double, dim> high_corner,
                const std::array<int, dim> num_cells, const int max_halo_width )
         : halo_width( max_halo_width )
-        , _plist_x( "positions" )
-        , _plist_f( "forces" )
     {
         createDomain( low_corner, high_corner, num_cells );
         createParticles( exec_space );
@@ -179,8 +173,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
                const std::array<int, dim> num_cells, const int max_halo_width,
                UserFunctor user_create )
         : halo_width( max_halo_width )
-        , _plist_x( "positions" )
-        , _plist_f( "forces" )
     {
         createDomain( low_corner, high_corner, num_cells );
         createParticles( exec_space, user_create );
@@ -262,7 +254,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
         auto nofail = sliceNoFail();
 
         // Initialize particles.
-        auto create_functor =
+        auto init_functor =
             KOKKOS_LAMBDA( const int pid, const double px[dim], const double pv,
                            typename plist_x_type::particle_type& particle )
         {
@@ -291,13 +283,16 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
 
             return create;
         };
-        n_local = Cabana::Grid::createParticles( Cabana::InitUniform{},
-                                                 exec_space, create_functor,
-                                                 _plist_x, 1, *local_grid );
+        n_local = Cabana::Grid::createParticles(
+            Cabana::InitUniform{}, exec_space, x, 1, *local_grid );
         resize( n_local, 0 );
         size = _plist_x.size();
 
-        // Not using Allreduce because global count is only used for printing.
+        // Set particle properties for those created.
+        updateParticles( exec_space, );
+
+        // Not using Allreduce because global count is only used for
+        // printing.
         MPI_Reduce( &n_local, &n_global, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0,
                     MPI_COMM_WORLD );
         _init_timer.stop();
