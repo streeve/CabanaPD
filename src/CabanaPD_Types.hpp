@@ -23,11 +23,11 @@ struct Fracture
 };
 
 // Thermal types.
-struct TemperatureDependent
+struct TemperatureIndependent
 {
     using base_type = TemperatureDependent;
 };
-struct TemperatureIndependent
+struct TemperatureDependent
 {
     using base_type = TemperatureIndependent;
 };
