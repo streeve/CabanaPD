@@ -23,6 +23,8 @@
 
 namespace CabanaPD
 {
+
+template <typename ForceModel>
 class Inputs
 {
   public:
@@ -77,10 +79,6 @@ class Inputs
             inputs["bulk_modulus"]["value"] = K;
         }
 
-        // Check critical time step
-        // This must be done after the values above are calculated
-        computeCriticalTimeStep();
-
         int num_steps = tf / dt;
         inputs["num_steps"]["value"] = num_steps;
 
@@ -115,10 +113,6 @@ class Inputs
         double dx = inputs["dx"]["value"][0];
         double dy = inputs["dx"]["value"][1];
         double dz = inputs["dx"]["value"][2];
-        double v_p = dx * dy * dz;
-
-        // Initialize denominator's summation
-        double sum = 0;
 
         // Run over the neighborhood of a point in the bulk of a body
         int m = inputs["m"]["value"];
@@ -128,6 +122,54 @@ class Inputs
         // FIXME: this is copied from the forces
         double c = 18.0 * K / ( pi * delta * delta * delta * delta );
 
+        double sum = sumBonds( delta, m, dx, dy, dz );
+
+        double safety_factor = inputs["timestep_safety_factor"]["value"];
+        double dt_crit = safety_factor * std::sqrt( 2 * rho / sum );
+
+        double dt = inputs["timestep"]["value"];
+        if ( dt > dt_crit )
+        {
+            log( std::cout, "WARNING: timestep (", dt,
+                 ") is larger than estimated stable timestep (", dt_crit,
+                 "), using safety factor of ", safety_factor, ".\n" );
+        }
+        // Store in inputs
+        inputs["critical_timestep"]["value"] = dt_crit;
+    }
+
+    void computeThermalCriticalTimeStep() {}
+
+    // Parse JSON file.
+    inline nlohmann::json parse( const std::string& filename )
+    {
+        std::ifstream stream( filename );
+        return nlohmann::json::parse( stream );
+    }
+
+    // Get a single input.
+    auto operator[]( std::string label ) { return inputs[label]["value"]; }
+
+    // Get a single input.
+    std::string units( std::string label )
+    {
+        if ( inputs[label].contains( "units" ) )
+            return inputs[label]["units"];
+        else
+            return "";
+    }
+
+    // Check a key exists.
+    bool contains( std::string label ) { return inputs.contains( label ); }
+
+  protected:
+    double sumBonds( const double delta, const int m, const double dx,
+                     const double dy, const double dz,
+                     const bool mechanics = true )
+    {
+        // Initialize denominator's summation
+        double sum = 0;
+        double v_p = dx * dy * dz;
         for ( int i = -( m + 1 ); i < m + 2; i++ )
         {
             // x-component of bond
@@ -153,50 +195,17 @@ class Inputs
                         if ( r2 > 0 )
                         {
                             // Compute denominator
-                            sum += v_p * c / std::sqrt( r2 );
+                            if ( mechanics )
+                                r2 = std::sqrt( r2 );
+                            sum += v_p * c / r2;
                         }
                     }
                 }
             }
         }
-
-        double safety_factor = inputs["timestep_safety_factor"]["value"];
-        double dt_crit = safety_factor * std::sqrt( 2 * rho / sum );
-
-        double dt = inputs["timestep"]["value"];
-        if ( dt > dt_crit )
-        {
-            log( std::cout, "WARNING: timestep (", dt,
-                 ") is larger than estimated stable timestep (", dt_crit,
-                 "), using safety factor of ", safety_factor, ".\n" );
-        }
-        // Store in inputs
-        inputs["critical_timestep"]["value"] = dt_crit;
+        return sum;
     }
 
-    // Parse JSON file.
-    inline nlohmann::json parse( const std::string& filename )
-    {
-        std::ifstream stream( filename );
-        return nlohmann::json::parse( stream );
-    }
-
-    // Get a single input.
-    auto operator[]( std::string label ) { return inputs[label]["value"]; }
-
-    // Get a single input.
-    std::string units( std::string label )
-    {
-        if ( inputs[label].contains( "units" ) )
-            return inputs[label]["units"];
-        else
-            return "";
-    }
-
-    // Check a key exists.
-    bool contains( std::string label ) { return inputs.contains( label ); }
-
-  protected:
     nlohmann::json inputs;
 };
 
