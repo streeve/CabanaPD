@@ -106,7 +106,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     using int_type = Cabana::MemberTypes<int>;
     // v, W, rho, damage,  type.
     using other_types =
-        Cabana::MemberTypes<double[dim * 2],double[dim], double, double, double, int>;
+        Cabana::MemberTypes<double[dim * 2],double[dim], double, double, double, int>; //added double[dim * 2] for virial stress
     // Potentially needed later: body force (b), ID.
 
     // FIXME: add vector length.

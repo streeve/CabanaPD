@@ -161,6 +161,41 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             double w = 0.25 * model.c * s * s * xi * vol( j );
             W( i ) += w;
             Phi += w * vol( i );
+
+            // Calculate forces for virial stress
+            double fx_i = 0.0;
+            double fy_i = 0.0;
+            double fz_i = 0.0;
+
+            double rx, ry, rz;
+            getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+
+           /* // Check if the bond is broken
+            if ( model.criticalStretch( i, j, r, xi ) && !nofail( i ) && !nofail( j ) )
+            {
+                return;  // Skip this bond if broken
+            }
+            */
+            const double coeff = model.c * s * vol( j );
+            fx_i = coeff * rx / r;
+            fy_i = coeff * ry / r;
+            fz_i = coeff * rz / r;
+
+            f( i, 0 ) += fx_i;
+            f( i, 1 ) += fy_i;
+            f( i, 2 ) += fz_i;
+
+            // Assuming virial_stress is the slice for the virial stress tensor
+            auto virial_stress = particles.sliceVirialStress();
+
+            virial_stress(i, 0) += (rx * fx) / vol( j );  // σ_xx
+            virial_stress(i, 1) += (ry * fy) / vol( j );  // σ_yy
+            virial_stress(i, 2) += (rz * fz) / vol( j );  // σ_zz
+
+            virial_stress(i, 3) += (rx * fy) / vol( j );  // σ_xy
+            virial_stress(i, 4) += (rx * fz) / vol( j );  // σ_xz
+            virial_stress(i, 5) += (ry * fz) / vol( j );  // σ_yz
+
         };
 
         double strain_energy = 0.0;
