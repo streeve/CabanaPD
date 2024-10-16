@@ -106,7 +106,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     using int_type = Cabana::MemberTypes<int>;
     // v, W, rho, damage,  type.
     using other_types =
-        Cabana::MemberTypes<double[dim], double, double, double, int>;
+        Cabana::MemberTypes<double[dim * 2],double[dim], double, double, double, int>;
     // Potentially needed later: body force (b), ID.
 
     // FIXME: add vector length.
@@ -361,29 +361,38 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     auto sliceType() const { return Cabana::slice<4>( _aosoa_other, "type" ); }
     auto sliceStrainEnergy()
     {
-        return Cabana::slice<1>( _aosoa_other, "strain_energy" );
+        return Cabana::slice<2>( _aosoa_other, "strain_energy" );
     }
     auto sliceStrainEnergy() const
     {
-        return Cabana::slice<1>( _aosoa_other, "strain_energy" );
+        return Cabana::slice<2>( _aosoa_other, "strain_energy" );
     }
+    auto virialStress()
+    {
+        return Cabana::slice<0>(_aosoa_other, "virial_stress") //added virial stress
+    }
+    auto virialStress() const
+    {
+        return Cabana::slice<0>(_aosoa_other, "virial_stress") //added virial stress const
+    }
+
     auto sliceVelocity()
     {
-        return Cabana::slice<0>( _aosoa_other, "velocities" );
+        return Cabana::slice<1>( _aosoa_other, "velocities" );
     }
     auto sliceVelocity() const
     {
-        return Cabana::slice<0>( _aosoa_other, "velocities" );
+        return Cabana::slice<1>( _aosoa_other, "velocities" );
     }
     auto sliceDensity() { return Cabana::slice<2>( _aosoa_other, "density" ); }
     auto sliceDensity() const
     {
-        return Cabana::slice<2>( _aosoa_other, "density" );
+        return Cabana::slice<3>( _aosoa_other, "density" );
     }
     auto sliceDamage() { return Cabana::slice<3>( _aosoa_other, "damage" ); }
     auto sliceDamage() const
     {
-        return Cabana::slice<3>( _aosoa_other, "damage" );
+        return Cabana::slice<4>( _aosoa_other, "damage" );
     }
     auto sliceNoFail()
     {
