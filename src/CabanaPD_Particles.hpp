@@ -384,12 +384,12 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     {
         return Cabana::slice<1>( _aosoa_other, "velocities" );
     }
-    auto sliceDensity() { return Cabana::slice<2>( _aosoa_other, "density" ); }
+    auto sliceDensity() { return Cabana::slice<3>( _aosoa_other, "density" ); }
     auto sliceDensity() const
     {
         return Cabana::slice<3>( _aosoa_other, "density" );
     }
-    auto sliceDamage() { return Cabana::slice<3>( _aosoa_other, "damage" ); }
+    auto sliceDamage() { return Cabana::slice<4>( _aosoa_other, "damage" ); }
     auto sliceDamage() const
     {
         return Cabana::slice<4>( _aosoa_other, "damage" );

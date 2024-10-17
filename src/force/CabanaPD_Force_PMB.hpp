@@ -162,6 +162,8 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             W( i ) += w;
             Phi += w * vol( i );
 
+
+            
             // Calculate forces for virial stress
             double fx_i = 0.0;
             double fy_i = 0.0;
@@ -170,12 +172,12 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             double rx, ry, rz;
             getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
 
-           /* // Check if the bond is broken
-            if ( model.criticalStretch( i, j, r, xi ) && !nofail( i ) && !nofail( j ) )
-            {
-                return;  // Skip this bond if broken
-            }
-            */
+            // Check if the bond is broken
+            //if ( model.criticalStretch( i, j, r, xi ) && !nofail( i ) && !nofail( j ) )
+            //{
+            //    return;  // Skip this bond if broken
+            //}
+            
             const double coeff = model.c * s * vol( j );
             fx_i = coeff * rx / r;
             fy_i = coeff * ry / r;
@@ -195,6 +197,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             virial_stress(i, 3) += (rx * fy_i) / vol( j );  // σ_xy
             virial_stress(i, 4) += (rx * fz_i) / vol( j );  // σ_xz
             virial_stress(i, 5) += (ry * fz_i) / vol( j );  // σ_yz
+            
 
         };
 
