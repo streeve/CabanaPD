@@ -187,7 +187,6 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             //f( i, 1 ) += fy_i;
             //f( i, 2 ) += fz_i;
 
-            // Assuming virial_stress is the slice for the virial stress tensor
             auto virial_stress = particles.sliceVirialStress();
 
             virial_stress(i, 0) += (rx * fx_i) / vol( j );  // σ_xx

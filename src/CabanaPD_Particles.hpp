@@ -459,7 +459,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
         Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
             h5_config, "particles", MPI_COMM_WORLD, output_step, output_time,
             n_local, getPosition( use_reference ), sliceStrainEnergy(),
-            sliceForce(), sliceDisplacement(), sliceVelocity(), sliceDamage() );
+            sliceForce(), sliceDisplacement(), sliceVelocity(), sliceDamage(), sliceVirialStress() );
 #else
 #ifdef Cabana_ENABLE_SILO
         Cabana::Grid::Experimental::SiloParticleOutput::
