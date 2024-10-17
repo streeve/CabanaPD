@@ -181,20 +181,20 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             fy_i = coeff * ry / r;
             fz_i = coeff * rz / r;
 
-            f( i, 0 ) += fx_i;
-            f( i, 1 ) += fy_i;
-            f( i, 2 ) += fz_i;
+            //f( i, 0 ) += fx_i; //no point accumulating them for virial stress
+            //f( i, 1 ) += fy_i;
+            //f( i, 2 ) += fz_i;
 
             // Assuming virial_stress is the slice for the virial stress tensor
             auto virial_stress = particles.sliceVirialStress();
 
-            virial_stress(i, 0) += (rx * fx) / vol( j );  // σ_xx
-            virial_stress(i, 1) += (ry * fy) / vol( j );  // σ_yy
-            virial_stress(i, 2) += (rz * fz) / vol( j );  // σ_zz
+            virial_stress(i, 0) += (rx * fx_i) / vol( j );  // σ_xx
+            virial_stress(i, 1) += (ry * fy_i) / vol( j );  // σ_yy
+            virial_stress(i, 2) += (rz * fz_i) / vol( j );  // σ_zz
 
-            virial_stress(i, 3) += (rx * fy) / vol( j );  // σ_xy
-            virial_stress(i, 4) += (rx * fz) / vol( j );  // σ_xz
-            virial_stress(i, 5) += (ry * fz) / vol( j );  // σ_yz
+            virial_stress(i, 3) += (rx * fy_i) / vol( j );  // σ_xy
+            virial_stress(i, 4) += (rx * fz_i) / vol( j );  // σ_xz
+            virial_stress(i, 5) += (ry * fz_i) / vol( j );  // σ_yz
 
         };
 

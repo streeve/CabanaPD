@@ -367,13 +367,13 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     {
         return Cabana::slice<2>( _aosoa_other, "strain_energy" );
     }
-    auto virialStress()
+    auto sliceVirialStress()
     {
-        return Cabana::slice<0>(_aosoa_other, "virial_stress") //added virial stress
+        return Cabana::slice<0>(_aosoa_other, "virial_stress"); //added virial stress
     }
-    auto virialStress() const
+    auto sliceVirialStress() const
     {
-        return Cabana::slice<0>(_aosoa_other, "virial_stress") //added virial stress const
+        return Cabana::slice<0>(_aosoa_other, "virial_stress"); //added virial stress const
     }
 
     auto sliceVelocity()
