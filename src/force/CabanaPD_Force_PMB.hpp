@@ -138,7 +138,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
     template <class PosType, class WType, class ParticleType,
               class NeighListType, class ParallelType>
     double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
-                              const ParticleType& particles,
+                              ParticleType& particles,
                               const NeighListType& neigh_list,
                               const int n_local, ParallelType& neigh_op_tag )
     {
@@ -279,7 +279,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
     template <class PosType, class WType, class DamageType, class ParticleType,
               class NeighListType, class MuView, class ParallelType>
     double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
-                              DamageType& phi, const ParticleType& particles,
+                              DamageType& phi, ParticleType& particles,
                               const NeighListType& neigh_list, MuView& mu,
                               const int n_local, ParallelType& )
     {
