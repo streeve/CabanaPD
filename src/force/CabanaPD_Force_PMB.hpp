@@ -146,13 +146,17 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
 
         auto model = _model;
         const auto vol = particles.sliceVolume();
+        auto virial_stress = particles.sliceVirialStress(); // Moved outside of kernel
+        const auto f = particles.sliceForce(); //Slice forces outside of Kernel
+
 
         auto energy_full =
             KOKKOS_LAMBDA( const int i, const int j, double& Phi )
         {
             // Get the bond distance, displacement, and stretch.
             double xi, r, s;
-            getDistance( x, u, i, j, xi, r, s );
+            double rx, ry, rz;
+            getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
 
             model.thermalStretch( s, i, j );
 
@@ -163,39 +167,15 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             Phi += w * vol( i );
 
 
-            
-            // Calculate forces for virial stress
-            double fx_i = 0.0;
-            double fy_i = 0.0;
-            double fz_i = 0.0;
 
-            double rx, ry, rz;
-            getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+            // Use precomputed force for virial stress
+            virial_stress(i, 0) += (rx * f(i, 0)) / vol( j );  // σ_xx
+            virial_stress(i, 1) += (ry * f(i, 1)) / vol( j );  // σ_yy
+            virial_stress(i, 2) += (rz * f(i, 2)) / vol( j );  // σ_zz
 
-            // Check if the bond is broken
-            //if ( model.criticalStretch( i, j, r, xi ) && !nofail( i ) && !nofail( j ) )
-            //{
-            //    return;  // Skip this bond if broken
-            //}
-            
-            const double coeff = model.c * s * vol( j );
-            fx_i = coeff * rx / r;
-            fy_i = coeff * ry / r;
-            fz_i = coeff * rz / r;
-
-            //f( i, 0 ) += fx_i; //no point accumulating them for virial stress
-            //f( i, 1 ) += fy_i;
-            //f( i, 2 ) += fz_i;
-
-            auto virial_stress = particles.sliceVirialStress();
-
-            virial_stress(i, 0) += (rx * fx_i) / vol( j );  // σ_xx
-            virial_stress(i, 1) += (ry * fy_i) / vol( j );  // σ_yy
-            virial_stress(i, 2) += (rz * fz_i) / vol( j );  // σ_zz
-
-            virial_stress(i, 3) += (rx * fy_i) / vol( j );  // σ_xy
-            virial_stress(i, 4) += (rx * fz_i) / vol( j );  // σ_xz
-            virial_stress(i, 5) += (ry * fz_i) / vol( j );  // σ_yz
+            virial_stress(i, 3) += (rx * f(i, 1)) / vol( j );  // σ_xy
+            virial_stress(i, 4) += (rx * f(i, 2)) / vol( j );  // σ_xz
+            virial_stress(i, 5) += (ry * f(i, 2)) / vol( j );  // σ_yz
             
 
         };
