@@ -146,9 +146,9 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
 
         auto model = _model;
         const auto vol = particles.sliceVolume();
-        auto virial_stress = particles.sliceVirialStress(); // Moved outside of kernel
-        const auto f = particles.sliceForce(); //Slice forces outside of Kernel
-
+        auto virial_stress =
+            particles.sliceVirialStress();     // Moved outside of kernel
+        const auto f = particles.sliceForce(); // Slice forces outside of Kernel
 
         auto energy_full =
             KOKKOS_LAMBDA( const int i, const int j, double& Phi )
@@ -166,18 +166,14 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             W( i ) += w;
             Phi += w * vol( i );
 
-
-
             // Use precomputed force for virial stress
-            virial_stress(i, 0) += (rx * f(i, 0)) / vol( j );  // σ_xx
-            virial_stress(i, 1) += (ry * f(i, 1)) / vol( j );  // σ_yy
-            virial_stress(i, 2) += (rz * f(i, 2)) / vol( j );  // σ_zz
+            virial_stress( i, 0 ) += ( rx * f( i, 0 ) ) / vol( j ); // σ_xx
+            virial_stress( i, 1 ) += ( ry * f( i, 1 ) ) / vol( j ); // σ_yy
+            virial_stress( i, 2 ) += ( rz * f( i, 2 ) ) / vol( j ); // σ_zz
 
-            virial_stress(i, 3) += (rx * f(i, 1)) / vol( j );  // σ_xy
-            virial_stress(i, 4) += (rx * f(i, 2)) / vol( j );  // σ_xz
-            virial_stress(i, 5) += (ry * f(i, 2)) / vol( j );  // σ_yz
-            
-
+            virial_stress( i, 3 ) += ( rx * f( i, 1 ) ) / vol( j ); // σ_xy
+            virial_stress( i, 4 ) += ( rx * f( i, 2 ) ) / vol( j ); // σ_xz
+            virial_stress( i, 5 ) += ( ry * f( i, 2 ) ) / vol( j ); // σ_yz
         };
 
         double strain_energy = 0.0;
