@@ -5,3 +5,5 @@ build/
 *.silo
 run/
 .vscode/
+.pre-commit-config.yaml
+examples/

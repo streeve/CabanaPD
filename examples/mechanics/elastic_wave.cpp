@@ -55,15 +55,13 @@ void elasticWaveExample( const std::string filename )
     //                    Force model
     // ====================================================
 
-    using model_type = 
-        CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
+    using model_type = CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
 
-    // Assuming you calculate K and G before, you may need to calculate bond stiffness.
-    // K is bulk modulus, delta is horizon, adjust as needed for PMB
-    double bond_stiffness = 18.00 * K / (3.14159 * delta * delta * delta * delta);
-    model_type force_model(delta, K);
-
-
+    // Assuming you calculate K and G before, you may need to calculate bond
+    // stiffness. K is bulk modulus, delta is horizon, adjust as needed for PMB
+    double bond_stiffness =
+        18.00 * K / ( 3.14159 * delta * delta * delta * delta );
+    model_type force_model( delta, K );
 
     // ====================================================
     //                 Particle generation

@@ -106,7 +106,9 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     using int_type = Cabana::MemberTypes<int>;
     // v, W, rho, damage,  type.
     using other_types =
-        Cabana::MemberTypes<double[dim * (dim + 1) / 2],double[dim], double, double, double, int>; //added double[dim * 2] for virial stress
+        Cabana::MemberTypes<double[dim * ( dim + 1 ) / 2], double[dim], double,
+                            double, double,
+                            int>; // added double[dim * 2] for virial stress
     // Potentially needed later: body force (b), ID.
 
     // FIXME: add vector length.
@@ -345,7 +347,10 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     }
     auto sliceForce() { return _plist_f.slice( CabanaPD::Field::Force() ); }
 
-    auto sliceForce() const { return _plist_f.slice( CabanaPD::Field::Force() ); } //added const version for slicing in energy calculation
+    auto sliceForce() const
+    {
+        return _plist_f.slice( CabanaPD::Field::Force() );
+    } // added const version for slicing in energy calculation
 
     auto sliceForceAtomic()
     {
@@ -372,11 +377,13 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     }
     auto sliceVirialStress()
     {
-        return Cabana::slice<0>(_aosoa_other, "virial_stress"); //added virial stress
+        return Cabana::slice<0>( _aosoa_other,
+                                 "virial_stress" ); // added virial stress
     }
     auto sliceVirialStress() const
     {
-        return Cabana::slice<0>(_aosoa_other, "virial_stress"); //added virial stress const
+        return Cabana::slice<0>( _aosoa_other,
+                                 "virial_stress" ); // added virial stress const
     }
 
     auto sliceVelocity()
@@ -462,7 +469,8 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
         Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
             h5_config, "particles", MPI_COMM_WORLD, output_step, output_time,
             n_local, getPosition( use_reference ), sliceStrainEnergy(),
-            sliceForce(), sliceDisplacement(), sliceVelocity(), sliceDamage(), sliceVirialStress() );
+            sliceForce(), sliceDisplacement(), sliceVelocity(), sliceDamage(),
+            sliceVirialStress() );
 #else
 #ifdef Cabana_ENABLE_SILO
         Cabana::Grid::Experimental::SiloParticleOutput::

@@ -146,16 +146,9 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
 
         auto model = _model;
         const auto vol = particles.sliceVolume();
-<<<<<<< HEAD
         auto virial_stress =
             particles.sliceVirialStress();     // Moved outside of kernel
         const auto f = particles.sliceForce(); // Slice forces outside of Kernel
-=======
-        auto virial_stress = 
-            particles.sliceVirialStress(); // Moved outside of kernel
-        const auto f = particles.sliceForce(); //Slice forces outside of Kernel
-
->>>>>>> bd5bffa (Made suggested formatting changes and virial stress is now working for no fracture PMB model)
 
         auto energy_full =
             KOKKOS_LAMBDA( const int i, const int j, double& Phi )
@@ -176,7 +169,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             // Use precomputed force for virial stress
             virial_stress( i, 0 ) += ( rx * f( i, 0 ) ) / vol( j ); // σ_xx
             virial_stress( i, 1 ) += ( ry * f( i, 1 ) ) / vol( j ); // σ_yy
-            virial_stress( i, 2 ) += ( rz * f( i, 2 ) ) / vol( j ); // σ_zz            
+            virial_stress( i, 2 ) += ( rz * f( i, 2 ) ) / vol( j ); // σ_zz
 
             virial_stress( i, 3 ) += ( rx * f( i, 1 ) ) / vol( j ); // σ_xy
             virial_stress( i, 4 ) += ( rx * f( i, 2 ) ) / vol( j ); // σ_xz
@@ -294,6 +287,8 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
 
         auto model = _model;
         const auto vol = particles.sliceVolume();
+        auto virial_stress = particles.sliceVirialStress();
+        const auto f = particles.sliceForce();
 
         auto energy_full = KOKKOS_LAMBDA( const int i, double& Phi )
         {
@@ -302,6 +297,9 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
                                                                   i );
             double phi_i = 0.0;
             double vol_H_i = 0.0;
+            double sigma_xx = 0.0, sigma_yy = 0.0, sigma_zz = 0.0;
+            double sigma_xy = 0.0, sigma_xz = 0.0, sigma_yz = 0.0;
+
             for ( std::size_t n = 0; n < num_neighbors; n++ )
             {
                 std::size_t j =
@@ -309,7 +307,8 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
                         neigh_list, i, n );
                 // Get the bond distance, displacement, and stretch.
                 double xi, r, s;
-                getDistance( x, u, i, j, xi, r, s );
+                double rx, ry, rz;
+                getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
 
                 model.thermalStretch( s, i, j );
 
@@ -320,7 +319,24 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
 
                 phi_i += mu( i, n ) * vol( j );
                 vol_H_i += vol( j );
+
+                // Accumulate virial stress contributions (no division yet)
+                sigma_xx += ( rx * f( i, 0 ) );
+                sigma_yy += ( ry * f( i, 1 ) );
+                sigma_zz += ( rz * f( i, 2 ) );
+
+                sigma_xy += ( rx * f( i, 1 ) );
+                sigma_xz += ( rx * f( i, 2 ) );
+                sigma_yz += ( ry * f( i, 2 ) );
             }
+            virial_stress( i, 0 ) += sigma_xx / ( vol_H_i + vol( i ) );
+            virial_stress( i, 1 ) += sigma_yy / ( vol_H_i + vol( i ) );
+            virial_stress( i, 2 ) += sigma_zz / ( vol_H_i + vol( i ) );
+
+            virial_stress( i, 3 ) += sigma_xy / ( vol_H_i + vol( i ) );
+            virial_stress( i, 4 ) += sigma_xz / ( vol_H_i + vol( i ) );
+            virial_stress( i, 5 ) += sigma_yz / ( vol_H_i + vol( i ) );
+
             Phi += W( i ) * vol( i );
             phi( i ) = 1 - phi_i / vol_H_i;
         };
