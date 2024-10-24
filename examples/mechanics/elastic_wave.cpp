@@ -36,7 +36,7 @@ void elasticWaveExample( const std::string filename )
     //                Material parameters
     // ====================================================
     double rho0 = inputs["density"];
-    double K = inputs["bulk_modulus"];
+    auto K = inputs["bulk_modulus"];
     double G = inputs["shear_modulus"];
     double delta = inputs["horizon"];
     delta += 1e-10;
@@ -54,14 +54,9 @@ void elasticWaveExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-
-    using model_type = CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
-
-    // Assuming you calculate K and G before, you may need to calculate bond
-    // stiffness. K is bulk modulus, delta is horizon, adjust as needed for PMB
-    double bond_stiffness =
-        18.00 * K / ( 3.14159 * delta * delta * delta * delta );
-    model_type force_model( delta, K );
+    using model_type =
+        CabanaPD::ForceModel<CabanaPD::LinearLPS, CabanaPD::Elastic>;
+    model_type force_model( delta, K, G );
 
     // ====================================================
     //                 Particle generation

@@ -107,8 +107,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     // v, W, rho, damage,  type.
     using other_types =
         Cabana::MemberTypes<double[dim * ( dim + 1 ) / 2], double[dim], double,
-                            double, double,
-                            int>; // added double[dim * 2] for virial stress
+                            double, double, int>;
     // Potentially needed later: body force (b), ID.
 
     // FIXME: add vector length.
@@ -350,7 +349,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     auto sliceForce() const
     {
         return _plist_f.slice( CabanaPD::Field::Force() );
-    } // added const version for slicing in energy calculation
+    }
 
     auto sliceForceAtomic()
     {
@@ -377,13 +376,11 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     }
     auto sliceVirialStress()
     {
-        return Cabana::slice<0>( _aosoa_other,
-                                 "virial_stress" ); // added virial stress
+        return Cabana::slice<0>( _aosoa_other, "virial_stress" );
     }
     auto sliceVirialStress() const
     {
-        return Cabana::slice<0>( _aosoa_other,
-                                 "virial_stress" ); // added virial stress const
+        return Cabana::slice<0>( _aosoa_other, "virial_stress" );
     }
 
     auto sliceVelocity()
