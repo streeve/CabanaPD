@@ -51,6 +51,81 @@ struct ForceModel<PMB, Elastic, TemperatureIndependent> : public BaseForceModel
         K = _K;
         c = 18.0 * K / ( pi * delta * delta * delta * delta );
     }
+
+    KOKKOS_INLINE_FUNCTION
+    auto forceCoeff( const double s, const double vol ) const
+    {
+        return c * s * vol;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    auto energyCoeff( const double s, const double xi, const double vol ) const
+    {
+        // 0.25 factor is due to 1/2 from outside the integral and 1/2 from
+        // the integrand (pairwise potential).
+        return 0.25 * c * s * s * xi * vol;
+    }
+};
+
+template <>
+struct ForceModel<PMB, NoFracture, Plastic, TemperatureIndependent>
+    : public ForceModel<PMB, NoFracture, Elastic, TemperatureIndependent>
+{
+    using base_type = ForceModel<PMB, NoFracture>;
+    using base_model = PMB;
+    using fracture_type = NoFracture;
+    using plasticity_type = Plastic;
+    using thermal_type = TemperatureIndependent;
+
+    using base_type::c;
+    using base_type::delta;
+    using base_type::K;
+    // FIXME: hardcoded
+    const double s_Y = 0.0014;
+
+    ForceModel(){};
+    ForceModel( const double delta, const double K )
+        : base_type( delta, K )
+    {
+        set_param( delta, K );
+    }
+
+    ForceModel( const ForceModel& model )
+        : base_type( model )
+    {
+        c = model.c;
+        K = model.K;
+    }
+
+    void set_param( const double _delta, const double _K )
+    {
+        delta = _delta;
+        K = _K;
+        c = 18.0 * K / ( pi * delta * delta * delta * delta );
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    auto forceCoeff( const double s, const double vol ) const
+    {
+        if ( s < s_Y )
+            return c * s * vol;
+        else
+            return c * s_Y * vol;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    auto energyCoeff( const double s, const double xi, const double vol ) const
+    {
+        double stretch_term = 0.0;
+        if ( s < s_Y )
+            stretch_term = s * s;
+        else
+            stretch_term = s_Y * ( 2 * s - s_Y );
+
+        // 0.25 factor is due to 1/2 from outside the integral and 1/2 from
+        // the integrand (pairwise potential).
+        return 0.25 * c * stretch_term * xi * vol;
+    }
 };
 
 template <>
