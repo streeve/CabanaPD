@@ -23,6 +23,7 @@ struct ForceModel<PMB, Elastic, TemperatureIndependent> : public BaseForceModel
 {
     using base_type = BaseForceModel;
     using base_model = PMB;
+    using model_type = PMB;
     using fracture_type = Elastic;
     using thermal_type = TemperatureIndependent;
 
@@ -59,6 +60,7 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent>
 {
     using base_type = ForceModel<PMB, Elastic>;
     using base_model = typename base_type::base_model;
+    using model_type = PMB;
     using fracture_type = Fracture;
     using thermal_type = base_type::thermal_type;
 
@@ -106,6 +108,7 @@ struct ForceModel<LinearPMB, Elastic, TemperatureIndependent>
 {
     using base_type = ForceModel<PMB, Elastic>;
     using base_model = typename base_type::base_model;
+    using model_type = LinearPMB;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = base_type::thermal_type;
 
@@ -122,6 +125,7 @@ struct ForceModel<LinearPMB, Fracture, TemperatureIndependent>
 {
     using base_type = ForceModel<PMB, Fracture>;
     using base_model = typename base_type::base_model;
+    using model_type = LinearPMB;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = base_type::thermal_type;
 
@@ -144,6 +148,7 @@ struct ForceModel<PMB, Elastic, TemperatureDependent, TemperatureType>
     using base_type = ForceModel<PMB, Elastic, TemperatureIndependent>;
     using base_temperature_type = BaseTemperatureModel<TemperatureType>;
     using base_model = PMB;
+    using model_type = PMB;
     using fracture_type = Elastic;
     using thermal_type = TemperatureDependent;
 
@@ -194,6 +199,7 @@ struct ForceModel<PMB, Fracture, TemperatureDependent, TemperatureType>
     using base_type = ForceModel<PMB, Fracture, TemperatureIndependent>;
     using base_temperature_type = BaseTemperatureModel<TemperatureType>;
     using base_model = typename base_type::base_model;
+    using model_type = PMB;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = TemperatureDependent;
 
