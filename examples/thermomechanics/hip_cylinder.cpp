@@ -156,6 +156,7 @@ void fragmentingCylinderExample( const std::string filename )
     // ====================================================
     //                Boundary conditions
     // ====================================================
+    /*
     // Create BC last to ensure ghost particles are included.
     double sigma0 = inputs["traction"];
     double b0 = sigma0 / dy;
@@ -170,12 +171,14 @@ void fragmentingCylinderExample( const std::string filename )
     };
     auto bc = createBoundaryCondition( bc_op, exec_space{}, *particles, planes,
                                        true );
+    */
 
     // ====================================================
     //                   Imposed field
     // ====================================================
     auto x = particles->sliceReferencePosition();
-    auto temp = particles->sliceTemperature();
+    f = particles->sliceForce();
+    // auto temp = particles->sliceTemperature();
     const double low_corner_y = low_corner[1];
     // This is purposely delayed until after solver init so that ghosted
     // particles are correctly taken into account for lambda capture here.
