@@ -111,10 +111,10 @@ void fragmentingCylinderExample( const std::string filename )
     auto x = particles->sliceReferencePosition();
     auto f = particles->sliceForce();
     double dx = particles->dx[0];
-    double dy = particles->dx[1];
     double dz = particles->dx[2];
     double sigma0 = inputs["pressure"];
-    double b0 = sigma0 / dy;
+    double bz = sigma0 / dz;
+    double br = sigma0 / dx; // Here we assume dx = dy
     double top = high_corner[2];
     double bottom = low_corner[2];
 
@@ -122,28 +122,37 @@ void fragmentingCylinderExample( const std::string filename )
     // particles are correctly taken into account for lambda capture here.
     auto force_func = KOKKOS_LAMBDA( const int pid, const double )
     {
+        // Pressure on top surface
         if ( x( pid, 2 ) > top - dz )
         {
-            f( pid, 2 ) += -b0;
+            f( pid, 2 ) += -bz;
         }
-
-        if ( x( pid, 2 ) < bottom + dz )
+        // Pressure on bottom surface
+        else if ( x( pid, 2 ) < bottom + dz )
         {
-            f( pid, 2 ) += b0;
+            f( pid, 2 ) += bz;
         }
 
-        /*
-        double rsq = ( x[0] - x_center ) * ( x[0] - x_center ) +
-                     ( x[1] - y_center ) * ( x[1] - y_center );
-        if ( rsq > Rout - dx )
+        double rx = x( pid, 0 ) - x_center;
+        double ry = x( pid, 1 ) - y_center;
+        double rsq = rx * rx + ry * ry;
+
+        // Pressure on outer cylinder: assumes dx = dy
+        if ( rsq > ( Rout - dx ) * ( Rout - dx ) )
         {
-            f( pid, 0 ) += b0 * (x( pid, 0 ) - x_center)/radial_dist2;
-            f( pid, 1 ) += b0 * x( pid, 1 )/radial_dist2;
-
+            double r = std::sqrt( rsq );
+            f( pid, 0 ) += -br * rx / r;
+            f( pid, 1 ) += -br * ry / r;
         }
-        */
+        // Pressure on inner cylinder: assumes dx = dy
+        else if ( rsq < ( Rin + dx ) * ( Rin + dx ) )
+        {
+            double r = std::sqrt( rsq );
+            f( pid, 0 ) += br * rx / r;
+            f( pid, 1 ) += br * ry / r;
+        }
     };
-    auto body_term = CabanaPD::createBodyTerm( force_func, false );
+    auto body_term = CabanaPD::createBodyTerm( force_func, true );
 
     // ====================================================
     //                   Simulation run
