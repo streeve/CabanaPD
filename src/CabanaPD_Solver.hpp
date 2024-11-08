@@ -714,7 +714,7 @@ class SolverContact
     using force_type = typename base_type::force_type;
     using neigh_iter_tag = Cabana::SerialOpTag;
     using input_type = typename base_type::input_type;
-    using contact_type = Contact<memory_space, ContactModel>;
+    using contact_type = ContactForce<memory_space, ContactModel>;
     using contact_model_type = ContactModel;
 
     SolverContact( input_type _inputs,

@@ -65,13 +65,13 @@ struct NormalRepulsionModel : public ContactModel
 };
 
 template <class MemorySpace, class ContactType>
-class Contact;
+class ContactForce;
 
 /******************************************************************************
   Normal repulsion computation
 ******************************************************************************/
 template <class MemorySpace>
-class Contact<MemorySpace, NormalRepulsionModel>
+class ContactForce<MemorySpace, NormalRepulsionModel>
 {
   public:
     using neighbor_type =
@@ -79,8 +79,8 @@ class Contact<MemorySpace, NormalRepulsionModel>
                            Cabana::VerletLayout2D, Cabana::TeamOpTag>;
 
     template <class ParticleType>
-    Contact( const bool half_neigh, const NormalRepulsionModel model,
-             ParticleType& particles )
+    ContactForce( const bool half_neigh, const NormalRepulsionModel model,
+                  ParticleType& particles )
         : _half_neigh( half_neigh )
         , _model( model )
     {

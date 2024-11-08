@@ -14,7 +14,7 @@
 
 namespace CabanaPD
 {
-// Mechanics types.
+// Fracture tags.
 struct Elastic
 {
 };
@@ -22,7 +22,15 @@ struct Fracture
 {
 };
 
-// Thermal types.
+// Contact and DEM (contact without PD) tags.
+struct DEM
+{
+};
+struct Contact
+{
+};
+
+// Thermal tags.
 struct TemperatureIndependent
 {
 };
@@ -56,7 +64,7 @@ struct is_heat_transfer<DynamicTemperature> : public std::true_type
 {
 };
 
-// Model types.
+// Force model tags.
 struct PMB
 {
 };
