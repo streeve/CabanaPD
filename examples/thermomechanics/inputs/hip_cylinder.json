@@ -7,7 +7,7 @@
     "shear_modulus"            : {"value": 78e+9, "unit": "Pa"},
     "critical_stretch"         : {"value": 0.02},
     "horizon"                  : {"value": 0.00417462, "unit": "m"},  
-    "pressure"                 : {"value": 2e6,   "unit": "Pa"},
+    "pressure"                 : {"value": 2e6, "unit": "Pa"},
     "cylinder_outer_radius"    : {"value": 0.127, "unit": "m"},
     "cylinder_inner_radius"    : {"value": 0.0635, "unit": "m"},
     "max_radial_velocity"      : {"value": 200, "unit": "m/s"}, 

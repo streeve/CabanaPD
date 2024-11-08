@@ -73,19 +73,6 @@ void fragmentingCylinderExample( const std::string filename )
         exec_space(), low_corner, high_corner, num_cells, halo_width );
 
     // ====================================================
-    //                Boundary conditions planes
-    // ====================================================
-    double dy = particles->dx[1];
-    CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> plane1(
-        low_corner[0], high_corner[0], low_corner[1] - dy, low_corner[1] + dy,
-        low_corner[2], high_corner[2] );
-    CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> plane2(
-        low_corner[0], high_corner[0], high_corner[1] - dy, high_corner[1] + dy,
-        low_corner[2], high_corner[2] );
-    std::vector<CabanaPD::RegionBoundary<CabanaPD::RectangularPrism>> planes = {
-        plane1, plane2 };
-
-    // ====================================================
     //            Custom particle initialization
     // ====================================================
     double x_center = 0.5 * ( low_corner[0] + high_corner[0] );
@@ -105,96 +92,51 @@ void fragmentingCylinderExample( const std::string filename )
     particles->createParticles( exec_space(), init_op );
 
     auto rho = particles->sliceDensity();
-    /*
-    auto x = particles->sliceReferencePosition();
-    auto v = particles->sliceVelocity();
-    auto f = particles->sliceForce();
-
-    double vrmax = inputs["max_radial_velocity"];
-    double vrmin = inputs["min_radial_velocity"];
-    double vzmax = inputs["max_vertical_velocity"];
-    double zmin = low_corner[2];
-
-    auto dx = particles->dx;
-    double height = inputs["system_size"][2];
-    double factor = inputs["grid_perturbation_factor"];
-
-    using pool_type = Kokkos::Random_XorShift64_Pool<exec_space>;
-    using random_type = Kokkos::Random_XorShift64<exec_space>;
-    pool_type pool;
-    int seed = 456854;
-    pool.init( seed, particles->n_local );
-    */
     auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
         // Density
         rho( pid ) = rho0;
-
-        /*
-        // Perturb particle positions
-        auto gen = pool.get_state();
-        for ( std::size_t d = 0; d < 3; d++ )
-        {
-            auto rand =
-                Kokkos::rand<random_type, double>::draw( gen, 0.0, 1.0 );
-            x( pid, d ) += ( 2.0 * rand - 1.0 ) * factor * dx[d];
-        }
-        pool.free_state( gen );
-
-        // Velocity
-        double zfactor = ( ( x( pid, 2 ) - zmin ) / ( 0.5 * height ) ) - 1;
-        double vr = vrmax - vrmin * zfactor * zfactor;
-        v( pid, 0 ) =
-            vr * Kokkos::cos( Kokkos::atan2( x( pid, 1 ), x( pid, 0 ) ) );
-        v( pid, 1 ) =
-            vr * Kokkos::sin( Kokkos::atan2( x( pid, 1 ), x( pid, 0 ) ) );
-        v( pid, 2 ) = vzmax * zfactor;
-        */
     };
     particles->updateParticles( exec_space{}, init_functor );
 
     // ====================================================
-    //                Boundary conditions
+    //                   Create solver
     // ====================================================
-    /*
-    // Create BC last to ensure ghost particles are included.
-    double sigma0 = inputs["traction"];
-    double b0 = sigma0 / dy;
-    f = particles->sliceForce();
-    x = particles->sliceReferencePosition();
-    // Create a symmetric force BC in the y-direction.
-    auto bc_op = KOKKOS_LAMBDA( const int pid, const double )
-    {
-        auto ypos = x( pid, 1 );
-        auto sign = std::abs( ypos ) / ypos;
-        f( pid, 1 ) += b0 * sign;
-    };
-    auto bc = createBoundaryCondition( bc_op, exec_space{}, *particles, planes,
-                                       true );
-    */
+    auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
+        inputs, particles, force_model );
 
     // ====================================================
     //                   Imposed field
     // ====================================================
     auto x = particles->sliceReferencePosition();
-    f = particles->sliceForce();
-    // auto temp = particles->sliceTemperature();
+    auto f = particles->sliceForce();
+    double dy = particles->dx[1];
+    double sigma0 = inputs["pressure"];
+    double b0 = sigma0 / dy;
+    const double high_corner_y = high_corner[1];
     const double low_corner_y = low_corner[1];
+
     // This is purposely delayed until after solver init so that ghosted
     // particles are correctly taken into account for lambda capture here.
-    auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
+    auto force_func = KOKKOS_LAMBDA( const int pid, const double )
     {
-        temp( pid ) = temp0 + 5000.0 * ( x( pid, 1 ) - low_corner_y ) * t;
+        if ( x( pid, 1 ) > high_corner_y - dy )
+        {
+            f( pid, 1 ) += -b0;
+        }
+
+        if ( x( pid, 1 ) < low_corner_y + dy )
+        {
+            f( pid, 1 ) += b0;
+        }
     };
-    auto body_term = CabanaPD::createBodyTerm( temp_func, false );
+    auto body_term = CabanaPD::createBodyTerm( force_func, false );
 
     // ====================================================
     //                   Simulation run
     // ====================================================
-    auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
-        inputs, particles, force_model );
-    cabana_pd->init();
-    cabana_pd->run();
+    cabana_pd->init( body_term );
+    cabana_pd->run( body_term );
 }
 
 // Initialize MPI+Kokkos.
