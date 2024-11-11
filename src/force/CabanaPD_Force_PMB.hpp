@@ -70,14 +70,17 @@
 
 namespace CabanaPD
 {
-template <class ExecutionSpace, class... ModelParams>
-class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
-    : public Force<ExecutionSpace, BaseForceModel>
+template <class MemorySpace, class... ModelParams>
+class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
+    : public Force<MemorySpace, BaseForceModel>
 {
   public:
-    using exec_space = ExecutionSpace;
+    // Using the default exec_space.
+    using exec_space = typename MemorySpace::execution_space;
     using model_type = ForceModel<PMB, Elastic, ModelParams...>;
-    using base_type = Force<exec_space, BaseForceModel>;
+    using base_type = Force<MemorySpace, BaseForceModel>;
+    using neighbor_type = typename base_type::neighbor_type;
+    using base_type::neigh_list;
 
   protected:
     using base_type::_half_neigh;
@@ -87,17 +90,18 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
     using base_type::_timer;
 
   public:
-    Force( const bool half_neigh, const model_type model )
-        : base_type( half_neigh )
+    template <class ParticleType>
+    Force( const bool half_neigh, const ParticleType& particles,
+           const model_type model )
+        : base_type( half_neigh, model.delta, particles )
         , _model( model )
     {
     }
 
     template <class ForceType, class PosType, class ParticleType,
-              class NeighListType, class ParallelType>
+              class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
-                           const ParticleType& particles,
-                           const NeighListType& neigh_list, const int n_local,
+                           const ParticleType& particles, const int n_local,
                            ParallelType& neigh_op_tag )
     {
         _timer.start();
@@ -136,11 +140,10 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
     }
 
     template <class PosType, class WType, class ParticleType,
-              class NeighListType, class ParallelType>
+              class ParallelType>
     double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
-                              const ParticleType& particles,
-                              const NeighListType& neigh_list,
-                              const int n_local, ParallelType& neigh_op_tag )
+                              const ParticleType& particles, const int n_local,
+                              ParallelType& neigh_op_tag )
     {
         _energy_timer.start();
 
@@ -175,17 +178,20 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
     }
 };
 
-template <class ExecutionSpace, class... ModelParams>
-class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
-    : public Force<ExecutionSpace, BaseForceModel>
+template <class MemorySpace, class... ModelParams>
+class Force<MemorySpace, ForceModel<PMB, Fracture, ModelParams...>>
+    : public Force<MemorySpace, BaseForceModel>
 {
   public:
-    using exec_space = ExecutionSpace;
+    // Using the default exec_space.
+    using exec_space = typename MemorySpace::execution_space;
     using model_type = ForceModel<PMB, Fracture, ModelParams...>;
+    using base_type = Force<MemorySpace, BaseForceModel>;
+    using neighbor_type = typename base_type::neighbor_type;
+    using base_type::neigh_list;
 
   protected:
     using base_model_type = typename model_type::base_type;
-    using base_type = Force<ExecutionSpace, BaseForceModel>;
     using base_type::_half_neigh;
     model_type _model;
 
@@ -193,17 +199,18 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
     using base_type::_timer;
 
   public:
-    Force( const bool half_neigh, const model_type model )
-        : base_type( half_neigh )
+    template <class ParticleType>
+    Force( const bool half_neigh, const ParticleType& particles,
+           const model_type model )
+        : base_type( half_neigh, model.delta, particles )
         , _model( model )
     {
     }
 
-    template <class ForceType, class PosType, class ParticleType,
-              class NeighListType, class MuView, class ParallelType>
+    template <class ForceType, class PosType, class ParticleType, class MuView,
+              class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
-                           const ParticleType& particles,
-                           const NeighListType& neigh_list, MuView& mu,
+                           const ParticleType& particles, MuView& mu,
                            const int n_local, ParallelType& )
     {
         _timer.start();
@@ -215,7 +222,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
         auto force_full = KOKKOS_LAMBDA( const int i )
         {
             std::size_t num_neighbors =
-                Cabana::NeighborList<NeighListType>::numNeighbor( neigh_list,
+                Cabana::NeighborList<neighbor_type>::numNeighbor( neigh_list,
                                                                   i );
             for ( std::size_t n = 0; n < num_neighbors; n++ )
             {
@@ -224,7 +231,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
                 double fz_i = 0.0;
 
                 std::size_t j =
-                    Cabana::NeighborList<NeighListType>::getNeighbor(
+                    Cabana::NeighborList<neighbor_type>::getNeighbor(
                         neigh_list, i, n );
 
                 // Get the reference positions and displacements.
@@ -264,11 +271,10 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
     }
 
     template <class PosType, class WType, class DamageType, class ParticleType,
-              class NeighListType, class MuView, class ParallelType>
+              class MuView, class ParallelType>
     double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
                               DamageType& phi, const ParticleType& particles,
-                              const NeighListType& neigh_list, MuView& mu,
-                              const int n_local, ParallelType& )
+                              MuView& mu, const int n_local, ParallelType& )
     {
         _energy_timer.start();
 
@@ -278,14 +284,14 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
         auto energy_full = KOKKOS_LAMBDA( const int i, double& Phi )
         {
             std::size_t num_neighbors =
-                Cabana::NeighborList<NeighListType>::numNeighbor( neigh_list,
+                Cabana::NeighborList<neighbor_type>::numNeighbor( neigh_list,
                                                                   i );
             double phi_i = 0.0;
             double vol_H_i = 0.0;
             for ( std::size_t n = 0; n < num_neighbors; n++ )
             {
                 std::size_t j =
-                    Cabana::NeighborList<NeighListType>::getNeighbor(
+                    Cabana::NeighborList<neighbor_type>::getNeighbor(
                         neigh_list, i, n );
                 // Get the bond distance, displacement, and stretch.
                 double xi, r, s;
@@ -315,16 +321,19 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
     }
 };
 
-template <class ExecutionSpace, class... ModelParams>
-class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
-    : public Force<ExecutionSpace, BaseForceModel>
+template <class MemorySpace, class... ModelParams>
+class Force<MemorySpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
+    : public Force<MemorySpace, BaseForceModel>
 {
   public:
-    using exec_space = ExecutionSpace;
+    // Using the default exec_space.
+    using exec_space = typename MemorySpace::execution_space;
     using model_type = ForceModel<LinearPMB, Elastic, TemperatureIndependent>;
+    using base_type = Force<MemorySpace, BaseForceModel>;
+    using neighbor_type = typename base_type::neighbor_type;
+    using base_type::neigh_list;
 
   protected:
-    using base_type = Force<ExecutionSpace, BaseForceModel>;
     using base_type::_half_neigh;
     model_type _model;
 
@@ -332,17 +341,18 @@ class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
     using base_type::_timer;
 
   public:
-    Force( const bool half_neigh, const model_type model )
-        : base_type( half_neigh )
+    template <class ParticleType>
+    Force( const bool half_neigh, const ParticleType& particles,
+           const model_type model )
+        : base_type( half_neigh, model.delta, particles )
         , _model( model )
     {
     }
 
     template <class ForceType, class PosType, class ParticleType,
-              class NeighListType, class ParallelType>
+              class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
-                           ParticleType& particles,
-                           const NeighListType& neigh_list, const int n_local,
+                           ParticleType& particles, const int n_local,
                            ParallelType& neigh_op_tag )
     {
         _timer.start();
@@ -383,11 +393,10 @@ class Force<ExecutionSpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
     }
 
     template <class PosType, class WType, class ParticleType,
-              class NeighListType, class ParallelType>
+              class ParallelType>
     double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
-                              ParticleType& particles,
-                              const NeighListType& neigh_list,
-                              const int n_local, ParallelType& neigh_op_tag )
+                              ParticleType& particles, const int n_local,
+                              ParallelType& neigh_op_tag )
     {
         _energy_timer.start();
 

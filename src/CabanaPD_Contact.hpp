@@ -64,41 +64,31 @@ struct NormalRepulsionModel : public ContactModel
     }
 };
 
-template <class MemorySpace, class ContactType>
-class ContactForce;
-
 /******************************************************************************
   Normal repulsion computation
 ******************************************************************************/
 template <class MemorySpace>
-class ContactForce<MemorySpace, NormalRepulsionModel>
+class Force<MemorySpace, NormalRepulsionModel>
+    : public Force<MemorySpace, BaseForceModel>
 {
   public:
-    using neighbor_type =
-        Cabana::VerletList<MemorySpace, Cabana::FullNeighborTag,
-                           Cabana::VerletLayout2D, Cabana::TeamOpTag>;
+    using base_type = Force<MemorySpace, BaseForceModel>;
 
     template <class ParticleType>
-    ContactForce( const bool half_neigh, const NormalRepulsionModel model,
-                  ParticleType& particles )
-        : _half_neigh( half_neigh )
+    Force( const bool half_neigh, const NormalRepulsionModel model,
+           ParticleType& particles )
+        : base_type( half_neigh, model.Rc, particles.sliceCurrentPosition(),
+                     particles.n_local, particles->ghost_mesh_lo,
+                     particles->ghost_mesh_hi )
         , _model( model )
     {
-        // Create contact neighbor list
-        for ( std::size_t d = 0; d < 3; d++ )
-        {
-            mesh_min[d] = particles.ghost_mesh_lo[d];
-            mesh_max[d] = particles.ghost_mesh_hi[d];
-        }
-        const auto y = particles.sliceCurrentPosition();
-        _neighbors = std::make_shared<neighbor_type>(
-            y, 0, particles.n_local, model.Rc, 1.0, mesh_min, mesh_max );
+        mesh_min[3] = particles->ghost_mesh_lo;
+        mesh_max[3] = particles->ghost_mesh_hi;
     }
 
     template <class ForceType, class ParticleType, class ParallelType>
-    void computeContactFull( ForceType& fc, const ParticleType& particles,
-                             const int n_local,
-                             ParallelType& neigh_op_tag ) const
+    void computeForceFull( ForceType& fc, const ParticleType& particles,
+                           const int n_local, ParallelType& neigh_op_tag ) const
     {
         auto delta = _model.delta;
         auto Rc = _model.Rc;
@@ -108,8 +98,8 @@ class ContactForce<MemorySpace, NormalRepulsionModel>
         const auto u = particles.sliceDisplacement();
         const auto y = particles.sliceCurrentPosition();
 
-        _neighbors->build( y, 0, particles.n_local, Rc, 1.0, mesh_min,
-                           mesh_max );
+        neigh_list.build( y, 0, particles.n_local, Rc, 1.0, mesh_min,
+                          mesh_max );
 
         auto contact_full = KOKKOS_LAMBDA( const int i, const int j )
         {
@@ -139,14 +129,14 @@ class ContactForce<MemorySpace, NormalRepulsionModel>
         using exec_space = typename MemorySpace::execution_space;
         Kokkos::RangePolicy<exec_space> policy( 0, n_local );
         Cabana::neighbor_parallel_for(
-            policy, contact_full, *_neighbors, Cabana::FirstNeighborsTag(),
+            policy, contact_full, neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::Contact::compute_full" );
     }
 
   protected:
-    bool _half_neigh;
     NormalRepulsionModel _model;
-    std::shared_ptr<neighbor_type> _neighbors;
+    using base_type::_half_neigh;
+    using base_type::neigh_list;
 
     double mesh_max[3];
     double mesh_min[3];

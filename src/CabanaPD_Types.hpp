@@ -29,6 +29,21 @@ struct DEM
 struct Contact
 {
 };
+struct NoContact
+{
+};
+template <class>
+struct is_contact : public std::false_type
+{
+};
+template <>
+struct is_contact<Contact> : public std::true_type
+{
+};
+template <>
+struct is_contact<DEM> : public std::true_type
+{
+};
 
 // Thermal tags.
 struct TemperatureIndependent

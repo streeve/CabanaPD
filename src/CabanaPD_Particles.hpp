@@ -134,8 +134,9 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     std::array<double, dim> local_mesh_ext;
     std::array<double, dim> local_mesh_lo;
     std::array<double, dim> local_mesh_hi;
-    std::array<double, dim> ghost_mesh_lo;
-    std::array<double, dim> ghost_mesh_hi;
+    // FIXME: this is for neighborlist construction.
+    double ghost_mesh_lo[dim];
+    double ghost_mesh_hi[dim];
     std::shared_ptr<
         Cabana::Grid::LocalGrid<Cabana::Grid::UniformMesh<double, dim>>>
         local_grid;
