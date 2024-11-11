@@ -61,7 +61,7 @@ void diskImpactExample( const std::string filename )
     CabanaPD::NormalRepulsionModel contact_model( delta, r_c, K );
 
     // FIXME: use createSolver to switch backend at runtime.
-    auto cabana_pd = CabanaPD::createSolverContact<memory_space>(
+    auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
         inputs, particles, force_model, contact_model );
 
     double impact_r = inputs["impactor_radius"];
