@@ -57,8 +57,8 @@
 //
 //************************************************************************
 
-#ifndef INTEGRATOR_H
-#define INTEGRATOR_H
+#ifndef CABANAPD_INTEGRATOR_HPP
+#define CABANAPD_INTEGRATOR_HPP
 
 #include <Kokkos_Core.hpp>
 

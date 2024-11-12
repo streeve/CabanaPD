@@ -9,8 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef DISPLACEMENTPROFILE_H
-#define DISPLACEMENTPROFILE_H
+#ifndef CABANAPD_DISPLACEMENTPROFILE_HPP
+#define CABANAPD_DISPLACEMENTPROFILE_HPP
 
 #include <Kokkos_Core.hpp>
 

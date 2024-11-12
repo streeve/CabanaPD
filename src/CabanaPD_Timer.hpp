@@ -9,8 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef TIMER_H
-#define TIMER_H
+#ifndef CABANAPD_TIMER_HPP
+#define CABANAPD_TIMER_HPP
 
 #include "mpi.h"
 #include <iostream>

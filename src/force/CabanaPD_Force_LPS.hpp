@@ -57,8 +57,8 @@
 //
 //************************************************************************
 
-#ifndef FORCE_LPS_H
-#define FORCE_LPS_H
+#ifndef CABANAPD_FORCE_LPS_HPP
+#define CABANAPD_FORCE_LPS_HPP
 
 #include <cmath>
 
@@ -463,7 +463,7 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
                 num_bonds += static_cast<double>( mu( i, n ) );
 
             double phi_i = 0.0;
-            double vol_H_i = 0.0;
+            double vol_HPP_i = 0.0;
             for ( std::size_t n = 0; n < num_neighbors; n++ )
             {
                 std::size_t j =
@@ -482,10 +482,10 @@ class Force<ExecutionSpace, ForceModel<LPS, Fracture>>
                 W( i ) += w;
 
                 phi_i += mu( i, n ) * vol( j );
-                vol_H_i += vol( j );
+                vol_HPP_i += vol( j );
             }
             Phi += W( i ) * vol( i );
-            phi( i ) = 1 - phi_i / vol_H_i;
+            phi( i ) = 1 - phi_i / vol_HPP_i;
         };
 
         double strain_energy = 0.0;

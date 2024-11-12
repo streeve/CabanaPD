@@ -20,8 +20,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef OUTPUT_H
-#define OUTPUT_H
+#ifndef CABANAPD_OUTPUT_HPP
+#define CABANAPD_OUTPUT_HPP
 
 #include <fstream>
 #include <iostream>

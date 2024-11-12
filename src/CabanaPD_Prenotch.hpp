@@ -9,8 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef PRENOTCH_H
-#define PRENOTCH_H
+#ifndef CABANAPD_PRENOTCH_HPP
+#define CABANAPD_PRENOTCH_HPP
 
 #include <Kokkos_Core.hpp>
 

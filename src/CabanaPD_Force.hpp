@@ -57,8 +57,8 @@
 //
 //************************************************************************
 
-#ifndef FORCE_H
-#define FORCE_H
+#ifndef CABANAPD_FORCE_HPP
+#define CABANAPD_FORCE_HPP
 
 #include <cmath>
 

@@ -9,8 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef BODYTERM_H
-#define BODYTERM_H
+#ifndef CABANAPD_BODYTERM_HPP
+#define CABANAPD_BODYTERM_HPP
 
 #include <Kokkos_Core.hpp>
 

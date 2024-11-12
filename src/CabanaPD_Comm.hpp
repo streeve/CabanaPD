@@ -9,8 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef COMM_H
-#define COMM_H
+#ifndef CABANAPD_COMM_HPP
+#define CABANAPD_COMM_HPP
 
 #include <string>
 

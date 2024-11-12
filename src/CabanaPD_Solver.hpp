@@ -57,8 +57,8 @@
 //
 //************************************************************************
 
-#ifndef SOLVER_H
-#define SOLVER_H
+#ifndef CABANAPD_SOLVER_HPP
+#define CABANAPD_SOLVER_HPP
 
 #include <chrono>
 #include <ctime>

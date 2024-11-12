@@ -57,8 +57,8 @@
 //
 //************************************************************************
 
-#ifndef PARTICLES_H
-#define PARTICLES_H
+#ifndef CABANAPD_PARTICLES_HPP
+#define CABANAPD_PARTICLES_HPP
 
 #include <memory>
 

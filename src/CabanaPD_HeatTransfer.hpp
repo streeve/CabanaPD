@@ -9,8 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef HEATTRANSFER_H
-#define HEATTRANSFER_H
+#ifndef CABANAPD_HEATTRANSFER_HPP
+#define CABANAPD_HEATTRANSFER_HPP
 
 #include <CabanaPD_Timer.hpp>
 

@@ -9,8 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef BOUNDARYCONDITION_H
-#define BOUNDARYCONDITION_H
+#ifndef CABANAPD_BOUNDARYCONDITION_HPP
+#define CABANAPD_BOUNDARYCONDITION_HPP
 
 #include <Kokkos_Core.hpp>
 

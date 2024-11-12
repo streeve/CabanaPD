@@ -57,8 +57,8 @@
 //
 //************************************************************************
 
-#ifndef FORCE_PMB_H
-#define FORCE_PMB_H
+#ifndef CABANAPD_FORCE_PMB_HPP
+#define CABANAPD_FORCE_PMB_HPP
 
 #include <cmath>
 
@@ -281,7 +281,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
                 Cabana::NeighborList<NeighListType>::numNeighbor( neigh_list,
                                                                   i );
             double phi_i = 0.0;
-            double vol_H_i = 0.0;
+            double vol_HPP_i = 0.0;
             for ( std::size_t n = 0; n < num_neighbors; n++ )
             {
                 std::size_t j =
@@ -299,10 +299,10 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
                 W( i ) += w;
 
                 phi_i += mu( i, n ) * vol( j );
-                vol_H_i += vol( j );
+                vol_HPP_i += vol( j );
             }
             Phi += W( i ) * vol( i );
-            phi( i ) = 1 - phi_i / vol_H_i;
+            phi( i ) = 1 - phi_i / vol_HPP_i;
         };
 
         double strain_energy = 0.0;

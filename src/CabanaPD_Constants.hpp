@@ -9,8 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef CONSTANTS_H
-#define CONSTANTS_H
+#ifndef CABANAPD_CONSTANTS_HPP
+#define CABANAPD_CONSTANTS_HPP
 
 #include "mpi.h"
 

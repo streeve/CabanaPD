@@ -9,8 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef FORCE_MODELS_LPS_H
-#define FORCE_MODELS_LPS_H
+#ifndef CABANAPD_FORCE_MODELS_LPS_HPP
+#define CABANAPD_FORCE_MODELS_LPS_HPP
 
 #include <CabanaPD_ForceModels.hpp>
 #include <CabanaPD_Types.hpp>

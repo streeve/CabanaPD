@@ -9,8 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef FIELDS_HPP
-#define FIELDS_HPP
+#ifndef CABANAPD_FIELDS_HPP
+#define CABANAPD_FIELDS_HPP
 
 #include <Cabana_Core.hpp>
 
