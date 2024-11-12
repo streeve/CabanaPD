@@ -143,17 +143,17 @@ class Force<MemorySpace, BaseForceModel>
     using neighbor_type =
         Cabana::VerletList<MemorySpace, Cabana::FullNeighborTag,
                            Cabana::VerletLayout2D, Cabana::TeamOpTag>;
-    neighbor_type neigh_list;
+    neighbor_type _neigh_list;
 
     // Primary constructor: use positions and construct neighbors.
     template <class ParticleType>
     Force( const bool half_neigh, const double delta,
            const ParticleType& particles )
         : _half_neigh( half_neigh )
-        , neigh_list( neighbor_type( particles.sliceReferencePosition(), 0,
-                                     particles.n_local, delta + 1e-14, 1.0,
-                                     particles.ghost_mesh_lo,
-                                     particles.ghost_mesh_hi ) )
+        , _neigh_list( neighbor_type( particles.sliceReferencePosition(), 0,
+                                      particles.n_local, delta + 1e-14, 1.0,
+                                      particles.ghost_mesh_lo,
+                                      particles.ghost_mesh_hi ) )
     {
     }
 
@@ -163,21 +163,21 @@ class Force<MemorySpace, BaseForceModel>
            const PositionType& positions, const std::size_t num_local,
            const double mesh_min[3], const double mesh_max[3] )
         : _half_neigh( half_neigh )
-        , neigh_list( neighbor_type( positions, 0, num_local, delta + 1e-14,
-                                     1.0, mesh_min, mesh_max ) )
+        , _neigh_list( neighbor_type( positions, 0, num_local, delta + 1e-14,
+                                      1.0, mesh_min, mesh_max ) )
     {
     }
 
     auto getMaxLocalNeighbors()
     {
         // NOTE: this only works on host for 2D Verlet!
-        return Cabana::NeighborList<neighbor_type>::maxNeighbor( neigh_list );
+        return Cabana::NeighborList<neighbor_type>::maxNeighbor( _neigh_list );
     }
 
     void getNeighborStatistics( unsigned& max_neighbors,
                                 unsigned long long& total_neighbors )
     {
-        auto neigh = neigh_list;
+        auto neigh = _neigh_list;
         unsigned local_max_neighbors;
         unsigned long long local_total_neighbors;
         auto neigh_stats = KOKKOS_LAMBDA( const int, unsigned& max_n,

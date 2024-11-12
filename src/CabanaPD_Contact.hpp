@@ -101,7 +101,7 @@ class Force<MemorySpace, NormalRepulsionModel>
         const auto u = particles.sliceDisplacement();
         const auto y = particles.sliceCurrentPosition();
 
-        neigh_list.build( y, 0, n_local, Rc, 1.0, mesh_min, mesh_max );
+        _neigh_list.build( y, 0, n_local, Rc, 1.0, mesh_min, mesh_max );
 
         auto contact_full = KOKKOS_LAMBDA( const int i, const int j )
         {
@@ -131,14 +131,14 @@ class Force<MemorySpace, NormalRepulsionModel>
         using exec_space = typename MemorySpace::execution_space;
         Kokkos::RangePolicy<exec_space> policy( 0, n_local );
         Cabana::neighbor_parallel_for(
-            policy, contact_full, neigh_list, Cabana::FirstNeighborsTag(),
+            policy, contact_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::Contact::compute_full" );
     }
 
   protected:
     NormalRepulsionModel _model;
     using base_type::_half_neigh;
-    using base_type::neigh_list;
+    using base_type::_neigh_list;
 
     double mesh_max[3];
     double mesh_min[3];

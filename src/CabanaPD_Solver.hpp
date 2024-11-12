@@ -524,7 +524,7 @@ class SolverFracture
     void init_prenotch( Prenotch<NumPrenotch> prenotch )
     {
         // Create prenotch.
-        prenotch.create( exec_space{}, mu, *particles, force->neigh_list );
+        prenotch.create( exec_space{}, mu, *particles, force->_neigh_list );
         _init_time += prenotch.time();
     }
 

@@ -33,7 +33,7 @@ class HeatTransfer : public Force<MemorySpace, BaseForceModel>
     using exec_space = typename MemorySpace::execution_space;
 
   public:
-    using base_type::neigh_list;
+    using base_type::_neigh_list;
     using model_type = ModelType;
     static_assert(
         std::is_same_v<typename model_type::fracture_type, Elastic> );
@@ -71,7 +71,7 @@ class HeatTransfer : public Force<MemorySpace, BaseForceModel>
 
         Kokkos::RangePolicy<exec_space> policy( 0, n_local );
         Cabana::neighbor_parallel_for(
-            policy, temp_func, neigh_list, Cabana::FirstNeighborsTag(),
+            policy, temp_func, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::HeatTransfer::computeFull" );
 
         _timer.stop();

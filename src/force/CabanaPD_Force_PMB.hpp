@@ -80,7 +80,7 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
     using model_type = ForceModel<PMB, Elastic, ModelParams...>;
     using base_type = Force<MemorySpace, BaseForceModel>;
     using neighbor_type = typename base_type::neighbor_type;
-    using base_type::neigh_list;
+    using base_type::_neigh_list;
 
   protected:
     using base_type::_half_neigh;
@@ -133,7 +133,7 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
 
         Kokkos::RangePolicy<exec_space> policy( 0, n_local );
         Cabana::neighbor_parallel_for(
-            policy, force_full, neigh_list, Cabana::FirstNeighborsTag(),
+            policy, force_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::ForcePMB::computeFull" );
 
         _timer.stop();
@@ -169,7 +169,7 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
         double strain_energy = 0.0;
         Kokkos::RangePolicy<exec_space> policy( 0, n_local );
         Cabana::neighbor_parallel_reduce(
-            policy, energy_full, neigh_list, Cabana::FirstNeighborsTag(),
+            policy, energy_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, strain_energy,
             "CabanaPD::ForcePMB::computeEnergyFull" );
 
@@ -188,7 +188,7 @@ class Force<MemorySpace, ForceModel<PMB, Fracture, ModelParams...>>
     using model_type = ForceModel<PMB, Fracture, ModelParams...>;
     using base_type = Force<MemorySpace, BaseForceModel>;
     using neighbor_type = typename base_type::neighbor_type;
-    using base_type::neigh_list;
+    using base_type::_neigh_list;
 
   protected:
     using base_model_type = typename model_type::base_type;
@@ -216,6 +216,7 @@ class Force<MemorySpace, ForceModel<PMB, Fracture, ModelParams...>>
         _timer.start();
 
         auto model = _model;
+        auto neigh_list = _neigh_list;
         const auto vol = particles.sliceVolume();
         const auto nofail = particles.sliceNoFail();
 
@@ -279,6 +280,7 @@ class Force<MemorySpace, ForceModel<PMB, Fracture, ModelParams...>>
         _energy_timer.start();
 
         auto model = _model;
+        auto neigh_list = _neigh_list;
         const auto vol = particles.sliceVolume();
 
         auto energy_full = KOKKOS_LAMBDA( const int i, double& Phi )
@@ -331,7 +333,7 @@ class Force<MemorySpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
     using model_type = ForceModel<LinearPMB, Elastic, TemperatureIndependent>;
     using base_type = Force<MemorySpace, BaseForceModel>;
     using neighbor_type = typename base_type::neighbor_type;
-    using base_type::neigh_list;
+    using base_type::_neigh_list;
 
   protected:
     using base_type::_half_neigh;
@@ -386,7 +388,7 @@ class Force<MemorySpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
 
         Kokkos::RangePolicy<exec_space> policy( 0, n_local );
         Cabana::neighbor_parallel_for(
-            policy, force_full, neigh_list, Cabana::FirstNeighborsTag(),
+            policy, force_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::ForceLinearPMB::computeFull" );
 
         _timer.stop();
@@ -422,7 +424,7 @@ class Force<MemorySpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
         double strain_energy = 0.0;
         Kokkos::RangePolicy<exec_space> policy( 0, n_local );
         Cabana::neighbor_parallel_reduce(
-            policy, energy_full, neigh_list, Cabana::FirstNeighborsTag(),
+            policy, energy_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, strain_energy,
             "CabanaPD::ForceLinearPMB::computeEnergyFull" );
 
