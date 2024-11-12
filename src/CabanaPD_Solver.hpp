@@ -255,6 +255,7 @@ class SolverElastic
         {
             _step_timer.start();
 
+            particles->inject( exec_space{}, , num_sample, rho0, radius, seed );
             // Integrate - velocity Verlet first half.
             integrator->initialHalfStep( *particles );
 

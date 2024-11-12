@@ -307,6 +307,59 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
         _init_timer.stop();
     }
 
+    template <typename ExecutionSpace>
+    void inject( ExecutionSpace, const Kokkos::Array<double, 3> injection_point,
+                 const int num_sample, const double rho0, const double radius,
+                 const int seed )
+    {
+        std::size_t previous_size = n_local;
+        resize( previous_size + num_sample, 0 );
+        // FIXME: this breaks fixed ghost list.
+        Kokkos::RangePolicy<ExecutionSpace> policy( previous_size, n_local );
+        std::cout << previous_size << " " << n_local << " " << std::endl;
+        Kokkos::Random_XorShift64_Pool<ExecutionSpace> pool( seed );
+        pool.init( seed, num_sample * 3 );
+
+        auto x = sliceReferencePosition();
+        auto u = sliceDisplacement();
+        auto y = sliceCurrentPosition();
+        auto f = sliceForce();
+        auto vol = sliceVolume();
+        auto v = sliceVelocity();
+        auto rho = sliceDensity();
+        auto type = sliceType();
+        auto nofail = sliceNoFail();
+        auto create_functor = KOKKOS_LAMBDA( const int pid )
+        {
+            // Set the particle position.
+            for ( int d = 0; d < 3; d++ )
+            {
+                const double min = injection_point[d] - radius * 5;
+                const double max = injection_point[d] + radius * 5;
+                auto gen = pool.get_state();
+                auto rand =
+                    Kokkos::rand<Kokkos::Random_XorShift64<ExecutionSpace>,
+                                 double>::draw( gen, min, max );
+                pool.free_state( gen );
+                x( pid, d ) = rand;
+                u( pid, d ) = 0.0;
+                y( pid, d ) = 0.0;
+                v( pid, d ) = 0.0;
+                f( pid, d ) = 0.0;
+            }
+            // Get the volume of the particle.
+            vol( pid ) = 4 / 3 * Kokkos::numbers::pi_v<double> * radius *
+                         radius * radius;
+
+            // FIXME: hardcoded.
+            type( pid ) = 0;
+            nofail( pid ) = 0;
+            rho( pid ) = rho0;
+        };
+        Kokkos::parallel_for( "CabanaPD::Particle::inject", policy,
+                              create_functor );
+    }
+
     template <class ExecSpace, class FunctorType>
     void updateParticles( const ExecSpace, const FunctorType init_functor )
     {
