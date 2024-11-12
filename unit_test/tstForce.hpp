@@ -623,7 +623,7 @@ struct NoDamageTag
 {
 };
 
-template <class ForceType, class ParticleType, class NeighborList>
+template <class ForceType, class ParticleType>
 double computeEnergyAndForce( NoDamageTag, ForceType force,
                               ParticleType& particles, const int )
 {
@@ -631,7 +631,7 @@ double computeEnergyAndForce( NoDamageTag, ForceType force,
     double Phi = computeEnergy( force, particles, Cabana::SerialOpTag() );
     return Phi;
 }
-template <class ForceType, class ParticleType, class NeighborList>
+template <class ForceType, class ParticleType>
 double computeEnergyAndForce( DamageTag, ForceType force,
                               ParticleType& particles, const int max_neighbors )
 {
@@ -701,7 +701,7 @@ void testForce( ModelType model, const DamageType damage_tag, const double dx,
     initializeForce( model, force, particles );
 
     unsigned int max_neighbors;
-    unsigned int total_neighbors;
+    unsigned long long total_neighbors;
     force.getNeighborStatistics( max_neighbors, total_neighbors );
     double Phi =
         computeEnergyAndForce( damage_tag, force, particles, max_neighbors );

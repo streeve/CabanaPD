@@ -23,9 +23,7 @@ struct Fracture
 };
 
 // Contact and DEM (contact without PD) tags.
-struct DEM
-{
-};
+
 struct Contact
 {
 };
@@ -38,10 +36,6 @@ struct is_contact : public std::false_type
 };
 template <>
 struct is_contact<Contact> : public std::true_type
-{
-};
-template <>
-struct is_contact<DEM> : public std::true_type
 {
 };
 

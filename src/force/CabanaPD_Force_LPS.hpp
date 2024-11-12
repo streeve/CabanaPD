@@ -274,8 +274,9 @@ class Force<MemorySpace, ForceModel<LPS, Fracture>>
     using base_type::neigh_list;
 
     template <class ParticleType>
-    Force( const bool half_neigh, const ForceModel<LPS, Fracture> model )
-        : base_type( half_neigh, model )
+    Force( const bool half_neigh, const ParticleType& particles,
+           const ForceModel<LPS, Fracture> model )
+        : base_type( half_neigh, particles, model )
         , _model( model )
     {
     }

@@ -75,15 +75,18 @@ class Force<MemorySpace, NormalRepulsionModel>
     using base_type = Force<MemorySpace, BaseForceModel>;
 
     template <class ParticleType>
-    Force( const bool half_neigh, const NormalRepulsionModel model,
-           ParticleType& particles )
+    Force( const bool half_neigh, const ParticleType& particles,
+           const NormalRepulsionModel model )
         : base_type( half_neigh, model.Rc, particles.sliceCurrentPosition(),
-                     particles.n_local, particles->ghost_mesh_lo,
-                     particles->ghost_mesh_hi )
+                     particles.n_local, particles.ghost_mesh_lo,
+                     particles.ghost_mesh_hi )
         , _model( model )
     {
-        mesh_min[3] = particles->ghost_mesh_lo;
-        mesh_max[3] = particles->ghost_mesh_hi;
+        for ( int d = 0; d < particles.dim; d++ )
+        {
+            mesh_min[d] = particles.ghost_mesh_lo[d];
+            mesh_max[d] = particles.ghost_mesh_hi[d];
+        }
     }
 
     template <class ForceType, class ParticleType, class ParallelType>
