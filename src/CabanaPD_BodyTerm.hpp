@@ -41,7 +41,8 @@ struct BodyTerm
     void apply( ExecSpace, ParticleType& particles, const double time )
     {
         _timer.start();
-        Kokkos::RangePolicy<ExecSpace> policy( 0, particles.n_local );
+        Kokkos::RangePolicy<ExecSpace> policy( particles.n_frozen,
+                                               particles.n_local );
         auto user = _user_functor;
         Kokkos::parallel_for(
             "CabanaPD::BodyTerm::apply", policy,

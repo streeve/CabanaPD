@@ -97,6 +97,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     // Per particle.
     unsigned long long int n_global = 0;
     std::size_t n_local = 0;
+    std::size_t n_frozen = 0;
     std::size_t n_ghost = 0;
     std::size_t size = 0;
 
@@ -164,13 +165,14 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     template <class ExecSpace>
     Particles( const ExecSpace& exec_space, std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
-               const std::array<int, dim> num_cells, const int max_halo_width )
+               const std::array<int, dim> num_cells, const int max_halo_width,
+               const bool create_frozen = false )
         : halo_width( max_halo_width )
         , _plist_x( "positions" )
         , _plist_f( "forces" )
     {
         createDomain( low_corner, high_corner, num_cells );
-        createParticles( exec_space );
+        createParticles( exec_space, create_frozen );
     }
 
     // Constructor which initializes particles on regular grid with
@@ -179,13 +181,13 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     Particles( const ExecSpace& exec_space, std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
                const std::array<int, dim> num_cells, const int max_halo_width,
-               UserFunctor user_create )
+               UserFunctor user_create, const bool create_frozen = false )
         : halo_width( max_halo_width )
         , _plist_x( "positions" )
         , _plist_f( "forces" )
     {
         createDomain( low_corner, high_corner, num_cells );
-        createParticles( exec_space, user_create );
+        createParticles( exec_space, user_create, create_frozen );
     }
 
     void createDomain( std::array<double, dim> low_corner,
@@ -230,7 +232,8 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     }
 
     template <class ExecSpace>
-    void createParticles( const ExecSpace& exec_space )
+    void createParticles( const ExecSpace& exec_space,
+                          const bool create_frozen = false )
     {
         auto empty = KOKKOS_LAMBDA( const int, const double[dim] )
         {
@@ -240,7 +243,8 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     }
 
     template <class ExecSpace, class UserFunctor>
-    void createParticles( const ExecSpace& exec_space, UserFunctor user_create )
+    void createParticles( const ExecSpace& exec_space, UserFunctor user_create,
+                          const bool create_frozen = false )
     {
         _init_timer.start();
         // Create a local mesh and owned space.
@@ -298,6 +302,10 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
                                                  _plist_x, 1, *local_grid );
         resize( n_local, 0 );
         size = _plist_x.size();
+
+        // Only set this value if this generation of particles should be frozen.
+        if ( create_frozen )
+            n_frozen = size;
 
         // Not using Allreduce because global count is only used for printing.
         auto n_local_mpi = static_cast<unsigned long long int>( n_local );

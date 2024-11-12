@@ -70,7 +70,7 @@ class HeatTransfer : public Force<MemorySpace, BaseForceModel>
                 coeff * ( temp( j ) - temp( i ) ) / xi / xi * vol( j );
         };
 
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_frozen, n_local );
         Cabana::neighbor_parallel_for(
             policy, temp_func, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::HeatTransfer::computeFull" );
@@ -91,7 +91,7 @@ class HeatTransfer : public Force<MemorySpace, BaseForceModel>
         {
             temp( i ) += dt / rho( i ) / model.cp * conduction( i );
         };
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_frozen, n_local );
         Kokkos::parallel_for( "CabanaPD::HeatTransfer::forwardEuler", policy,
                               euler_func );
         _euler_timer.stop();
