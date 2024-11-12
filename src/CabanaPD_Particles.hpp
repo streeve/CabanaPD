@@ -96,6 +96,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     // Per particle.
     unsigned long long int n_global = 0;
     std::size_t n_local = 0;
+    std::size_t n_start = 0;
     std::size_t n_ghost = 0;
     std::size_t size = 0;
 
@@ -300,6 +301,8 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
                                                  _plist_x, 1, *local_grid );
         resize( n_local, 0 );
         size = _plist_x.size();
+        // FIXME: only correct for contiguous frozen boundary creation
+        n_start = size;
 
         // Not using Allreduce because global count is only used for printing.
         MPI_Reduce( &n_local, &n_global, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0,

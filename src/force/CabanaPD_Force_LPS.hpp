@@ -118,7 +118,7 @@ class Force<MemorySpace, ForceModel<LPS, Elastic>>
             m( i ) += m_j;
         };
 
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_start, n_local );
         Cabana::neighbor_parallel_for(
             policy, weighted_volume, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::ForceLPS::computeWeightedVolume" );
@@ -151,7 +151,7 @@ class Force<MemorySpace, ForceModel<LPS, Elastic>>
             theta( i ) += 3.0 * theta_i / m( i );
         };
 
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_start, n_local );
         Cabana::neighbor_parallel_for(
             policy, dilatation, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::ForceLPS::computeDilatation" );
@@ -196,7 +196,7 @@ class Force<MemorySpace, ForceModel<LPS, Elastic>>
             f( i, 2 ) += fz_i;
         };
 
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_start, n_local );
         Cabana::neighbor_parallel_for(
             policy, force_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::ForceLPS::computeFull" );
@@ -242,7 +242,7 @@ class Force<MemorySpace, ForceModel<LPS, Elastic>>
 
         double strain_energy = 0.0;
 
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_start, n_local );
         Cabana::neighbor_parallel_reduce(
             policy, energy_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, strain_energy,
@@ -317,7 +317,7 @@ class Force<MemorySpace, ForceModel<LPS, Fracture>>
             }
         };
 
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_start, n_local );
         Kokkos::parallel_for( "CabanaPD::ForceLPSDamage::computeWeightedVolume",
                               policy, weighted_volume );
 
@@ -364,7 +364,7 @@ class Force<MemorySpace, ForceModel<LPS, Fracture>>
             }
         };
 
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_start, n_local );
         Kokkos::parallel_for( "CabanaPD::ForceLPSDamage::computeDilatation",
                               policy, dilatation );
 
@@ -437,7 +437,7 @@ class Force<MemorySpace, ForceModel<LPS, Fracture>>
             }
         };
 
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_start, n_local );
         Kokkos::parallel_for( "CabanaPD::ForceLPSDamage::computeFull", policy,
                               force_full );
 
@@ -497,7 +497,7 @@ class Force<MemorySpace, ForceModel<LPS, Fracture>>
         };
 
         double strain_energy = 0.0;
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_start, n_local );
         Kokkos::parallel_reduce( "CabanaPD::ForceLPSDamage::computeEnergyFull",
                                  policy, energy_full, strain_energy );
 
@@ -574,7 +574,7 @@ class Force<MemorySpace, ForceModel<LinearLPS, Elastic>>
             f( i, 2 ) += fz_i;
         };
 
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_start, n_local );
         Cabana::neighbor_parallel_for(
             policy, force_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::ForceLPS::computeFull" );
@@ -622,7 +622,7 @@ class Force<MemorySpace, ForceModel<LinearLPS, Elastic>>
 
         double strain_energy = 0.0;
 
-        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Kokkos::RangePolicy<exec_space> policy( particles.n_start, n_local );
         Cabana::neighbor_parallel_reduce(
             policy, energy_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, strain_energy,
