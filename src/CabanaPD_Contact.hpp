@@ -60,7 +60,7 @@ struct NormalRepulsionModel : public ContactModel
         Rc = _Rc;
         K = _K;
         // This could inherit from PMB (same c)
-        c = 18.0 * K / ( 3.141592653589793 * delta * delta * delta * delta );
+        c = 18.0 * K / ( pi * delta * delta * delta * delta );
     }
 };
 
@@ -101,8 +101,7 @@ class Force<MemorySpace, NormalRepulsionModel>
         const auto u = particles.sliceDisplacement();
         const auto y = particles.sliceCurrentPosition();
 
-        neigh_list.build( y, 0, particles.n_local, Rc, 1.0, mesh_min,
-                          mesh_max );
+        neigh_list.build( y, 0, n_local, Rc, 1.0, mesh_min, mesh_max );
 
         auto contact_full = KOKKOS_LAMBDA( const int i, const int j )
         {
@@ -162,7 +161,8 @@ void computeContact( const ForceType& force, ParticleType& particles,
     //                    neigh_op_tag );
 
     // Forces only atomic if using team threading
-    if ( std::is_same<decltype( neigh_op_tag ), Cabana::TeamOpTag>::value )
+    if constexpr ( std::is_same<decltype( neigh_op_tag ),
+                                Cabana::TeamOpTag>::value )
         force.computeContactFull( f_a, particles, n_local, neigh_op_tag );
     else
         force.computeContactFull( f, particles, n_local, neigh_op_tag );
