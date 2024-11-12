@@ -60,11 +60,8 @@ void fragmentingCylinderExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    using model_type = CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Fracture>;
-    model_type force_model( delta, K, G0 );
-    // using model_type =
-    //      CabanaPD::ForceModel<CabanaPD::LPS, CabanaPD::Fracture>;
-    // model_type force_model( delta, K, G, G0 );
+    using model_type = CabanaPD::ForceModel<CabanaPD::PMB, CabanaPD::Elastic>;
+    model_type force_model( delta, K );
 
     // ====================================================
     //                 Particle generation
@@ -98,6 +95,7 @@ void fragmentingCylinderExample( const std::string filename )
         rho( pid ) = rho0;
     };
     particles->updateParticles( exec_space{}, init_functor );
+    int num_container_particles = particles->n_local;
 
     // ====================================================
     //                   Create solver
@@ -113,8 +111,6 @@ void fragmentingCylinderExample( const std::string filename )
     double dx = particles->dx[0];
     double dy = particles->dx[1];
     double dz = particles->dx[2];
-    double sigma0 = inputs["pressure"];
-    double b0 = sigma0 / dy;
     double top = high_corner[2];
     double bottom = low_corner[2];
 
@@ -122,26 +118,16 @@ void fragmentingCylinderExample( const std::string filename )
     // particles are correctly taken into account for lambda capture here.
     auto force_func = KOKKOS_LAMBDA( const int pid, const double )
     {
-        if ( x( pid, 2 ) > top - dz )
+        // Reset boundary
+        if ( pid < num_container_particles )
         {
-            f( pid, 2 ) += -b0;
+            for ( int d = 0; d < 3; d++ )
+                f( pid, d ) = 0.0;
         }
-
-        if ( x( pid, 2 ) < bottom + dz )
+        else
         {
-            f( pid, 2 ) += b0;
+            f( pid, 2 ) += -9.8 * rho0;
         }
-
-        /*
-        double rsq = ( x[0] - x_center ) * ( x[0] - x_center ) +
-                     ( x[1] - y_center ) * ( x[1] - y_center );
-        if ( rsq > Rout - dx )
-        {
-            f( pid, 0 ) += b0 * (x( pid, 0 ) - x_center)/radial_dist2;
-            f( pid, 1 ) += b0 * x( pid, 1 )/radial_dist2;
-
-        }
-        */
     };
     auto body_term = CabanaPD::createBodyTerm( force_func, false );
 
