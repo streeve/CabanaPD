@@ -62,6 +62,10 @@
 
 #include <cmath>
 
+#include <Kokkos_Core.hpp>
+
+#include <Cabana_Core.hpp>
+
 #include <CabanaPD_ForceModels.hpp>
 #include <CabanaPD_Particles.hpp>
 

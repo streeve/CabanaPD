@@ -16,6 +16,8 @@
 
 #include <Cabana_Core.hpp>
 
+#include <CabanaPD_Timer.hpp>
+
 #include <cassert>
 
 namespace CabanaPD

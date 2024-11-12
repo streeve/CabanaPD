@@ -12,6 +12,10 @@
 #ifndef HEATTRANSFER_H
 #define HEATTRANSFER_H
 
+#include <Kokkos_Core.hpp>
+
+#include <Cabana_Core.hpp>
+
 #include <CabanaPD_Timer.hpp>
 
 namespace CabanaPD
