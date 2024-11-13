@@ -43,12 +43,32 @@ struct BodyTerm
         _timer.start();
         Kokkos::RangePolicy<ExecSpace> policy( particles.n_start,
                                                particles.n_local );
-        auto user = _user_functor;
+
+        // FIXME
+        auto f = particles.sliceForce();
+        auto user = KOKKOS_LAMBDA( const int pid, const double )
+        {
+            // Reset boundary
+            if ( pid < particles.n_start )
+            {
+                for ( int d = 0; d < 3; d++ )
+                    f( pid, d ) = 0.0;
+            }
+            else
+            {
+                f( pid, 2 ) -= 9.8 * 7800.0 * 1000.0;
+                std::cout << f( pid, 2 ) << std::endl;
+            }
+        };
+        // FIXME
+
         Kokkos::parallel_for(
             "CabanaPD::BodyTerm::apply", policy,
             KOKKOS_LAMBDA( const int p ) { user( p, time ); } );
         _timer.stop();
     }
+
+    void update( UserFunctor user ) { _user_functor( user ); }
 
     auto forceUpdate() { return _force_update; }
 

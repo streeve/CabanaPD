@@ -305,8 +305,9 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
         n_start = size;
 
         // Not using Allreduce because global count is only used for printing.
-        MPI_Reduce( &n_local, &n_global, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM, 0,
-                    MPI_COMM_WORLD );
+        auto n_local_mpi = static_cast<unsigned long long int>( n_local );
+        MPI_Reduce( &n_local_mpi, &n_global, 1, MPI_UNSIGNED_LONG_LONG, MPI_SUM,
+                    0, MPI_COMM_WORLD );
         _init_timer.stop();
     }
 
@@ -337,8 +338,8 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
             // Set the particle position.
             for ( int d = 0; d < 3; d++ )
             {
-                const double min = injection_point[d] - radius * 5;
-                const double max = injection_point[d] + radius * 5;
+                const double min = injection_point[d] - radius;
+                const double max = injection_point[d] + radius;
                 auto gen = pool.get_state();
                 auto rand =
                     Kokkos::rand<Kokkos::Random_XorShift64<ExecutionSpace>,

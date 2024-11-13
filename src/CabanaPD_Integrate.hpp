@@ -105,6 +105,8 @@ class Integrator
             u( i, 0 ) += dt * v( i, 0 );
             u( i, 1 ) += dt * v( i, 1 );
             u( i, 2 ) += dt * v( i, 2 );
+            // if ( u( i, 2 ) > 0.0 )
+            //   std::cout << u( i, 2 ) << std::endl;
         };
         Kokkos::RangePolicy<exec_space> policy( p.n_start, p.n_local );
         Kokkos::parallel_for( "CabanaPD::Integrator::Initial", policy,
@@ -125,6 +127,9 @@ class Integrator
         auto half_dt = _half_dt;
         auto final_func = KOKKOS_LAMBDA( const int i )
         {
+            // FIXME: BC
+            f( i, 2 ) -= 9.8 * rho( i );
+
             const double half_dt_m = half_dt / rho( i );
             v( i, 0 ) += half_dt_m * f( i, 0 );
             v( i, 1 ) += half_dt_m * f( i, 1 );

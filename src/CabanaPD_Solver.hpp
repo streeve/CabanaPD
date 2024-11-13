@@ -254,11 +254,12 @@ class SolverElastic
         for ( int step = 1; step <= num_steps; step++ )
         {
             _step_timer.start();
-            if ( step % 1000 == 0 || step == 1 )
+            if ( step % 100000 == 0 || step == 1 )
             {
                 const int seed = 12345 + step;
-                particles->inject( Kokkos::Serial{}, { 0, 0, 0 }, 10,
-                                   inputs["density"], inputs["horizon"], seed );
+                double radius = inputs["cylinder_inner_radius"];
+                particles->inject( Kokkos::Serial{}, { 0, 0, 0 }, 50,
+                                   inputs["density"], radius * 0.75, seed );
             }
 
             // Integrate - velocity Verlet first half.
@@ -311,6 +312,13 @@ class SolverElastic
         for ( int step = 1; step <= num_steps; step++ )
         {
             _step_timer.start();
+            if ( step % 100000 == 0 || step == 1 )
+            {
+                const int seed = 12345 + step;
+                double radius = inputs["cylinder_inner_radius"];
+                particles->inject( Kokkos::Serial{}, { 0, 0, 0 }, 50,
+                                   inputs["density"], radius * 0.75, seed );
+            }
 
             // Integrate - velocity Verlet first half.
             integrator->initialHalfStep( *particles );

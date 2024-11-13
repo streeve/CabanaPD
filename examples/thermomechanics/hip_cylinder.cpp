@@ -42,7 +42,7 @@ void fragmentingCylinderExample( const std::string filename )
     double delta = inputs["horizon"];
     delta += 1e-10;
     // For PMB or LPS with influence_type == 1
-    double G0 = 9 * K * delta * ( sc * sc ) / 5;
+    // double G0 = 9 * K * delta * ( sc * sc ) / 5;
     // For LPS with influence_type == 0 (default)
     // double G0 = 15 * K * delta * ( sc * sc ) / 8;
 
@@ -76,13 +76,14 @@ void fragmentingCylinderExample( const std::string filename )
     double y_center = 0.5 * ( low_corner[1] + high_corner[1] );
     double Rout = inputs["cylinder_outer_radius"];
     double Rin = inputs["cylinder_inner_radius"];
+    double bottom = low_corner[2] + ( Rout - Rin );
 
     // Do not create particles outside given cylindrical region
     auto init_op = KOKKOS_LAMBDA( const int, const double x[3] )
     {
         double rsq = ( x[0] - x_center ) * ( x[0] - x_center ) +
                      ( x[1] - y_center ) * ( x[1] - y_center );
-        if ( rsq < Rin * Rin || rsq > Rout * Rout )
+        if ( ( rsq < Rin * Rin || rsq > Rout * Rout ) && x[2] > bottom )
             return false;
         return true;
     };
@@ -100,22 +101,20 @@ void fragmentingCylinderExample( const std::string filename )
     // ====================================================
     //                   Create solver
     // ====================================================
-    auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
-        inputs, particles, force_model );
+    double r_c = inputs["contact_radius"];
+    CabanaPD::NormalRepulsionModel contact_model( delta, r_c, K );
+
+    auto cabana_pd = CabanaPD::createSolverElastic<memory_space>(
+        inputs, particles, contact_model );
 
     // ====================================================
     //                   Imposed field
     // ====================================================
-    auto x = particles->sliceReferencePosition();
     auto f = particles->sliceForce();
-    double dx = particles->dx[0];
-    double dy = particles->dx[1];
-    double dz = particles->dx[2];
-    double top = high_corner[2];
-    double bottom = low_corner[2];
 
     // This is purposely delayed until after solver init so that ghosted
     // particles are correctly taken into account for lambda capture here.
+    /*
     auto force_func = KOKKOS_LAMBDA( const int pid, const double )
     {
         // Reset boundary
@@ -126,16 +125,16 @@ void fragmentingCylinderExample( const std::string filename )
         }
         else
         {
-            f( pid, 2 ) += -9.8 * rho0;
+            f( pid, 2 ) -= 9.8 * rho0 * 1000;
         }
     };
     auto body_term = CabanaPD::createBodyTerm( force_func, false );
-
+    */
     // ====================================================
     //                   Simulation run
     // ====================================================
-    cabana_pd->init( body_term );
-    cabana_pd->run( body_term );
+    cabana_pd->init();
+    cabana_pd->run();
 }
 
 // Initialize MPI+Kokkos.
