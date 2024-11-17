@@ -54,7 +54,7 @@ void kalthoffWinklerExample( const std::string filename )
     std::array<int, 3> num_cells = inputs["num_cells"];
     int m = std::floor( delta /
                         ( ( high_corner[0] - low_corner[0] ) / num_cells[0] ) );
-    int halo_width = m + 1; // Just to be safe.
+    int halo_width = m + 2; // Just to be safe.
 
     // ====================================================
     //                   Pre-notches

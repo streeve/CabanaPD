@@ -74,8 +74,12 @@ void crackBranchingExample( const std::string filename )
     //                 Particle generation
     // ====================================================
     // Note that individual inputs can be passed instead (see other examples).
+    std::array<int, 3> num_cells = inputs["num_cells"];
+    int m = std::floor( delta /
+                        ( ( high_corner[0] - low_corner[0] ) / num_cells[0] ) );
+    int halo_width = m + 1; // Just to be safe.
     auto particles = CabanaPD::createParticles<memory_space, model_type>(
-        exec_space{}, inputs );
+        exec_space(), low_corner, high_corner, num_cells, halo_width, 1, 2 );
 
     // ====================================================
     //                Boundary conditions planes

@@ -188,13 +188,55 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
         createParticles( exec_space, user_create );
     }
 
+    // Constructor which initializes particles on regular grid with non-default
+    // partitioning.
+    template <class ExecSpace>
+    Particles( const ExecSpace& exec_space, std::array<double, dim> low_corner,
+               std::array<double, dim> high_corner,
+               const std::array<int, dim> num_cells, const int max_halo_width,
+               const int unpartitioned1, const int unpartitioned2 )
+        : halo_width( max_halo_width )
+        , _plist_x( "positions" )
+        , _plist_f( "forces" )
+    {
+        createDomain( low_corner, high_corner, num_cells, unpartitioned1,
+                      unpartitioned2 );
+        createParticles( exec_space );
+    }
+
     void createDomain( std::array<double, dim> low_corner,
                        std::array<double, dim> high_corner,
                        const std::array<int, dim> num_cells )
     {
+        // Create the default MPI partitions.
+        Cabana::Grid::DimBlockPartitioner<dim> partitioner;
+        createDomain( low_corner, high_corner, num_cells, partitioner );
+    }
+
+    void createDomain( std::array<double, dim> low_corner,
+                       std::array<double, dim> high_corner,
+                       const std::array<int, dim> num_cells,
+                       const int unpartitioned1, const int unpartitioned2 )
+    {
+        // Create the MPI partitions.
+        Cabana::Grid::DimBlockPartitioner<dim> partitioner( unpartitioned1,
+                                                            unpartitioned2 );
+
+        createDomain( low_corner, high_corner, num_cells, partitioner );
+    }
+
+    void createDomain( std::array<double, dim> low_corner,
+                       std::array<double, dim> high_corner,
+                       const std::array<int, dim> num_cells,
+                       Cabana::Grid::DimBlockPartitioner<dim> partitioner )
+    {
+        auto ranks_per_dim =
+            partitioner.ranksPerDimension( MPI_COMM_WORLD, num_cells );
+        std::cout << ranks_per_dim[0] << " " << ranks_per_dim[1] << " "
+                  << ranks_per_dim[2] << std::endl;
+
         _init_timer.start();
         // Create the MPI partitions.
-        Cabana::Grid::DimBlockPartitioner<dim> partitioner;
 
         // Create global mesh of MPI partitions.
         auto global_mesh = Cabana::Grid::createUniformGlobalMesh(
@@ -810,7 +852,7 @@ auto createParticles( ExecSpace exec_space, CabanaPD::Inputs inputs )
     double delta = inputs["horizon"];
     int m = std::floor( delta /
                         ( ( high_corner[0] - low_corner[0] ) / num_cells[0] ) );
-    int halo_width = m + 1; // Just to be safe.
+    int halo_width = m + 2; // Just to be safe.
 
     return std::make_shared<
         CabanaPD::Particles<MemorySpace, typename ModelType::base_model,
@@ -830,6 +872,22 @@ auto createParticles( const ExecSpace& exec_space,
         CabanaPD::Particles<MemorySpace, typename ModelType::base_model,
                             typename ModelType::thermal_type>>(
         exec_space, low_corner, high_corner, num_cells, max_halo_width );
+}
+
+template <typename MemorySpace, typename ModelType, typename ExecSpace,
+          std::size_t Dim>
+auto createParticles( const ExecSpace& exec_space,
+                      std::array<double, Dim> low_corner,
+                      std::array<double, Dim> high_corner,
+                      const std::array<int, Dim> num_cells,
+                      const int max_halo_width, const int unpartitioned1,
+                      const int unpartitioned2 )
+{
+    return std::make_shared<
+        CabanaPD::Particles<MemorySpace, typename ModelType::base_model,
+                            typename ModelType::thermal_type>>(
+        exec_space, low_corner, high_corner, num_cells, max_halo_width,
+        unpartitioned1, unpartitioned2 );
 }
 
 template <typename MemorySpace, typename ModelType, typename ThermalType,
