@@ -156,6 +156,14 @@ class Force<MemorySpace, BaseForceModel>
     {
     }
 
+    // Primary constructor: use positions and construct neighbors.
+    template <class NeighborType>
+    Force( const bool half_neigh, const NeighborType& neighbors )
+        : _half_neigh( half_neigh )
+        , _neigh_list( neighbors )
+    {
+    }
+
     auto getMaxLocalNeighbors()
     {
         // NOTE: this only works on host for 2D Verlet!
