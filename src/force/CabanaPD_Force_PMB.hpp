@@ -146,7 +146,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
 
         auto model = _model;
         const auto vol = particles.sliceVolume();
-        auto virial_stress = particles.sliceVirialStress();
+        auto stress = particles.sliceStress();
         const auto f = particles.sliceForce();
 
         auto energy_full =
@@ -165,13 +165,24 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             W( i ) += w;
             Phi += w * vol( i );
 
-            virial_stress( i, 0 ) += ( rx * f( i, 0 ) ) / vol( j );
-            virial_stress( i, 1 ) += ( ry * f( i, 1 ) ) / vol( j );
-            virial_stress( i, 2 ) += ( rz * f( i, 2 ) ) / vol( j );
+            const double coeff = model.c * s * vol( j );
+            double fx_i = coeff * rx / r;
+            double fy_i = coeff * ry / r;
+            double fz_i = coeff * rz / r;
 
-            virial_stress( i, 3 ) += ( rx * f( i, 1 ) ) / vol( j );
-            virial_stress( i, 4 ) += ( rx * f( i, 2 ) ) / vol( j );
-            virial_stress( i, 5 ) += ( ry * f( i, 2 ) ) / vol( j );
+            // sigma_xx
+            stress( i, 0 ) += 0.5 * fx_i * rx * vol( j );
+            // sigma_yy
+            stress( i, 1 ) += 0.5 * fy_i * ry * vol( j );
+            // sigma_zz
+            stress( i, 2 ) += 0.5 * fz_i * rz * vol( j );
+
+            // sigma_xy
+            stress( i, 3 ) += 0.5 * f( i, 0 ) * ry * vol( j );
+            // sigma_xz
+            stress( i, 4 ) += 0.5 * f( i, 0 ) * rz * vol( j );
+            // sigma_yz
+            stress( i, 5 ) += 0.5 * f( i, 1 ) * rz * vol( j );
         };
 
         double strain_energy = 0.0;
@@ -285,7 +296,7 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
 
         auto model = _model;
         const auto vol = particles.sliceVolume();
-        auto virial_stress = particles.sliceVirialStress();
+        auto stress = particles.sliceStress();
         const auto f = particles.sliceForce();
 
         auto energy_full = KOKKOS_LAMBDA( const int i, double& Phi )
@@ -295,8 +306,6 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
                                                                   i );
             double phi_i = 0.0;
             double vol_H_i = 0.0;
-            double sigma_xx = 0.0, sigma_yy = 0.0, sigma_zz = 0.0;
-            double sigma_xy = 0.0, sigma_xz = 0.0, sigma_yz = 0.0;
 
             for ( std::size_t n = 0; n < num_neighbors; n++ )
             {
@@ -318,21 +327,25 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
                 phi_i += mu( i, n ) * vol( j );
                 vol_H_i += vol( j );
 
-                sigma_xx += ( rx * f( i, 0 ) );
-                sigma_yy += ( ry * f( i, 1 ) );
-                sigma_zz += ( rz * f( i, 2 ) );
+                const double coeff = model.c * s * vol( j );
+                double fx_i = coeff * rx / r;
+                double fy_i = coeff * ry / r;
+                double fz_i = coeff * rz / r;
 
-                sigma_xy += ( rx * f( i, 1 ) );
-                sigma_xz += ( rx * f( i, 2 ) );
-                sigma_yz += ( ry * f( i, 2 ) );
+                // sigma_xx
+                stress( i, 0 ) += mu( i, n ) * 0.5 * fx_i * rx * vol( j );
+                // sigma_yy
+                stress( i, 1 ) += mu( i, n ) * 0.5 * fy_i * ry * vol( j );
+                // sigma_zz
+                stress( i, 2 ) += mu( i, n ) * 0.5 * fz_i * rz * vol( j );
+
+                // sigma_xy
+                stress( i, 3 ) += mu( i, n ) * 0.5 * f( i, 0 ) * ry * vol( j );
+                // sigma_xz
+                stress( i, 4 ) += mu( i, n ) * 0.5 * f( i, 0 ) * rz * vol( j );
+                // sigma_yz
+                stress( i, 5 ) += mu( i, n ) * 0.5 * f( i, 1 ) * rz * vol( j );
             }
-            virial_stress( i, 0 ) += sigma_xx / ( vol_H_i + vol( i ) );
-            virial_stress( i, 1 ) += sigma_yy / ( vol_H_i + vol( i ) );
-            virial_stress( i, 2 ) += sigma_zz / ( vol_H_i + vol( i ) );
-
-            virial_stress( i, 3 ) += sigma_xy / ( vol_H_i + vol( i ) );
-            virial_stress( i, 4 ) += sigma_xz / ( vol_H_i + vol( i ) );
-            virial_stress( i, 5 ) += sigma_yz / ( vol_H_i + vol( i ) );
 
             Phi += W( i ) * vol( i );
             phi( i ) = 1 - phi_i / vol_H_i;

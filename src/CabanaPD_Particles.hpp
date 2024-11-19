@@ -374,13 +374,10 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
     {
         return Cabana::slice<2>( _aosoa_other, "strain_energy" );
     }
-    auto sliceVirialStress()
+    auto sliceStress() { return Cabana::slice<0>( _aosoa_other, "stress" ); }
+    auto sliceStress() const
     {
-        return Cabana::slice<0>( _aosoa_other, "virial_stress" );
-    }
-    auto sliceVirialStress() const
-    {
-        return Cabana::slice<0>( _aosoa_other, "virial_stress" );
+        return Cabana::slice<0>( _aosoa_other, "stress" );
     }
 
     auto sliceVelocity()
@@ -467,7 +464,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, Dimension>
             h5_config, "particles", MPI_COMM_WORLD, output_step, output_time,
             n_local, getPosition( use_reference ), sliceStrainEnergy(),
             sliceForce(), sliceDisplacement(), sliceVelocity(), sliceDamage(),
-            sliceVirialStress() );
+            sliceStress() );
 #else
 #ifdef Cabana_ENABLE_SILO
         Cabana::Grid::Experimental::SiloParticleOutput::
