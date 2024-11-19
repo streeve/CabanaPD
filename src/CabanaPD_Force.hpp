@@ -164,6 +164,17 @@ class Force<MemorySpace, BaseForceModel>
     {
     }
 
+    // General constructor (necessary for e.g. DHPD and contact)
+    template <class PositionType>
+    Force( const bool half_neigh, const double delta,
+           const PositionType& positions, const std::size_t num_local,
+           const double mesh_min[3], const double mesh_max[3] )
+        : _half_neigh( half_neigh )
+        , _neigh_list( neighbor_type( positions, 0, num_local, delta + 1e-14,
+                                      1.0, mesh_min, mesh_max ) )
+    {
+    }
+
     auto getMaxLocalNeighbors()
     {
         // NOTE: this only works on host for 2D Verlet!
