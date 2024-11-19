@@ -62,21 +62,32 @@ struct NormalRepulsionModel : public ContactModel
         // This could inherit from PMB (same c)
         c = 18.0 * K / ( pi * delta * delta * delta * delta );
     }
+
+    KOKKOS_INLINE_FUNCTION
+    auto forceCoeff( const double sc, const double vol )
+    {
+        // Normal repulsion uses a 15 factor compared to the PMB force
+        return 15.0 * c * sc * vol;
+    }
 };
+
+// Forward declaration.
+template <class MemorySpace, class ContactModelType>
+class ContactForce;
 
 /******************************************************************************
   Normal repulsion computation
 ******************************************************************************/
 template <class MemorySpace>
-class Force<MemorySpace, NormalRepulsionModel>
+class ContactForce<MemorySpace, NormalRepulsionModel>
     : public Force<MemorySpace, BaseForceModel>
 {
   public:
     using base_type = Force<MemorySpace, BaseForceModel>;
 
     template <class ParticleType>
-    Force( const bool half_neigh, const ParticleType& particles,
-           const NormalRepulsionModel model )
+    ContactForce( const bool half_neigh, const ParticleType& particles,
+                  const NormalRepulsionModel model )
         : base_type( half_neigh, model.Rc, particles.sliceCurrentPosition(),
                      particles.n_local, particles.ghost_mesh_lo,
                      particles.ghost_mesh_hi )
@@ -93,15 +104,13 @@ class Force<MemorySpace, NormalRepulsionModel>
     void computeForceFull( ForceType& fc, const ParticleType& particles,
                            const int n_local, ParallelType& neigh_op_tag ) const
     {
-        auto delta = _model.delta;
-        auto Rc = _model.Rc;
-        auto c = _model.c;
+        auto model = _model;
         const auto vol = particles.sliceVolume();
         const auto x = particles.sliceReferencePosition();
         const auto u = particles.sliceDisplacement();
         const auto y = particles.sliceCurrentPosition();
 
-        _neigh_list.build( y, 0, n_local, Rc, 1.0, mesh_min, mesh_max );
+        _neigh_list.build( y, 0, n_local, model.Rc, 1.0, mesh_min, mesh_max );
 
         auto contact_full = KOKKOS_LAMBDA( const int i, const int j )
         {
@@ -114,10 +123,10 @@ class Force<MemorySpace, NormalRepulsionModel>
             getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
 
             // Contact "stretch"
-            const double sc = ( r - Rc ) / delta;
+            const double sc = ( r - model.Rc ) / model.delta;
 
             // Normal repulsion uses a 15 factor compared to the PMB force
-            const double coeff = 15 * c * sc * vol( j );
+            const double coeff = model.forceCoeff( sc, vol( j ) );
             fcx_i = coeff * rx / r;
             fcy_i = coeff * ry / r;
             fcz_i = coeff * rz / r;

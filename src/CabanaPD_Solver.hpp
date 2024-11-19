@@ -112,7 +112,7 @@ class SolverElastic
 
     // Optional module types.
     using heat_transfer_type = HeatTransfer<memory_space, force_model_type>;
-    using contact_type = Force<memory_space, ContactModel>;
+    using contact_type = ContactForce<memory_space, ContactModel>;
     using contact_model_type = ContactModel;
 
     SolverElastic( input_type _inputs,
