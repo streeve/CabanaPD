@@ -14,19 +14,51 @@
 
 namespace CabanaPD
 {
+// Mechanics types.
 struct Elastic
 {
 };
 struct Fracture
 {
 };
+
+// Thermal types.
+struct TemperatureIndependent
+{
+    using base_type = TemperatureIndependent;
+};
 struct TemperatureDependent
 {
+    using base_type = TemperatureDependent;
 };
-struct TemperatureIndependent
+struct DynamicTemperature : public TemperatureDependent
+{
+    using base_type = TemperatureDependent;
+};
+
+//! Static type checkers.
+template <class>
+struct is_temperature_dependent : public std::false_type
+{
+};
+template <>
+struct is_temperature_dependent<TemperatureDependent> : public std::true_type
+{
+};
+template <>
+struct is_temperature_dependent<DynamicTemperature> : public std::true_type
+{
+};
+template <class>
+struct is_heat_transfer : public std::false_type
+{
+};
+template <>
+struct is_heat_transfer<DynamicTemperature> : public std::true_type
 {
 };
 
+// Model types.
 struct PMB
 {
 };
