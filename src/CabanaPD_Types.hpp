@@ -72,5 +72,15 @@ struct LinearLPS
 {
 };
 
+struct NoOutput
+{
+};
+struct OutputEnergy
+{
+};
+struct OutputEnergyStress
+{
+};
+
 } // namespace CabanaPD
 #endif
