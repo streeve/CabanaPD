@@ -171,18 +171,26 @@ class Force<ExecutionSpace, ForceModel<PMB, Elastic, ModelParams...>>
             double fz_i = coeff * rz / r;
 
             // sigma_xx
-            stress( i, 0 ) += 0.5 * fx_i * rx * vol( j );
+            stress( i, 0, 0 ) += 0.5 * fx_i * rx * vol( j );
             // sigma_yy
-            stress( i, 1 ) += 0.5 * fy_i * ry * vol( j );
+            stress( i, 1, 1 ) += 0.5 * fy_i * ry * vol( j );
             // sigma_zz
-            stress( i, 2 ) += 0.5 * fz_i * rz * vol( j );
+            stress( i, 2, 2 ) += 0.5 * fz_i * rz * vol( j );
 
             // sigma_xy
-            stress( i, 3 ) += 0.5 * f( i, 0 ) * ry * vol( j );
+            stress( i, 0, 1 ) += 0.5 * fx_i * ry * vol( j );
+            // sigma_yx
+            stress( i, 1, 0 ) += 0.5 * fy_i * rx * vol( j );
+
             // sigma_xz
-            stress( i, 4 ) += 0.5 * f( i, 0 ) * rz * vol( j );
+            stress( i, 0, 2 ) += 0.5 * fx_i * rz * vol( j );
+            // sigma_zx
+            stress( i, 2, 0 ) += 0.5 * fz_i * rx * vol( j );
+
             // sigma_yz
-            stress( i, 5 ) += 0.5 * f( i, 1 ) * rz * vol( j );
+            stress( i, 1, 2 ) += 0.5 * fy_i * rz * vol( j );
+            // sigma_zy
+            stress( i, 2, 1 ) += 0.5 * fz_i * ry * vol( j );
         };
 
         double strain_energy = 0.0;
@@ -333,18 +341,26 @@ class Force<ExecutionSpace, ForceModel<PMB, Fracture, ModelParams...>>
                 double fz_i = coeff * rz / r;
 
                 // sigma_xx
-                stress( i, 0 ) += mu( i, n ) * 0.5 * fx_i * rx * vol( j );
+                stress( i, 0, 0 ) += mu( i, n ) * 0.5 * fx_i * rx * vol( j );
                 // sigma_yy
-                stress( i, 1 ) += mu( i, n ) * 0.5 * fy_i * ry * vol( j );
+                stress( i, 1, 1 ) += mu( i, n ) * 0.5 * fy_i * ry * vol( j );
                 // sigma_zz
-                stress( i, 2 ) += mu( i, n ) * 0.5 * fz_i * rz * vol( j );
+                stress( i, 2, 2 ) += mu( i, n ) * 0.5 * fz_i * rz * vol( j );
 
                 // sigma_xy
-                stress( i, 3 ) += mu( i, n ) * 0.5 * f( i, 0 ) * ry * vol( j );
+                stress( i, 0, 1 ) += mu( i, n ) * 0.5 * fx_i * ry * vol( j );
+                // sigma_yx
+                stress( i, 1, 0 ) += mu( i, n ) * 0.5 * fy_i * rx * vol( j );
+
                 // sigma_xz
-                stress( i, 4 ) += mu( i, n ) * 0.5 * f( i, 0 ) * rz * vol( j );
+                stress( i, 0, 2 ) += mu( i, n ) * 0.5 * fx_i * rz * vol( j );
+                // sigma_zx
+                stress( i, 2, 0 ) += mu( i, n ) * 0.5 * fz_i * rx * vol( j );
+
                 // sigma_yz
-                stress( i, 5 ) += mu( i, n ) * 0.5 * f( i, 1 ) * rz * vol( j );
+                stress( i, 1, 2 ) += mu( i, n ) * 0.5 * fy_i * rz * vol( j );
+                // sigma_zy
+                stress( i, 2, 1 ) += mu( i, n ) * 0.5 * fz_i * ry * vol( j );
             }
 
             Phi += W( i ) * vol( i );
