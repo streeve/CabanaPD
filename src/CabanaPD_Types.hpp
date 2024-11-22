@@ -82,5 +82,25 @@ struct OutputEnergyStress
 {
 };
 
+template <class>
+struct is_energy_output : public std::false_type
+{
+};
+template <>
+struct is_energy_output<OutputEnergy> : public std::true_type
+{
+};
+template <>
+struct is_energy_output<OutputEnergyStress> : public std::true_type
+{
+};
+template <class>
+struct is_stress_output : public std::false_type
+{
+};
+template <>
+struct is_stress_output<OutputEnergyStress> : public std::true_type
+{
+};
 } // namespace CabanaPD
 #endif

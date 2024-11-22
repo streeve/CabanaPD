@@ -79,7 +79,7 @@
 namespace CabanaPD
 {
 template <class MemorySpace, class ModelType, class ThermalType,
-          class OutputType = OutputEnergy, int Dimension = 3>
+          class OutputType = NoOutput, int Dimension = 3>
 class Particles;
 
 template <class MemorySpace, int Dimension>
@@ -89,6 +89,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, NoOutput, Dimension>
     using self_type = Particles<MemorySpace, PMB, TemperatureIndependent,
                                 NoOutput, Dimension>;
     using thermal_type = TemperatureIndependent;
+    using output_type = NoOutput;
     using memory_space = MemorySpace;
     using execution_space = typename memory_space::execution_space;
     static constexpr int dim = Dimension;
@@ -508,6 +509,7 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, NoOutput, Dimension>
                                 NoOutput, Dimension>;
     using base_type = Particles<MemorySpace, PMB, TemperatureIndependent,
                                 NoOutput, Dimension>;
+    using output_type = typename base_type::output_type;
     using thermal_type = TemperatureIndependent;
     using memory_space = typename base_type::memory_space;
     using base_type::dim;
@@ -628,10 +630,6 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, NoOutput, Dimension>
     aosoa_theta_type _aosoa_theta;
     aosoa_m_type _aosoa_m;
 
-#ifdef Cabana_ENABLE_HDF5
-    using base_type::h5_config;
-#endif
-
     using base_type::_init_timer;
     using base_type::_timer;
 };
@@ -647,6 +645,7 @@ class Particles<MemorySpace, PMB, TemperatureDependent, NoOutput, Dimension>
     using base_type = Particles<MemorySpace, PMB, TemperatureIndependent,
                                 NoOutput, Dimension>;
     using thermal_type = TemperatureDependent;
+    using output_type = typename base_type::output_type;
     using memory_space = typename base_type::memory_space;
     using base_type::dim;
 
@@ -759,10 +758,6 @@ class Particles<MemorySpace, PMB, TemperatureDependent, NoOutput, Dimension>
     }
 
     aosoa_temp_type _aosoa_temp;
-
-#ifdef Cabana_ENABLE_HDF5
-    using base_type::h5_config;
-#endif
 };
 
 template <class MemorySpace, class ModelType, class ThermalType, int Dimension>
@@ -771,10 +766,11 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputEnergy, Dimension>
 {
   public:
     using self_type =
-        Particles<MemorySpace, ModelType, ThermalType, Output, Dimension>;
+        Particles<MemorySpace, ModelType, ThermalType, OutputEnergy, Dimension>;
     using base_type =
         Particles<MemorySpace, ModelType, ThermalType, NoOutput, Dimension>;
     using thermal_type = typename base_type::thermal_type;
+    using output_type = OutputEnergy;
     using memory_space = typename base_type::memory_space;
     using base_type::dim;
 
@@ -784,7 +780,7 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputEnergy, Dimension>
     using base_type::n_local;
     using base_type::size;
 
-    using output_types = Cabana::MemberTypes<double[dim][dim], double>;
+    using output_types = Cabana::MemberTypes<double>;
     using aosoa_output_type = Cabana::AoSoA<output_types, memory_space, 1>;
 
     // Per type.
@@ -820,7 +816,116 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputEnergy, Dimension>
         : base_type( exec_space, low_corner, high_corner, num_cells,
                      max_halo_width )
     {
-        _aosoa_output = aosoa_output_type( "Particle Temperature", n_local );
+        _aosoa_output = aosoa_output_type( "Particle Energy Output", n_local );
+        init_output();
+    }
+
+    template <typename... Args>
+    void createParticles( Args&&... args )
+    {
+        // Forward arguments to standard or custom particle creation.
+        base_type::createParticles( std::forward<Args>( args )... );
+        _aosoa_output.resize( n_local );
+    }
+
+    auto sliceStrainEnergy()
+    {
+        return Cabana::slice<0>( _aosoa_output, "strain_energy" );
+    }
+    auto sliceStrainEnergy() const
+    {
+        return Cabana::slice<0>( _aosoa_output, "strain_energy" );
+    }
+
+    void resize( int new_local, int new_ghost )
+    {
+        base_type::resize( new_local, new_ghost );
+        _aosoa_output.resize( new_local + new_ghost );
+    }
+
+    template <typename... OtherFields>
+    void output( const int output_step, const double output_time,
+                 const bool use_reference, OtherFields&&... other )
+    {
+        base_type::output( output_step, output_time, use_reference,
+                           sliceStrainEnergy(),
+                           std::forward<OtherFields>( other )... );
+    }
+
+    friend class Comm<self_type, PMB, TemperatureIndependent>;
+    friend class Comm<self_type, LPS, TemperatureIndependent>;
+    friend class Comm<self_type, PMB, TemperatureDependent>;
+    friend class Comm<self_type, LPS, TemperatureDependent>;
+
+  protected:
+    void init_output()
+    {
+        auto energy = sliceStrainEnergy();
+        Cabana::deep_copy( energy, 0.0 );
+    }
+
+    aosoa_output_type _aosoa_output;
+};
+
+template <class MemorySpace, class ModelType, class ThermalType, int Dimension>
+class Particles<MemorySpace, ModelType, ThermalType, OutputEnergyStress,
+                Dimension>
+    : public Particles<MemorySpace, ModelType, ThermalType, OutputEnergy,
+                       Dimension>
+{
+  public:
+    using self_type = Particles<MemorySpace, ModelType, ThermalType,
+                                OutputEnergyStress, Dimension>;
+    using base_type =
+        Particles<MemorySpace, ModelType, ThermalType, OutputEnergy, Dimension>;
+    using thermal_type = typename base_type::thermal_type;
+    using output_type = OutputEnergyStress;
+    using memory_space = typename base_type::memory_space;
+    using base_type::dim;
+
+    // Per particle.
+    using base_type::n_ghost;
+    using base_type::n_global;
+    using base_type::n_local;
+    using base_type::size;
+
+    using output_types = Cabana::MemberTypes<double[dim][dim]>;
+    using aosoa_output_type = Cabana::AoSoA<output_types, memory_space, 1>;
+
+    // Per type.
+    using base_type::n_types;
+
+    // Simulation total domain.
+    using base_type::global_mesh_ext;
+
+    // Simulation sub domain (single MPI rank).
+    using base_type::ghost_mesh_hi;
+    using base_type::ghost_mesh_lo;
+    using base_type::local_mesh_ext;
+    using base_type::local_mesh_hi;
+    using base_type::local_mesh_lo;
+
+    using base_type::dx;
+    using base_type::local_grid;
+
+    using base_type::halo_width;
+
+    // Default constructor.
+    Particles()
+        : base_type()
+    {
+        _aosoa_output = aosoa_output_type( "Particle Stress Output", 0 );
+    }
+
+    // Constructor which initializes particles on regular grid.
+    template <class ExecSpace>
+    Particles( const ExecSpace& exec_space, std::array<double, dim> low_corner,
+               std::array<double, dim> high_corner,
+               const std::array<int, dim> num_cells, const int max_halo_width )
+        : base_type( exec_space, low_corner, high_corner, num_cells,
+                     max_halo_width )
+    {
+        _aosoa_output = aosoa_output_type( "Particle Stress Output", n_local );
         init_output();
     }
 
@@ -837,14 +942,6 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputEnergy, Dimension>
     {
         return Cabana::slice<0>( _aosoa_output, "stress" );
     }
-    auto sliceStrainEnergy()
-    {
-        return Cabana::slice<1>( _aosoa_output, "strain_energy" );
-    }
-    auto sliceStrainEnergy() const
-    {
-        return Cabana::slice<1>( _aosoa_output, "strain_energy" );
-    }
 
     void resize( int new_local, int new_ghost )
     {
@@ -857,7 +954,7 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputEnergy, Dimension>
                  const bool use_reference, OtherFields&&... other )
     {
         base_type::output( output_step, output_time, use_reference,
-                           sliceStrainEnergy(), sliceStress(),
+                           sliceStress(),
                            std::forward<OtherFields>( other )... );
     }
 
@@ -871,19 +968,15 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputEnergy, Dimension>
     {
         auto stress = sliceStress();
         Cabana::deep_copy( stress, 0.0 );
-        auto energy = sliceStrainEnergy();
-        Cabana::deep_copy( energy, 0.0 );
     }
 
     aosoa_output_type _aosoa_output;
-
-#ifdef Cabana_ENABLE_HDF5
-    using base_type::h5_config;
-#endif
 };
 
-template <typename MemorySpace, typename ModelType, typename ExecSpace>
-auto createParticles( ExecSpace exec_space, CabanaPD::Inputs inputs )
+template <typename MemorySpace, typename ModelType, typename ExecSpace,
+          typename OutputType>
+auto createParticles( ExecSpace exec_space, CabanaPD::Inputs inputs,
+                      OutputType )
 {
     std::array<double, 3> low_corner = inputs["low_corner"];
     std::array<double, 3> high_corner = inputs["high_corner"];
@@ -895,10 +988,39 @@ auto createParticles( ExecSpace exec_space, CabanaPD::Inputs inputs )
 
     return std::make_shared<
         CabanaPD::Particles<MemorySpace, typename ModelType::base_model,
-                            typename ModelType::thermal_type>>(
+                            typename ModelType::thermal_type, OutputType>>(
         exec_space, low_corner, high_corner, num_cells, halo_width );
 }
 
+template <typename MemorySpace, typename ModelType, typename ExecSpace,
+          std::size_t Dim, typename OutputType>
+auto createParticles( const ExecSpace& exec_space,
+                      std::array<double, Dim> low_corner,
+                      std::array<double, Dim> high_corner,
+                      const std::array<int, Dim> num_cells,
+                      const int max_halo_width, OutputType )
+{
+    return std::make_shared<
+        CabanaPD::Particles<MemorySpace, typename ModelType::base_model,
+                            typename ModelType::thermal_type, OutputType>>(
+        exec_space, low_corner, high_corner, num_cells, max_halo_width );
+}
+
+template <typename MemorySpace, typename ModelType, typename ThermalType,
+          typename ExecSpace, std::size_t Dim, typename OutputType>
+auto createParticles(
+    const ExecSpace& exec_space, std::array<double, Dim> low_corner,
+    std::array<double, Dim> high_corner, const std::array<int, Dim> num_cells,
+    const int max_halo_width, OutputType,
+    typename std::enable_if<( is_temperature_dependent<ThermalType>::value ),
+                            int>::type* = 0 )
+{
+    return std::make_shared<CabanaPD::Particles<
+        MemorySpace, ModelType, typename ThermalType::base_type, OutputType>>(
+        exec_space, low_corner, high_corner, num_cells, max_halo_width );
+}
+
+// Backwards compatible versions with energy output by default.
 template <typename MemorySpace, typename ModelType, typename ExecSpace,
           std::size_t Dim>
 auto createParticles( const ExecSpace& exec_space,
@@ -909,7 +1031,7 @@ auto createParticles( const ExecSpace& exec_space,
 {
     return std::make_shared<
         CabanaPD::Particles<MemorySpace, typename ModelType::base_model,
-                            typename ModelType::thermal_type>>(
+                            typename ModelType::thermal_type, OutputEnergy>>(
         exec_space, low_corner, high_corner, num_cells, max_halo_width );
 }
 
@@ -923,10 +1045,9 @@ auto createParticles(
                             int>::type* = 0 )
 {
     return std::make_shared<CabanaPD::Particles<
-        MemorySpace, ModelType, typename ThermalType::base_type>>(
+        MemorySpace, ModelType, typename ThermalType::base_type, OutputEnergy>>(
         exec_space, low_corner, high_corner, num_cells, max_halo_width );
 }
-
 } // namespace CabanaPD
 
 #endif
