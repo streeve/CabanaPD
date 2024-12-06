@@ -472,7 +472,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     auto time() { return _timer.time(); };
 
     friend class Comm<self_type, PMB, TemperatureIndependent>;
-    friend class Comm<self_type, PMB, TemperatureDependent>;
     friend class Comm<self_type, Contact, TemperatureIndependent>;
 
   protected:
@@ -594,9 +593,10 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput, Dimension>
         return Cabana::slice<0>( _aosoa_m, "weighted_volume" );
     }
 
-    void resize( int new_local, int new_ghost )
+    template <typename... Args>
+    void resize( Args&&... args )
     {
-        base_type::resize( new_local, new_ghost );
+        base_type::resize( std::forward<Args>( args )... );
         _timer.start();
         _aosoa_theta.resize( n_reference );
         _aosoa_m.resize( n_reference );
@@ -729,9 +729,10 @@ class Particles<MemorySpace, PMB, TemperatureDependent, BaseOutput, Dimension>
         return temp_a;
     }
 
-    void resize( int new_local, int new_ghost )
+    template <typename... Args>
+    void resize( Args&&... args )
     {
-        base_type::resize( new_local, new_ghost );
+        base_type::resize( std::forward<Args>( args )... );
         _aosoa_temp.resize( n_reference );
     }
 
@@ -748,6 +749,8 @@ class Particles<MemorySpace, PMB, TemperatureDependent, BaseOutput, Dimension>
     friend class Comm<self_type, LPS, TemperatureIndependent>;
     friend class Comm<self_type, PMB, TemperatureDependent>;
     friend class Comm<self_type, LPS, TemperatureDependent>;
+    friend class Comm<self_type, Contact, TemperatureIndependent>;
+    friend class Comm<self_type, Contact, TemperatureDependent>;
 
   protected:
     void init_temp()
@@ -778,6 +781,7 @@ class Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>
     using base_type::n_ghost;
     using base_type::n_global;
     using base_type::n_local;
+    using base_type::n_reference;
     using base_type::size;
 
     // energy, damage
@@ -843,10 +847,11 @@ class Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>
         return Cabana::slice<1>( _aosoa_output, "damage" );
     }
 
-    void resize( int new_local, int new_ghost )
+    template <typename... Args>
+    void resize( Args&&... args )
     {
-        base_type::resize( new_local, new_ghost );
-        _aosoa_output.resize( new_local + new_ghost );
+        base_type::resize( std::forward<Args>( args )... );
+        _aosoa_output.resize( n_reference );
     }
 
     template <typename... OtherFields>
@@ -860,8 +865,10 @@ class Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>
 
     friend class Comm<self_type, PMB, TemperatureIndependent>;
     friend class Comm<self_type, LPS, TemperatureIndependent>;
+    friend class Comm<self_type, Contact, TemperatureIndependent>;
     friend class Comm<self_type, PMB, TemperatureDependent>;
     friend class Comm<self_type, LPS, TemperatureDependent>;
+    friend class Comm<self_type, Contact, TemperatureDependent>;
 
   protected:
     void init_output()
