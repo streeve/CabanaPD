@@ -627,7 +627,7 @@ class SolverFracture
             // Need to ghost current positions for DEM/contact.
             if constexpr ( is_contact<contact_model_type>::value ||
                            is_contact<force_model_type>::value )
-                contact_comm->gatherCurrentPostiion( *particles );
+                contact_comm->gather( *particles );
 
             // Compute internal forces.
             updateForce();
@@ -671,7 +671,7 @@ class SolverFracture
             // Need to ghost current positions for DEM/contact.
             if constexpr ( is_contact<contact_model_type>::value ||
                            is_contact<force_model_type>::value )
-                contact_comm->gatherCurrentPostiion( *particles );
+                contact_comm->gather( *particles );
 
             // Compute internal forces.
             updateForce();
