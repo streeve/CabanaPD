@@ -35,7 +35,7 @@ class Force<MemorySpace, NormalRepulsionModel>
     Force( const bool half_neigh, const ParticleType& particles,
            const NormalRepulsionModel model )
         : base_type( half_neigh, model.Rc, particles.sliceCurrentPosition(),
-                     particles.n_local, particles.ghost_mesh_lo,
+                     particles.numLocal(), particles.ghost_mesh_lo,
                      particles.ghost_mesh_hi )
         , _model( model )
     {
@@ -49,7 +49,7 @@ class Force<MemorySpace, NormalRepulsionModel>
     template <class ForceType, class PosType, class ParticleType,
               class ParallelType>
     void computeForceFull( ForceType& fc, const PosType& x, const PosType& u,
-                           const ParticleType& particles, const int n_local,
+                           const ParticleType& particles,
                            ParallelType& neigh_op_tag )
     {
         auto delta = _model.delta;
@@ -57,6 +57,7 @@ class Force<MemorySpace, NormalRepulsionModel>
         auto c = _model.c;
         const auto vol = particles.sliceVolume();
         const auto y = particles.sliceCurrentPosition();
+        const int n_local = particles.numLocal();
 
         _neigh_timer.start();
         _neigh_list.build( y, 0, n_local, Rc, 1.0, mesh_min, mesh_max );

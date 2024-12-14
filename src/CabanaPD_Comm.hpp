@@ -271,7 +271,7 @@ class Comm<ParticleType, PMB, TemperatureIndependent>
 
         // Create the Cabana Halo.
         halo = std::make_shared<halo_type>( local_grid->globalGrid().comm(),
-                                            particles.n_local, halo_ids._ids,
+                                            particles.numLocal(), halo_ids._ids,
                                             halo_ids._destinations, topology );
 
         particles.resize( halo->numLocal(), halo->numGhost() );

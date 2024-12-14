@@ -325,6 +325,12 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         _timer.stop();
     }
 
+    auto numFrozen() const { return n_frozen; }
+    auto numLocal() const { return n_local; }
+    auto numGhost() const { return n_ghost; }
+    auto numReference() const { return size; }
+    auto numGlobal() const { return n_global; }
+
     auto sliceReferencePosition()
     {
         return _plist_x.slice( CabanaPD::Field::ReferencePosition() );
