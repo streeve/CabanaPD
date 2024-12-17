@@ -149,6 +149,8 @@ class Force<MemorySpace, BaseForceModel>
     Force( const bool half_neigh, const double delta,
            const ParticleType& particles, const double tol = 1e-14 )
         : _half_neigh( half_neigh )
+        // Note: this construction must always include frozen particles as
+        // potential neighbors, so we start at zero.
         , _neigh_list( neighbor_list_type( particles.sliceReferencePosition(),
                                            0, particles.numLocal(), delta + tol,
                                            1.0, particles.ghost_mesh_lo,
@@ -164,6 +166,8 @@ class Force<MemorySpace, BaseForceModel>
            const double mesh_min[3], const double mesh_max[3],
            const double tol = 1e-14 )
         : _half_neigh( half_neigh )
+        // Note: this construction must always include frozen particles as
+        // potential neighbors, so we start at zero.
         , _neigh_list( neighbor_list_type( positions, 0, num_local, delta + tol,
                                            1.0, mesh_min, mesh_max ) )
     {

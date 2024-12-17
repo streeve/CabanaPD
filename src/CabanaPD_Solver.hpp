@@ -529,9 +529,10 @@ class SolverFracture
         _init_timer.start();
         // Create View to track broken bonds.
         auto max_neighbors = force->getMaxLocalNeighbors();
+        // TODO: this could be optimized to ignore frozen particle bonds.
         mu = NeighborView(
             Kokkos::ViewAllocateWithoutInitializing( "broken_bonds" ),
-            particles->numLocal(), max_neighbors );
+            particles->localOffset(), max_neighbors );
         Kokkos::deep_copy( mu, 1 );
         _init_timer.stop();
     }

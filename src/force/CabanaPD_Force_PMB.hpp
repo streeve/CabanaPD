@@ -131,8 +131,8 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
             f( i, 2 ) += fz_i;
         };
 
-        Kokkos::RangePolicy<exec_space> policy( particles.numFrozen(),
-                                                particles.numLocal() );
+        Kokkos::RangePolicy<exec_space> policy( particles.frozenOffset(),
+                                                particles.localOffset() );
         Cabana::neighbor_parallel_for(
             policy, force_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::ForcePMB::computeFull" );
@@ -168,8 +168,8 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
         };
 
         double strain_energy = 0.0;
-        Kokkos::RangePolicy<exec_space> policy( particles.numFrozen(),
-                                                particles.numLocal() );
+        Kokkos::RangePolicy<exec_space> policy( particles.frozenOffset(),
+                                                particles.localOffset() );
         Cabana::neighbor_parallel_reduce(
             policy, energy_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, strain_energy,
@@ -266,8 +266,8 @@ class Force<MemorySpace, ForceModel<PMB, Fracture, ModelParams...>>
             }
         };
 
-        Kokkos::RangePolicy<exec_space> policy( particles.numFrozen(),
-                                                particles.numLocal() );
+        Kokkos::RangePolicy<exec_space> policy( particles.frozenOffset(),
+                                                particles.localOffset() );
         Kokkos::parallel_for( "CabanaPD::ForcePMBDamage::computeFull", policy,
                               force_full );
 
@@ -317,8 +317,8 @@ class Force<MemorySpace, ForceModel<PMB, Fracture, ModelParams...>>
         };
 
         double strain_energy = 0.0;
-        Kokkos::RangePolicy<exec_space> policy( particles.numFrozen(),
-                                                particles.numLocal() );
+        Kokkos::RangePolicy<exec_space> policy( particles.frozenOffset(),
+                                                particles.localOffset() );
         Kokkos::parallel_reduce( "CabanaPD::ForcePMBDamage::computeEnergyFull",
                                  policy, energy_full, strain_energy );
 
@@ -389,8 +389,8 @@ class Force<MemorySpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
             f( i, 2 ) += fz_i;
         };
 
-        Kokkos::RangePolicy<exec_space> policy( particles.numFrozen(),
-                                                particles.numLocal() );
+        Kokkos::RangePolicy<exec_space> policy( particles.frozenOffset(),
+                                                particles.localOffset() );
         Cabana::neighbor_parallel_for(
             policy, force_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, "CabanaPD::ForceLinearPMB::computeFull" );
@@ -426,8 +426,8 @@ class Force<MemorySpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
         };
 
         double strain_energy = 0.0;
-        Kokkos::RangePolicy<exec_space> policy( particles.numFrozen(),
-                                                particles.numLocal() );
+        Kokkos::RangePolicy<exec_space> policy( particles.frozenOffset(),
+                                                particles.localOffset() );
         Cabana::neighbor_parallel_reduce(
             policy, energy_full, _neigh_list, Cabana::FirstNeighborsTag(),
             neigh_op_tag, strain_energy,
