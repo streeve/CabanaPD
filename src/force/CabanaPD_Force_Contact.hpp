@@ -35,8 +35,8 @@ class Force<MemorySpace, NormalRepulsionModel>
     Force( const bool half_neigh, const ParticleType& particles,
            const NormalRepulsionModel model )
         : base_type( half_neigh, model.Rc, particles.sliceCurrentPosition(),
-                     particles.localOffset(), particles.ghost_mesh_lo,
-                     particles.ghost_mesh_hi )
+                     particles.frozenOffset(), particles.localOffset(),
+                     particles.ghost_mesh_lo, particles.ghost_mesh_hi )
         , _model( model )
     {
         for ( int d = 0; d < particles.dim; d++ )
