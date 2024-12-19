@@ -373,6 +373,10 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         return Cabana::slice<0>( _aosoa_u, "displacements" );
     }
     auto sliceForce() { return _plist_f.slice( CabanaPD::Field::Force() ); }
+    auto sliceForce() const
+    {
+        return _plist_f.slice( CabanaPD::Field::Force() );
+    }
     auto sliceForceAtomic()
     {
         auto f = sliceForce();

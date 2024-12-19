@@ -48,6 +48,6 @@ macro(CabanaPD_add_tests)
   endforeach()
 endmacro()
 
-CabanaPD_add_tests(NAMES Particles Force Integrator)
+CabanaPD_add_tests(NAMES Particles Force Integrator Boundary)
 
 CabanaPD_add_tests(MPI NAMES Comm)
