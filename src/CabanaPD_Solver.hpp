@@ -474,6 +474,8 @@ class Solver
     double dt;
     int thermal_subcycle_steps;
 
+    std::shared_ptr<particle_type> particles;
+
   protected:
     template <std::size_t NumPrenotch>
     void init_prenotch( Prenotch<NumPrenotch> prenotch )
@@ -489,7 +491,6 @@ class Solver
 
     // Core modules.
     input_type inputs;
-    std::shared_ptr<particle_type> particles;
     std::shared_ptr<comm_type> comm;
     std::shared_ptr<integrator_type> integrator;
     std::shared_ptr<force_type> force;
