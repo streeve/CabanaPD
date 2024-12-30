@@ -109,8 +109,8 @@ class Solver
 
     Solver( input_type _inputs, std::shared_ptr<particle_type> _particles,
             force_model_type force_model )
-        : inputs( _inputs )
-        , particles( _particles )
+        : particles( _particles )
+        , inputs( _inputs )
         , _init_time( 0.0 )
     {
         setup( force_model );
@@ -118,8 +118,8 @@ class Solver
 
     Solver( input_type _inputs, std::shared_ptr<particle_type> _particles,
             force_model_type force_model, contact_model_type contact_model )
-        : inputs( _inputs )
-        , particles( _particles )
+        : particles( _particles )
+        , inputs( _inputs )
         , _init_time( 0.0 )
     {
         setup( force_model );
