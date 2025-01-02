@@ -70,14 +70,17 @@
 
 namespace CabanaPD
 {
-template <class MemorySpace, class... ModelParams>
-class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
+template <class MemorySpace, class ModelType, class FractureType>
+class ForcePair;
+
+template <class MemorySpace, class ModelType>
+class ForcePair<MemorySpace, ModelType, NoFracture>
     : public Force<MemorySpace, BaseForceModel>
 {
   public:
     // Using the default exec_space.
     using exec_space = typename MemorySpace::execution_space;
-    using model_type = ForceModel<PMB, Elastic, ModelParams...>;
+    using model_type = ModelType;
     using base_type = Force<MemorySpace, BaseForceModel>;
     using neighbor_list_type = typename base_type::neighbor_list_type;
     using base_type::_neigh_list;
@@ -91,8 +94,8 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
 
   public:
     template <class ParticleType>
-    Force( const bool half_neigh, const ParticleType& particles,
-           const model_type model )
+    ForcePair( const bool half_neigh, const ParticleType& particles,
+               const model_type model )
         : base_type( half_neigh, model.delta, particles )
         , _model( model )
     {
@@ -111,10 +114,25 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
 
         auto force_full = KOKKOS_LAMBDA( const int i, const int j )
         {
-            auto fx = model.force( x, u, vol, i, j );
-            f( i, 0 ) += fx[0];
-            f( i, 1 ) += fy[1];
-            f( i, 2 ) += fz[2];
+            double fx_i = 0.0;
+            double fy_i = 0.0;
+            double fz_i = 0.0;
+
+            double xi, r, s;
+            double rx, ry, rz;
+            getDistanceComponents( model_type::linearized_type{}, x, u, i, j,
+                                   xi, r, s, rx, ry, rz );
+
+            model.thermalStretch( s, i, j );
+
+            const double coeff = model.forceCoeff( s, vol( j ) );
+            fx_i = coeff * rx / r;
+            fy_i = coeff * ry / r;
+            fz_i = coeff * rz / r;
+
+            f( i, 0 ) += fx_i;
+            f( i, 1 ) += fy_i;
+            f( i, 2 ) += fz_i;
         };
 
         Kokkos::RangePolicy<exec_space> policy( 0, n_local );
@@ -139,7 +157,13 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
         auto energy_full =
             KOKKOS_LAMBDA( const int i, const int j, double& Phi )
         {
-            auto w = model.energy( x, u, vol, i, j );
+            // Get the bond distance, displacement, and stretch.
+            double xi, r, s;
+            getDistance( x, u, i, j, xi, r, s );
+
+            model.thermalStretch( s, i, j );
+
+            double w = model.energyCoeff( s, xi, vol( j ) );
             W( i ) += w;
             Phi += w * vol( i );
         };
@@ -156,14 +180,13 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, ModelParams...>>
     }
 };
 
-template <class MemorySpace, class... ModelParams>
-class Force<MemorySpace, ForceModel<PMB, Fracture, ModelParams...>>
-    : public Force<MemorySpace, BaseForceModel>
+template <class MemorySpace, class ModelType>
+class Force : public Force<MemorySpace, BaseForceModel>
 {
   public:
     // Using the default exec_space.
     using exec_space = typename MemorySpace::execution_space;
-    using model_type = ForceModel<PMB, Fracture, ModelParams...>;
+    using model_type = ModelType;
     using base_type = Force<MemorySpace, BaseForceModel>;
     using neighbor_list_type = typename base_type::neighbor_list_type;
     using base_type::_neigh_list;
@@ -216,7 +239,8 @@ class Force<MemorySpace, ForceModel<PMB, Fracture, ModelParams...>>
                 // Get the reference positions and displacements.
                 double xi, r, s;
                 double rx, ry, rz;
-                getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+                getDistanceComponents( model_type::linearized_type{}, x, u, i,
+                                       j, xi, r, s, rx, ry, rz );
 
                 model.thermalStretch( s, i, j );
 
@@ -274,8 +298,13 @@ class Force<MemorySpace, ForceModel<PMB, Fracture, ModelParams...>>
                 std::size_t j =
                     Cabana::NeighborList<neighbor_list_type>::getNeighbor(
                         neigh_list, i, n );
+                // Get the bond distance, displacement, and stretch.
+                double xi, r, s;
+                getDistance( x, u, i, j, xi, r, s );
 
-                double w = mu( i, n ) * model.energy( x, u, vol, i, j );
+                model.thermalStretch( s, i, j );
+
+                double w = mu( i, n ) * model.energyCoeff( s, xi, vol( j ) );
                 W( i ) += w;
 
                 phi_i += mu( i, n ) * vol( j );
@@ -289,6 +318,114 @@ class Force<MemorySpace, ForceModel<PMB, Fracture, ModelParams...>>
         Kokkos::RangePolicy<exec_space> policy( 0, n_local );
         Kokkos::parallel_reduce( "CabanaPD::ForcePMBDamage::computeEnergyFull",
                                  policy, energy_full, strain_energy );
+
+        _energy_timer.stop();
+        return strain_energy;
+    }
+};
+
+template <class MemorySpace, class... ModelParams>
+class Force<MemorySpace, ForceModel<LinearPMB, Elastic, ModelParams...>>
+    : public Force<MemorySpace, BaseForceModel>
+{
+  public:
+    // Using the default exec_space.
+    using exec_space = typename MemorySpace::execution_space;
+    using model_type = ForceModel<LinearPMB, Elastic, TemperatureIndependent>;
+    using base_type = Force<MemorySpace, BaseForceModel>;
+    using neighbor_list_type = typename base_type::neighbor_list_type;
+    using base_type::_neigh_list;
+
+  protected:
+    using base_type::_half_neigh;
+    model_type _model;
+
+    using base_type::_energy_timer;
+    using base_type::_timer;
+
+  public:
+    template <class ParticleType>
+    Force( const bool half_neigh, const ParticleType& particles,
+           const model_type model )
+        : base_type( half_neigh, model.delta, particles )
+        , _model( model )
+    {
+    }
+
+    template <class ForceType, class PosType, class ParticleType,
+              class ParallelType>
+    void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
+                           ParticleType& particles, const int n_local,
+                           ParallelType& neigh_op_tag )
+    {
+        _timer.start();
+
+        auto model = _model;
+        const auto vol = particles.sliceVolume();
+
+        auto force_full = KOKKOS_LAMBDA( const int i, const int j )
+        {
+            double fx_i = 0.0;
+            double fy_i = 0.0;
+            double fz_i = 0.0;
+
+            // Get the bond distance, displacement, and linearized stretch.
+            double xi, linear_s;
+            double xi_x, xi_y, xi_z;
+            getLinearizedDistanceComponents( x, u, i, j, xi, linear_s, xi_x,
+                                             xi_y, xi_z );
+
+            model.thermalStretch( linear_s, i, j );
+
+            const double coeff = model.forceCoeff( linear_s, vol( j ) );
+            fx_i = coeff * xi_x / xi;
+            fy_i = coeff * xi_y / xi;
+            fz_i = coeff * xi_z / xi;
+
+            f( i, 0 ) += fx_i;
+            f( i, 1 ) += fy_i;
+            f( i, 2 ) += fz_i;
+        };
+
+        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Cabana::neighbor_parallel_for(
+            policy, force_full, _neigh_list, Cabana::FirstNeighborsTag(),
+            neigh_op_tag, "CabanaPD::ForceLinearPMB::computeFull" );
+
+        _timer.stop();
+    }
+
+    template <class PosType, class WType, class ParticleType,
+              class ParallelType>
+    double computeEnergyFull( WType& W, const PosType& x, const PosType& u,
+                              ParticleType& particles, const int n_local,
+                              ParallelType& neigh_op_tag )
+    {
+        _energy_timer.start();
+
+        auto model = _model;
+        const auto vol = particles.sliceVolume();
+
+        auto energy_full =
+            KOKKOS_LAMBDA( const int i, const int j, double& Phi )
+        {
+            // Get the bond distance, displacement, and linearized stretch.
+            double xi, linear_s;
+            getLinearizedDistance( x, u, i, j, xi, linear_s );
+
+            model.thermalStretch( linear_s, i, j );
+
+            double w = model.energyCoeff( linear_s, xi, vol( j ) );
+            W( i ) += w;
+            Phi += w * vol( i );
+        };
+
+        double strain_energy = 0.0;
+        Kokkos::RangePolicy<exec_space> policy( 0, n_local );
+        Cabana::neighbor_parallel_reduce(
+            policy, energy_full, _neigh_list, Cabana::FirstNeighborsTag(),
+            neigh_op_tag, strain_energy,
+            "CabanaPD::ForceLinearPMB::computeEnergyFull" );
 
         _energy_timer.stop();
         return strain_energy;

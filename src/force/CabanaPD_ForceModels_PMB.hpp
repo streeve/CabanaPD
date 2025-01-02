@@ -19,19 +19,20 @@
 namespace CabanaPD
 {
 template <>
-struct ForceModel<PMB, Elastic, TemperatureIndependent> : public BaseForceModel
+struct ForceModel<PMB, Elastic, TemperatureIndependent>
+    : public BasePairForceModel<NonLinearTag>
 {
-    using base_type = BaseForceModel;
+    using base_type = BasePairForceModel;
     using base_model = PMB;
     using fracture_type = Elastic;
     using thermal_type = TemperatureIndependent;
+    using linearized_type = typename base_type::linearized_type;
 
     using base_type::delta;
 
     double c;
     double K;
 
-    ForceModel(){};
     ForceModel( const double delta, const double K )
         : base_type( delta )
     {
@@ -58,6 +59,26 @@ struct ForceModel<PMB, Elastic, TemperatureIndependent> : public BaseForceModel
         return c * s * vol;
     }
 
+    template <class PosType, class VolType>
+    KOKKOS_INLINE_FUNCTION auto force( const PosType& x, const PosType& u,
+                                       const VolType& vol, const int i,
+                                       const int j ) const
+    {
+        double xi, r, s;
+        double rx, ry, rz;
+        getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+
+        thermalStretch( s, i, j );
+
+        const double coeff = forceCoeff( s, vol( j ) );
+        Kokkos::Array<double, 3> f;
+
+        f[0] = coeff * rx / r;
+        f[1] = coeff * ry / r;
+        f[2] = coeff * rz / r;
+        return f;
+    }
+
     KOKKOS_INLINE_FUNCTION
     auto energyCoeff( const double s, const double xi, const double vol ) const
     {
@@ -65,66 +86,18 @@ struct ForceModel<PMB, Elastic, TemperatureIndependent> : public BaseForceModel
         // the integrand (pairwise potential).
         return 0.25 * c * s * s * xi * vol;
     }
-};
 
-template <>
-struct ForceModel<PMB, NoFracture, Plastic, TemperatureIndependent>
-    : public ForceModel<PMB, NoFracture, Elastic, TemperatureIndependent>
-{
-    using base_type = ForceModel<PMB, NoFracture>;
-    using base_model = PMB;
-    using fracture_type = NoFracture;
-    using plasticity_type = Plastic;
-    using thermal_type = TemperatureIndependent;
-
-    using base_type::c;
-    using base_type::delta;
-    using base_type::K;
-    // FIXME: hardcoded
-    const double s_Y = 0.0014;
-
-    ForceModel(){};
-    ForceModel( const double delta, const double K )
-        : base_type( delta, K )
+    template <class PosType, class VolType>
+    KOKKOS_INLINE_FUNCTION auto energy( const PosType& x, const PosType& u,
+                                        const VolType& vol, const int i,
+                                        const int j ) const
     {
-        set_param( delta, K );
-    }
+        double xi, r, s;
+        getDistance( x, u, i, j, xi, r, s );
 
-    ForceModel( const ForceModel& model )
-        : base_type( model )
-    {
-        c = model.c;
-        K = model.K;
-    }
+        model.thermalStretch( s, i, j );
 
-    void set_param( const double _delta, const double _K )
-    {
-        delta = _delta;
-        K = _K;
-        c = 18.0 * K / ( pi * delta * delta * delta * delta );
-    }
-
-    KOKKOS_INLINE_FUNCTION
-    auto forceCoeff( const double s, const double vol ) const
-    {
-        if ( s < s_Y )
-            return c * s * vol;
-        else
-            return c * s_Y * vol;
-    }
-
-    KOKKOS_INLINE_FUNCTION
-    auto energyCoeff( const double s, const double xi, const double vol ) const
-    {
-        double stretch_term = 0.0;
-        if ( s < s_Y )
-            stretch_term = s * s;
-        else
-            stretch_term = s_Y * ( 2 * s - s_Y );
-
-        // 0.25 factor is due to 1/2 from outside the integral and 1/2 from
-        // the integrand (pairwise potential).
-        return 0.25 * c * stretch_term * xi * vol;
+        return model.energyCoeff( s, xi, vol( j ) );
     }
 };
 
@@ -136,6 +109,7 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent>
     using base_model = typename base_type::base_model;
     using fracture_type = Fracture;
     using thermal_type = base_type::thermal_type;
+    using linearized_type = typename base_type::linearized_type;
 
     using base_type::c;
     using base_type::delta;
@@ -144,7 +118,6 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent>
     double s0;
     double bond_break_coeff;
 
-    ForceModel() {}
     ForceModel( const double delta, const double K, const double G0 )
         : base_type( delta, K )
     {
@@ -177,9 +150,10 @@ struct ForceModel<PMB, Fracture, TemperatureIndependent>
 
 template <>
 struct ForceModel<LinearPMB, Elastic, TemperatureIndependent>
-    : public ForceModel<PMB, Elastic, TemperatureIndependent>
+    : public BasePairForceModel<LinearTag>
 {
-    using base_type = ForceModel<PMB, Elastic>;
+    using base_type = BasePairForceModel<LinearTag>;
+    using linearized_type = LinearTag;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = base_type::thermal_type;
@@ -189,6 +163,38 @@ struct ForceModel<LinearPMB, Elastic, TemperatureIndependent>
     using base_type::c;
     using base_type::delta;
     using base_type::K;
+
+    template <class PosType, class VolType>
+    KOKKOS_INLINE_FUNCTION auto force( const PosType& x, const PosType& u,
+                                       const VolType& vol, const int i,
+                                       const int j ) const
+    {
+        double xi, linear_s;
+        double xi_x, xi_y, xi_z;
+        getLinearizedDistanceComponents( x, u, i, j, xi, linear_s, xi_x, xi_y,
+                                         xi_z );
+
+        thermalStretch( linear_s, i, j );
+
+        const double coeff = forceCoeff( linear_s, vol( j ) );
+        f[0] = coeff * xi_x / xi;
+        f[1] = coeff * xi_y / xi;
+        f[2] = coeff * xi_z / xi;
+        return f;
+    }
+
+    template <class PosType, class VolType>
+    KOKKOS_INLINE_FUNCTION auto energy( const PosType& x, const PosType& u,
+                                        const VolType& vol, const int i,
+                                        const int j ) const
+    {
+        double xi, linear_s;
+        getLinearizedDistance( x, u, i, j, xi, linear_s );
+
+        model.thermalStretch( linear_s, i, j );
+
+        return model.energyCoeff( linear_s, xi, vol( j ) );
+    }
 };
 
 template <>
@@ -196,6 +202,7 @@ struct ForceModel<LinearPMB, Fracture, TemperatureIndependent>
     : public ForceModel<PMB, Fracture, TemperatureIndependent>
 {
     using base_type = ForceModel<PMB, Fracture>;
+    using linearized_type = LinearTag;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = base_type::thermal_type;
@@ -221,6 +228,7 @@ struct ForceModel<PMB, Elastic, TemperatureDependent, TemperatureType>
     using base_model = PMB;
     using fracture_type = Elastic;
     using thermal_type = TemperatureDependent;
+    using linearized_type = typename base_type::linearized_type;
 
     using base_type::c;
     using base_type::delta;
@@ -233,7 +241,6 @@ struct ForceModel<PMB, Elastic, TemperatureDependent, TemperatureType>
     // Explicitly use the temperature-dependent stretch.
     using base_temperature_type::thermalStretch;
 
-    // ForceModel(){};
     ForceModel( const double _delta, const double _K,
                 const TemperatureType _temp, const double _alpha,
                 const double _temp0 = 0.0 )
@@ -271,6 +278,7 @@ struct ForceModel<PMB, Fracture, TemperatureDependent, TemperatureType>
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = TemperatureDependent;
+    using linearized_type = typename base_type::linearized_type;
 
     using base_type::c;
     using base_type::delta;
@@ -288,7 +296,6 @@ struct ForceModel<PMB, Fracture, TemperatureDependent, TemperatureType>
     // Explicitly use the temperature-dependent stretch.
     using base_temperature_type::thermalStretch;
 
-    // ForceModel(){};
     ForceModel( const double _delta, const double _K, const double _G0,
                 const TemperatureType _temp, const double _alpha,
                 const double _temp0 = 0.0 )
@@ -338,6 +345,7 @@ struct ForceModel<PMB, Elastic, DynamicTemperature, TemperatureType>
     using base_model = PMB;
     using fracture_type = Elastic;
     using thermal_type = DynamicTemperature;
+    using linearized_type = typename base_type::linearized_type;
 
     using base_type::c;
     using base_type::delta;
@@ -354,7 +362,6 @@ struct ForceModel<PMB, Elastic, DynamicTemperature, TemperatureType>
     // Explicitly use the temperature-dependent stretch.
     using base_type::thermalStretch;
 
-    // ForceModel(){};
     ForceModel( const double _delta, const double _K,
                 const TemperatureType _temp, const double _kappa,
                 const double _cp, const double _alpha,
@@ -401,6 +408,7 @@ struct ForceModel<PMB, Fracture, DynamicTemperature, TemperatureType>
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = DynamicTemperature;
+    using linearized_type = typename base_type::linearized_type;
 
     using base_type::c;
     using base_type::delta;
@@ -421,7 +429,6 @@ struct ForceModel<PMB, Fracture, DynamicTemperature, TemperatureType>
     // Explicitly use the temperature-dependent stretch.
     using base_type::thermalStretch;
 
-    // ForceModel(){};
     ForceModel( const double _delta, const double _K, const double _G0,
                 const TemperatureType _temp, const double _kappa,
                 const double _cp, const double _alpha,

@@ -82,6 +82,14 @@ struct LinearLPS
 {
 };
 
+// Standard / linearized model tags.
+struct LinearTag
+{
+};
+struct NonLinearTag
+{
+};
+
 struct BaseOutput
 {
 };

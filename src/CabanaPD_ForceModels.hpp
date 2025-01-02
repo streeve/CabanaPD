@@ -20,8 +20,8 @@ namespace CabanaPD
 struct BaseForceModel
 {
     double delta;
+    using linearized_type = NonLinearTag;
 
-    BaseForceModel(){};
     BaseForceModel( const double _delta )
         : delta( _delta ){};
 
@@ -30,6 +30,14 @@ struct BaseForceModel
     // No-op for temperature.
     KOKKOS_INLINE_FUNCTION
     void thermalStretch( double&, const int, const int ) const {}
+};
+
+struct BaseForceModel : public BaseForceModel
+{
+    using base_type = BaseForceModel;
+    using linearized_type = typename base_type::linearized_type;
+
+    using base_type::base_type;
 };
 
 template <typename TemperatureType>
@@ -41,7 +49,6 @@ struct BaseTemperatureModel
     // Temperature field
     TemperatureType temperature;
 
-    BaseTemperatureModel(){};
     BaseTemperatureModel( const TemperatureType _temp, const double _alpha,
                           const double _temp0 )
         : alpha( _alpha )
