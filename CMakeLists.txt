@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.11)
 project(CabanaPD LANGUAGES CXX C)
 set(PROJECT_VERSION "0.4.0-dev")
 
+cmake_policy(SET CMP0074 NEW)
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 14)
 if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CXX_FLAGS)
@@ -79,7 +81,9 @@ if(CabanaPD_ENABLE_TESTING)
     message(FATAL_ERROR "bug in GTest find module workaround")
   endif()
   enable_testing()
+  set(TEST_HARNESS_DIR ${CMAKE_SOURCE_DIR}/test_harness)
   add_subdirectory(unit_test)
+  add_subdirectory(regression_test)
 endif()
 
 ##---------------------------------------------------------------------------##
