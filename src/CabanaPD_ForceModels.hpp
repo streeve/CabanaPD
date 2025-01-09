@@ -29,6 +29,50 @@ struct BaseForceModel
     void thermalStretch( double&, const int, const int ) const {}
 };
 
+// Wrap multiple models in a single object.
+// TODO: this currently only supports bi-material systems.
+template <typename... ModelType>
+struct ForceModels
+{
+    // TODO: should there be a static_assert that each model form is the same
+    // (PMB vs LPS)?
+    ForceModels( const ModelType... models )
+        : pack( Cabana::makeParameterPack( models... ) )
+    {
+    }
+
+    template <std::size_t I, std::size_t J,
+              std::enable_if_t<std::is_same<I, J>::type>>
+    auto get()
+    {
+        return Cabana::get<I>( pack );
+    }
+
+    template <std::size_t I, std::size_t J,
+              std::enable_if_t<!std::is_same<I, J>::type>>
+    auto get()
+    {
+        // FIXME: only true for binary.
+        return Cabana::get<2>( pack );
+    }
+
+    Cabana::ParameterPack<ModelType...> pack;
+};
+
+template <typename... ModelType>
+auto createForceModels( const ModelType... models )
+{
+    static constexpr std::size_t size = sizeof...( ModelType );
+
+    // FIXME: only true for binary.
+    if constexpr ( pack.size == 2 )
+    {
+        return ForceModels( models... );
+    }
+    else
+    {
+    }
+}
 template <typename TemperatureType>
 struct BaseTemperatureModel
 {
