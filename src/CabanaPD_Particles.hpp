@@ -116,7 +116,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     using aosoa_y_type = Cabana::AoSoA<vector_type, memory_space, 1>;
     using aosoa_vol_type = Cabana::AoSoA<scalar_type, memory_space, 1>;
     using aosoa_nofail_type = Cabana::AoSoA<int_type, memory_space, 1>;
-    using aosoa_species_type = Cabana::AoSoA<int_type, memory_space, 1>;
+    using aosoa_material_type = Cabana::AoSoA<int_type, memory_space, 1>;
     using aosoa_other_type = Cabana::AoSoA<other_types, memory_space>;
     // Using grid here for the particle init.
     using plist_x_type =
@@ -462,10 +462,10 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     {
         return Cabana::slice<0>( _aosoa_vol, "volume" );
     }
-    auto sliceType() { return Cabana::slice<0>( _aosoa_species, "type" ); }
+    auto sliceType() { return Cabana::slice<0>( _aosoa_material, "type" ); }
     auto sliceType() const
     {
-        return Cabana::slice<0>( _aosoa_species, "type" );
+        return Cabana::slice<0>( _aosoa_material, "type" );
     }
     auto sliceVelocity()
     {
@@ -528,7 +528,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         _plist_f.aosoa().resize( localOffset() );
         _aosoa_other.resize( localOffset() );
         _aosoa_nofail.resize( referenceOffset() );
-        _aosoa_species.resize( referenceOffset() );
+        _aosoa_material.resize( referenceOffset() );
         size = _plist_x.size();
         _timer.stop();
     };
@@ -577,17 +577,17 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     auto timeOutput() { return _output_timer.time(); };
     auto time() { return _timer.time(); };
 
-    friend class Comm<self_type, PMB, SingleSpecies, TemperatureIndependent>;
-    friend class Comm<self_type, PMB, SingleSpecies, TemperatureDependent>;
-    friend class Comm<self_type, PMB, MultiSpecies, TemperatureIndependent>;
-    friend class Comm<self_type, PMB, MultiSpecies, TemperatureDependent>;
+    friend class Comm<self_type, PMB, SingleMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, PMB, SingleMaterial, TemperatureDependent>;
+    friend class Comm<self_type, PMB, MultiMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, PMB, MultiMaterial, TemperatureDependent>;
 
   protected:
     aosoa_u_type _aosoa_u;
     aosoa_y_type _aosoa_y;
     aosoa_vol_type _aosoa_vol;
     aosoa_nofail_type _aosoa_nofail;
-    aosoa_species_type _aosoa_species;
+    aosoa_material_type _aosoa_material;
     aosoa_other_type _aosoa_other;
 
     plist_x_type _plist_x;
@@ -714,10 +714,10 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput, Dimension>
                            std::forward<OtherFields>( other )... );
     }
 
-    friend class Comm<self_type, PMB, SingleSpecies, TemperatureIndependent>;
-    friend class Comm<self_type, LPS, SingleSpecies, TemperatureIndependent>;
-    friend class Comm<self_type, PMB, MultiSpecies, TemperatureIndependent>;
-    friend class Comm<self_type, LPS, MultiSpecies, TemperatureIndependent>;
+    friend class Comm<self_type, PMB, SingleMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, LPS, SingleMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, PMB, MultiMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, LPS, MultiMaterial, TemperatureIndependent>;
 
   protected:
     void init_lps()
@@ -841,10 +841,10 @@ class Particles<MemorySpace, PMB, TemperatureDependent, BaseOutput, Dimension>
                            std::forward<OtherFields>( other )... );
     }
 
-    friend class Comm<self_type, PMB, SingleSpecies, TemperatureIndependent>;
-    friend class Comm<self_type, PMB, SingleSpecies, TemperatureDependent>;
-    friend class Comm<self_type, PMB, MultiSpecies, TemperatureIndependent>;
-    friend class Comm<self_type, PMB, MultiSpecies, TemperatureDependent>;
+    friend class Comm<self_type, PMB, SingleMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, PMB, SingleMaterial, TemperatureDependent>;
+    friend class Comm<self_type, PMB, MultiMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, PMB, MultiMaterial, TemperatureDependent>;
 
   protected:
     void init_temp()
@@ -947,10 +947,14 @@ class Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>
                            std::forward<OtherFields>( other )... );
     }
 
-    friend class Comm<self_type, PMB, TemperatureIndependent>;
-    friend class Comm<self_type, LPS, TemperatureIndependent>;
-    friend class Comm<self_type, PMB, TemperatureDependent>;
-    friend class Comm<self_type, LPS, TemperatureDependent>;
+    friend class Comm<self_type, PMB, SingleMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, PMB, SingleMaterial, TemperatureDependent>;
+    friend class Comm<self_type, PMB, MultiMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, PMB, MultiMaterial, TemperatureDependent>;
+    friend class Comm<self_type, LPS, SingleMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, LPS, SingleMaterial, TemperatureDependent>;
+    friend class Comm<self_type, LPS, MultiMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, LPS, MultiMaterial, TemperatureDependent>;
 
   protected:
     void init_output()

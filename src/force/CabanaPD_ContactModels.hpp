@@ -25,6 +25,8 @@ namespace CabanaPD
 ******************************************************************************/
 struct ContactModel
 {
+    using material_type = SingleMaterial;
+
     double delta;
     double Rc;
 

@@ -28,13 +28,14 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
     using base_model = PMB;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
+    using material_type = typename base_type::material_type;
 
     using base_type::delta;
 
     double c;
     double K;
 
-    ForceModel( const double delta, const double K )
+    ForceModel( const double delta, const double _K )
         : base_type( delta )
         , K( _K )
     {
@@ -46,11 +47,12 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
         : base_type( model1.delta )
     {
         K = ( model1.K + model2.K ) / 2.0;
-        c = ( model1.c_i + model2.c_j ) / 2.0;
+        c = ( model1.c + model2.c ) / 2.0;
     }
 
     KOKKOS_INLINE_FUNCTION
-    auto forceCoeff( const double s, const double vol ) const
+    auto forceCoeff( const int, const int, const double s,
+                     const double vol ) const
     {
         return c * s * vol;
     }

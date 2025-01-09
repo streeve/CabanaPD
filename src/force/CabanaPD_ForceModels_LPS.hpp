@@ -26,6 +26,7 @@ struct ForceModel<LPS, Elastic, NoFracture> : public BaseForceModel
     using base_model = LPS;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
+    using material_type = typename base_type::material_type;
 
     using base_type::delta;
 

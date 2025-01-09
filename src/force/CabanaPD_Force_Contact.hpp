@@ -41,11 +41,10 @@ KOKKOS_INLINE_FUNCTION void getRelativeNormalVelocityComponents(
   Normal repulsion forces
 ******************************************************************************/
 template <class MemorySpace>
-class Force<MemorySpace, NormalRepulsionModel>
-    : public Force<MemorySpace, BaseForceModel>
+class Force<MemorySpace, NormalRepulsionModel> : public BaseForce<MemorySpace>
 {
   public:
-    using base_type = Force<MemorySpace, BaseForceModel>;
+    using base_type = BaseForce<MemorySpace>;
     using neighbor_list_type = typename base_type::neighbor_list_type;
 
     template <class ParticleType>

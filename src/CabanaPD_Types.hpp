@@ -30,10 +30,10 @@ struct Elastic
 };
 
 // Material option tags.
-struct SingleSpecies
+struct SingleMaterial
 {
 };
-struct MultiSpecies
+struct MultiMaterial
 {
 };
 

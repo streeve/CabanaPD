@@ -19,6 +19,7 @@ namespace CabanaPD
 {
 struct BaseForceModel
 {
+    using material_type = SingleMaterial;
     double delta;
 
     BaseForceModel( const double _delta )
@@ -31,66 +32,73 @@ struct BaseForceModel
 
 // Wrap multiple models in a single object.
 // TODO: this currently only supports bi-material systems.
-template <typename... ModelType>
+template <typename MaterialType, typename ModelType>
 struct ForceModels
 {
-    // TODO: should there be a static_assert that each model form is the same
-    // (PMB vs LPS)?
-    ForceModels( const ModelType... models )
-        : pack( Cabana::makeParameterPack( models... ) )
+    using material_type = MultiMaterial;
+
+    ForceModels( MaterialType t, const ModelType m1, const ModelType m2 )
+        : type( t )
     {
+        setHorizon( m1, m2 );
+
+        models( 0, 0 ) = m1;
+        models( 1, 1 ) = m2;
+        ModelType m3( m1, m2 );
+        models( 0, 1 ) = m3;
+        models( 1, 0 ) = m3;
     }
 
-    template <std::size_t I, std::size_t J,
-              std::enable_if_t<std::is_same<I, J>::type>>
-    auto get()
+    ForceModels( MaterialType t, const ModelType m1, const ModelType m2,
+                 const ModelType m12 )
+        : type( t )
     {
-        return Cabana::get<I>( pack );
+        setHorizon( m1, m2 );
+
+        models( 0, 0 ) = m1;
+        models( 1, 1 ) = m2;
+        models( 0, 1 ) = m12;
+        models( 1, 0 ) = m12;
     }
 
-    template <std::size_t I, std::size_t J,
-              std::enable_if_t<!std::is_same<I, J>::type>>
-    auto get()
+    void setHorizon( const ModelType m1, const ModelType m2 )
     {
-        // FIXME: only true for binary.
-        return Cabana::get<2>( pack );
+        delta = 0.0;
+        if ( m1.delta > delta )
+            delta = m1.delta;
+        if ( m2.delta > delta )
+            delta = m2.delta;
+    }
+
+    KOKKOS_INLINE_FUNCTION auto getModel( const int i, const int j ) const
+    {
+        const int type_i = type( i );
+        const int type_j = type( j );
+        auto model = models( type_i, type_j );
+    }
+
+    template <typename... Args>
+    KOKKOS_INLINE_FUNCTION auto forceCoeff( const int i, const int j,
+                                            Args... args ) const
+    {
+        auto model = getModel( i, j );
+        return model.forceCoeff( args... );
     }
 
     auto horizon( const int ) { return delta; }
     auto maxHorizon() { return delta; }
 
-    Cabana::ParameterPack<ModelType...> pack;
+    double delta;
+    MaterialType type;
+    Kokkos::View<ModelType[2][2], typename MaterialType::memory_space> models;
 };
 
-template <typename... ModelType>
-auto createForceModels( const ModelType... models )
-{
-    static constexpr std::size_t size = sizeof...( ModelType );
-
-    // FIXME: only true for binary.
-    if constexpr ( pack.size == 2 )
-    {
-        return ForceModels( models... );
-    }
-    else
-    {
-        // Create a temporary pack to extract an average.
-        auto pack2 = Cabana::makeParameterPack( models... );
-        using model_type = typename pack2<0>::value_type;
-        model_type Model12( pack2.get<0>(), pack2.get<1>() );
-        return ForceModels( models..., Model12 );
-    }
-}
-
-template <typename ParticleType, typename ArrayType>
-auto createForceModel( PMB, Fracture, TemperatureIndependent,
-                       ParticleType particles, const ArrayType& delta,
-                       const ArrayType& K, const ArrayType& G0 )
+template <typename ParticleType, typename... ModelType>
+auto createMultiForceModel( ParticleType particles, ModelType... models )
 {
     auto type = particles.sliceType();
-    using type_type = decltype( type );
-    return ForceModel<PMB, Fracture, TemperatureIndependent, type_type>(
-        delta, K, G0, type );
+    using material_type = decltype( type );
+    return ForceModels<material_type, ModelType...>( type, models... );
 }
 
 template <typename TemperatureType>
@@ -109,7 +117,8 @@ struct BaseTemperatureModel
         , temperature( _temp ){};
 
     // Average from existing models.
-    BaseTemperatureModel( const ForceModel& model1, const ForceModel& model2 )
+    BaseTemperatureModel( const BaseTemperatureModel& model1,
+                          const BaseTemperatureModel& model2 )
     {
         alpha = ( model1.alpha + model2.alpha ) / 2.0;
         temp0 = ( model1.temp0 + model2.temp0 ) / 2.0;
@@ -151,8 +160,8 @@ struct BaseDynamicTemperatureModel
     }
 
     // Average from existing models.
-    BaseDynamicTemperatureModel( const ForceModel& model1,
-                                 const ForceModel& model2 )
+    BaseDynamicTemperatureModel( const BaseDynamicTemperatureModel& model1,
+                                 const BaseDynamicTemperatureModel& model2 )
     {
         delta = ( model1.delta + model2.delta ) / 2.0;
         kappa = ( model1.kappa + model2.kappa ) / 2.0;

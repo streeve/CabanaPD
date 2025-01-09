@@ -121,7 +121,7 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, NoFracture, ModelParams...>>
 
             model.thermalStretch( s, i, j );
 
-            const double coeff = model.forceCoeff( s, vol( j ) );
+            const double coeff = model.forceCoeff( i, j, s, vol( j ) );
             fx_i = coeff * rx / r;
             fy_i = coeff * ry / r;
             fz_i = coeff * rz / r;
@@ -186,7 +186,7 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, Fracture, ModelParams...>>
     // Using the default exec_space.
     using exec_space = typename MemorySpace::execution_space;
     using model_type = ForceModel<PMB, Elastic, Fracture, ModelParams...>;
-    using base_type = Force<MemorySpace, BaseForceModel>;
+    using base_type = BaseForce<MemorySpace>;
     using neighbor_list_type = typename base_type::neighbor_list_type;
     using base_type::_neigh_list;
 
@@ -251,7 +251,7 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, Fracture, ModelParams...>>
                 // Else if statement is only for performance.
                 else if ( mu( i, n ) > 0 )
                 {
-                    const double coeff = model.forceCoeff( s, vol( j ) );
+                    const double coeff = model.forceCoeff( i, j, s, vol( j ) );
 
                     double muij = mu( i, n );
                     fx_i = muij * coeff * rx / r;
@@ -378,7 +378,7 @@ class Force<MemorySpace,
 
             model.thermalStretch( linear_s, i, j );
 
-            const double coeff = model.forceCoeff( linear_s, vol( j ) );
+            const double coeff = model.forceCoeff( i, j, linear_s, vol( j ) );
             fx_i = coeff * xi_x / xi;
             fy_i = coeff * xi_y / xi;
             fz_i = coeff * xi_z / xi;
