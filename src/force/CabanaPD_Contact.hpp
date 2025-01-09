@@ -40,10 +40,10 @@ KOKKOS_INLINE_FUNCTION void getRelativeNormalVelocityComponents(
 
 // Contact forces base class.
 template <class MemorySpace>
-class BaseForceContact : public Force<MemorySpace, BaseForceModel>
+class BaseForceContact : public BaseForce<MemorySpace>
 {
   public:
-    using base_type = Force<MemorySpace, BaseForceModel>;
+    using base_type = BaseForce<MemorySpace>;
     using neighbor_list_type = typename base_type::neighbor_list_type;
 
     // NOTE: using 2x radius to find neighbors when particles first touch.
@@ -102,7 +102,7 @@ class BaseForceContact : public Force<MemorySpace, BaseForceModel>
   Normal repulsion forces
 ******************************************************************************/
 template <class MemorySpace>
-class Force<MemorySpace, NormalRepulsionModel>
+class Force<MemorySpace, NormalRepulsionModel, NormalRepulsionModel, NoFracture>
     : public BaseForceContact<MemorySpace>
 {
   public:

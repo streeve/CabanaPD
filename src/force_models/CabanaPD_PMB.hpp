@@ -54,6 +54,15 @@ struct BaseForceModelPMB<Elastic> : public BaseForceModel
 
     void init() { c = 18.0 * K / ( pi * delta * delta * delta * delta ); }
 
+    // Average from existing models.
+    template <typename ModelType1, typename ModelType2>
+    BaseForceModelPMB( const ModelType1& model1, const ModelType2& model2 )
+        : base_type( model1.delta )
+    {
+        K = ( model1.K + model2.K ) / 2.0;
+        c = ( model1.c + model2.c ) / 2.0;
+    }
+
     KOKKOS_INLINE_FUNCTION
     auto operator()( ForceCoeffTag, const int, const int, const double s,
                      const double vol ) const
@@ -322,6 +331,13 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureDependent, TemperatureType>
 
     {
     }
+
+    // Average from existing models.
+    ForceModel( const ForceModel& model1, const ForceModel& model2 )
+        : base_type( model1, model2 )
+        , base_temperature_type( model1, model2 )
+    {
+    }
 };
 
 template <typename TemperatureType>
@@ -402,11 +418,9 @@ ForceModel( ModelType, NoFracture, const double delta, const double K,
 
 template <typename ModelType, typename TemperatureType>
 struct ForceModel<ModelType, Elastic, Fracture, DynamicTemperature,
-                  TemperatureType>
-
-    : public BaseForceModelPMB<Elastic>,
-      ThermalFractureModel<TemperatureType>,
-      BaseDynamicTemperatureModel
+                  TemperatureType> : public BaseForceModelPMB<Elastic>,
+                                     ThermalFractureModel<TemperatureType>,
+                                     BaseDynamicTemperatureModel
 {
     using base_type = BaseForceModelPMB<Elastic>;
     using base_temperature_type = ThermalFractureModel<TemperatureType>;

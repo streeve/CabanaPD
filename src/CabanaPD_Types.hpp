@@ -48,40 +48,12 @@ struct State
 {
 };
 
-// Contact and DEM (contact without PD) tags.
-struct Contact
-{
-    using base_type = Pair;
-};
-struct NoContact
-{
-    using base_type = std::false_type;
-};
-template <class, class SFINAE = void>
-struct is_contact : public std::false_type
+// Material option tags.
+struct SingleMaterial
 {
 };
-template <typename ModelType>
-struct is_contact<
-    ModelType,
-    typename std::enable_if<(
-        std::is_same<typename ModelType::base_model, Contact>::value )>::type>
-    : public std::true_type
+struct MultiMaterial
 {
-};
-
-template <class, class, class SFINAE = void>
-struct either_contact
-{
-    using base_type = NoContact;
-};
-template <class Model1, class Model2>
-struct either_contact<
-    Model1, Model2,
-    typename std::enable_if<( is_contact<Model1>::value ||
-                              is_contact<Model2>::value )>::type>
-{
-    using base_type = Contact;
 };
 
 // Thermal tags.
@@ -134,6 +106,47 @@ struct is_temperature<TemperatureDependent> : public std::true_type
 template <>
 struct is_temperature<DynamicTemperature> : public std::true_type
 {
+};
+
+// Contact and DEM (contact without PD) tags.
+struct Contact
+{
+    using base_type = Pair;
+};
+
+// Contact and DEM (contact without PD) tags.
+struct NoContact
+{
+    using base_model = std::false_type;
+    using model_type = std::false_type;
+    using thermal_type = TemperatureIndependent;
+    using fracture_type = NoFracture;
+};
+template <class, class SFINAE = void>
+struct is_contact : public std::false_type
+{
+};
+template <typename ModelType>
+struct is_contact<
+    ModelType,
+    typename std::enable_if<(
+        std::is_same<typename ModelType::base_model, Contact>::value )>::type>
+    : public std::true_type
+{
+};
+
+template <class, class, class SFINAE = void>
+struct either_contact
+{
+    using base_type = NoContact;
+};
+template <class Model1, class Model2>
+struct either_contact<
+    Model1, Model2,
+    typename std::enable_if<( is_contact<Model1>::value ||
+                              is_contact<Model2>::value )>::type>
+{
+    using base_type = Contact;
 };
 
 // Force model tags.

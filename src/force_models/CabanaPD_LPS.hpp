@@ -26,6 +26,7 @@ template <>
 struct BaseForceModelLPS<Elastic> : public BaseForceModel
 {
     using base_type = BaseForceModel;
+    using model_type = LPS;
     using base_model = LPS;
 
     using base_type::delta;
@@ -178,18 +179,7 @@ struct ForceModel<LPS, Elastic, Fracture, TemperatureIndependent>
         init();
     }
 
-    void init()
-    {
-        if ( influence_type == 1 )
-        {
-            s0 = Kokkos::sqrt( 5.0 * G0 / 9.0 / K / delta ); // 1/xi
-        }
-        else
-        {
-            s0 = Kokkos::sqrt( 8.0 * G0 / 15.0 / K / delta ); // 1
-        }
-        bond_break_coeff = ( 1.0 + s0 ) * ( 1.0 + s0 );
-    }
+    void init() {}
 };
 
 template <>

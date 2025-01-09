@@ -95,16 +95,25 @@ class Solver
 
     // Core module types - required for all problems.
     using force_model_type = ForceModelType;
-    using force_type = Force<memory_space, force_model_type>;
+    using force_model_tag = typename force_model_type::model_type;
+    using force_fracture_type = typename force_model_type::fracture_type;
+    using force_type = Force<memory_space, force_model_type, force_model_tag,
+                             force_fracture_type>;
+    using force_thermal_type =
+        typename force_model_type::thermal_type::base_type;
     using comm_type =
         Comm<ParticleType, typename force_model_type::base_model::base_type,
-             typename ParticleType::thermal_type>;
+             typename force_model_type::material_type, force_thermal_type>;
     using neigh_iter_tag = Cabana::SerialOpTag;
 
     // Optional module types.
     using heat_transfer_type = HeatTransfer<memory_space, force_model_type>;
-    using contact_type = Force<memory_space, ContactModelType>;
     using contact_model_type = ContactModelType;
+    using contact_model_tag = typename contact_model_type::model_type;
+    using contact_base_model_type = typename contact_model_type::base_model;
+    using contact_fracture_type = typename contact_model_type::fracture_type;
+    using contact_type = Force<memory_space, contact_model_type,
+                               contact_model_tag, contact_fracture_type>;
 
     // Flexible module types.
     // Integration should include max displacement tracking if either model
@@ -160,6 +169,10 @@ class Solver
                     "Contact with MPI is currently disabled." );
         }
 
+        // Update optional property ghost sizes if needed.
+        if constexpr ( std::is_same<typename force_model_type::material_type,
+                                    MultiMaterial>::value )
+            force_model.update( particles->sliceType() );
         // Update temperature ghost size if needed.
         if constexpr ( is_temperature_dependent<
                            typename force_model_type::thermal_type>::value )
@@ -241,7 +254,10 @@ class Solver
         if ( !boundary_condition.forceUpdate() )
             boundary_condition.apply( exec_space(), particles, 0.0 );
 
-        // Communicate temperature.
+        // Communicate optional properties.
+        if constexpr ( std::is_same<typename force_model_type::material_type,
+                                    MultiMaterial>::value )
+            comm->gatherMaterial();
         if constexpr ( is_temperature_dependent<
                            typename force_model_type::thermal_type>::value )
             comm->gatherTemperature();
@@ -305,7 +321,7 @@ class Solver
         // FIXME: Will need to rebuild ghosts.
     }
 
-    void updateNeighbors() { force->update( *particles, 0.0, true ); }
+    void updateNeighbors() { force->update( particles, 0.0, true ); }
 
     template <typename BoundaryType>
     void runStep( const int step, BoundaryType boundary_condition )
@@ -319,10 +335,51 @@ class Solver
         if constexpr ( is_heat_transfer<
                            typename force_model_type::thermal_type>::value )
         {
-            if ( step % thermal_subcycle_steps == 0 )
-                computeHeatTransfer( *heat_transfer, particles,
-                                     neigh_iter_tag{},
-                                     thermal_subcycle_steps * dt );
+            _step_timer.start();
+
+            // Integrate - velocity Verlet first half.
+            integrator->initialHalfStep( exec_space{}, particles );
+
+            // Update ghost particles.
+            comm->gatherDisplacement();
+
+            // Communicate optional type.
+            if constexpr ( std::is_same<
+                               typename force_model_type::material_type,
+                               MultiMaterial>::value )
+                comm->gatherMaterial();
+
+            if constexpr ( is_heat_transfer<
+                               typename force_model_type::thermal_type>::value )
+            {
+                if ( step % thermal_subcycle_steps == 0 )
+                    computeHeatTransfer( *heat_transfer, particles,
+                                         neigh_iter_tag{},
+                                         thermal_subcycle_steps * dt );
+            }
+
+            // Add non-force boundary condition.
+            if ( !boundary_condition.forceUpdate() )
+                boundary_condition.apply( exec_space(), particles, step * dt );
+
+            if constexpr ( is_temperature_dependent<
+                               typename force_model_type::thermal_type>::value )
+                comm->gatherTemperature();
+
+            // Compute internal forces.
+            updateForce();
+
+            if constexpr ( is_contact<contact_model_type>::value )
+                computeForce( *contact, particles, neigh_iter_tag{}, false );
+
+            // Add force boundary condition.
+            if ( boundary_condition.forceUpdate() )
+                boundary_condition.apply( exec_space(), particles, step * dt );
+
+            // Integrate - velocity Verlet second half.
+            integrator->finalHalfStep( exec_space{}, particles );
+
+            output( step );
         }
 
         // Add non-force boundary condition.
