@@ -17,6 +17,9 @@
 
 namespace CabanaPD
 {
+/******************************************************************************
+  Mechanics models
+******************************************************************************/
 struct BaseForceModel
 {
     double delta;
@@ -76,6 +79,10 @@ auto createForceModels( const ModelType... models )
     {
     }
 }
+
+/******************************************************************************
+  Thermomechanics models
+******************************************************************************/
 template <typename TemperatureType>
 struct BaseTemperatureModel
 {
@@ -155,6 +162,7 @@ struct BaseDynamicTemperatureModel
     }
 };
 
+// Forward declaration.
 template <typename PeridynamicsModelType, typename MechanicsModelType = Elastic,
           typename DamageType = Fracture,
           typename ThermalType = TemperatureIndependent, typename... DataTypes>
