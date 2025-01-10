@@ -41,7 +41,7 @@ void kalthoffWinklerExample( const std::string filename )
     double nu = 1.0 / 3.0;
     double K = E / ( 3.0 * ( 1.0 - 2.0 * nu ) );
     double G0 = inputs["fracture_energy"];
-    // double G = E / ( 2.0 * ( 1.0 + nu ) ); // Only for LPS.
+    double G = E / ( 2.0 * ( 1.0 + nu ) ); // Only for LPS.
     double delta = inputs["horizon"];
     delta += 1e-10;
 
@@ -78,17 +78,16 @@ void kalthoffWinklerExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    using model_type = CabanaPD::ForceModel<CabanaPD::PMB>;
-    model_type force_model( delta, K, G0 );
-    // using model_type =
-    //     CabanaPD::ForceModel<CabanaPD::LPS>;
-    // model_type force_model( delta, K, G, G0 );
+    using model_type1 = CabanaPD::ForceModel<CabanaPD::PMB>;
+    model_type1 force_model1( delta, K, G0 );
+    using model_type2 = CabanaPD::ForceModel<CabanaPD::LPS>;
+    model_type2 force_model2( delta, K, G, G0 );
 
     // ====================================================
     //                 Particle generation
     // ====================================================
     // Does not set displacements, velocities, etc.
-    auto particles = CabanaPD::createParticles<memory_space, model_type>(
+    auto particles = CabanaPD::createParticles<memory_space, model_type2>(
         exec_space(), low_corner, high_corner, num_cells, halo_width );
 
     // ====================================================
@@ -115,8 +114,10 @@ void kalthoffWinklerExample( const std::string filename )
     // ====================================================
     //                   Create solver
     // ====================================================
+    auto models = CabanaPD::createMultiForceModel( *particles, force_model1,
+                                                   force_model2 );
     auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
-        inputs, particles, force_model );
+        inputs, particles, models );
 
     // ====================================================
     //                Boundary conditions

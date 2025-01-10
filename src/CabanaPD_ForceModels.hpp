@@ -32,49 +32,51 @@ struct BaseForceModel
 
 // Wrap multiple models in a single object.
 // TODO: this currently only supports bi-material systems.
-template <typename MaterialType, typename ModelType>
+template <typename MaterialType, typename ModelType1, typename ModelType2,
+          typename ModelType12 = ModelType1>
 struct ForceModels
 {
     using material_type = MultiMaterial;
+    // FIXME: improve this.
+    using first_model = ModelType1;
+    using base_model = typename first_model::base_model;
+    using thermal_type = typename first_model::thermal_type;
 
-    ForceModels( MaterialType t, const ModelType m1, const ModelType m2 )
+    ForceModels( MaterialType t, const ModelType1 m1, ModelType2 m2 )
         : type( t )
+        , model1( m1 )
+        , model2( m2 )
     {
-        setHorizon( m1, m2 );
+        setHorizon();
 
-        models( 0, 0 ) = m1;
-        models( 1, 1 ) = m2;
-        ModelType m3( m1, m2 );
-        models( 0, 1 ) = m3;
-        models( 1, 0 ) = m3;
+        // Construct cross terms through averaging.
+        m12( m1, m2 );
     }
 
-    ForceModels( MaterialType t, const ModelType m1, const ModelType m2,
-                 const ModelType m12 )
+    ForceModels( MaterialType t, const ModelType1 m1, ModelType2 m2,
+                 ModelType12 m12 )
         : type( t )
+        , model1( m1 )
+        , model2( m2 )
+        , model12( m12 )
     {
-        setHorizon( m1, m2 );
-
-        models( 0, 0 ) = m1;
-        models( 1, 1 ) = m2;
-        models( 0, 1 ) = m12;
-        models( 1, 0 ) = m12;
+        setHorizon();
     }
 
-    void setHorizon( const ModelType m1, const ModelType m2 )
+    void setHorizon()
     {
         delta = 0.0;
-        if ( m1.delta > delta )
-            delta = m1.delta;
-        if ( m2.delta > delta )
-            delta = m2.delta;
+        if ( model1.delta > delta )
+            delta = model1.delta;
+        if ( model2.delta > delta )
+            delta = model2.delta;
     }
 
     KOKKOS_INLINE_FUNCTION auto getModel( const int i, const int j ) const
     {
         const int type_i = type( i );
         const int type_j = type( j );
-        auto model = models( type_i, type_j );
+        return get<type_i, type_j>();
     }
 
     template <typename... Args>
@@ -88,9 +90,26 @@ struct ForceModels
     auto horizon( const int ) { return delta; }
     auto maxHorizon() { return delta; }
 
+    template <std::size_t I, std::size_t J>
+    auto get( typename std::enable_if_t<( I == J ), int>* = 0 )
+    {
+        return Cabana::get<I>( pack );
+    }
+
+    template <std::size_t I, std::size_t J>
+    auto get( typename std::enable_if_t<( I != J ), int>* = 0 )
+    {
+        // FIXME: only true for binary.
+        return Cabana::get<2>( pack );
+    }
+
+    void update( const MaterialType _type ) { type = _type; }
+
     double delta;
     MaterialType type;
-    Kokkos::View<ModelType[2][2], typename MaterialType::memory_space> models;
+    // Kokkos::View<ModelType[2][2], typename MaterialType::memory_space>
+    // models;
+    ModelPack pack;
 };
 
 template <typename ParticleType, typename... ModelType>
@@ -98,7 +117,23 @@ auto createMultiForceModel( ParticleType particles, ModelType... models )
 {
     auto type = particles.sliceType();
     using material_type = decltype( type );
-    return ForceModels<material_type, ModelType...>( type, models... );
+
+    auto pack = Cabana::makeParameterPack( models... );
+    return ForceModels<material_type, decltype( pack )>( type, pack );
+}
+
+template <typename ParticleType, typename... ModelType>
+auto createMultiForceModel( ParticleType particles, AverageTag,
+                            ModelType... models )
+{
+    auto type = particles.sliceType();
+    using material_type = decltype( type );
+
+    auto pack = Cabana::makeParameterPack( models... );
+    using model_type1 = std::tuple_element_t<0, std::tuple<ModelType...>>;
+    model_type1 m3( models... );
+    pack = Cabana::makeParameterPack( models..., m3 );
+    return ForceModels<material_type, decltype( pack )>( type, pack );
 }
 
 template <typename TemperatureType>
