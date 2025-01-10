@@ -32,13 +32,14 @@ struct BaseForceModel
 
 // Wrap multiple models in a single object.
 // TODO: this currently only supports bi-material systems.
-template <typename MaterialType, typename ModelType>
+template <typename MaterialType, typename... ModelType>
 struct ForceModels
 {
     using material_type = MultiMaterial;
 
-    ForceModels( MaterialType t, const ModelType m1, const ModelType m2 )
+    ForceModels( MaterialType t, const ModelType... models )
         : type( t )
+        , models( std::tuple( models... ) )
     {
         setHorizon( m1, m2 );
 
