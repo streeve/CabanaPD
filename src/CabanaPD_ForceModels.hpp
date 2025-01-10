@@ -30,6 +30,10 @@ struct BaseForceModel
     void thermalStretch( double&, const int, const int ) const {}
 };
 
+struct AverageTag
+{
+};
+
 // Wrap multiple models in a single object.
 // TODO: this currently only supports bi-material systems.
 template <typename MaterialType, typename... ModelType>
@@ -37,45 +41,51 @@ struct ForceModels
 {
     using material_type = MultiMaterial;
 
-    ForceModels( MaterialType t, const ModelType... models )
+    ForceModels( MaterialType t, const ModelType... m )
         : type( t )
-        , models( std::tuple( models... ) )
+        , models( std::make_tuple( m... ) )
+        , delta( 0.0 )
     {
-        setHorizon( m1, m2 );
-
-        models( 0, 0 ) = m1;
-        models( 1, 1 ) = m2;
-        ModelType m3( m1, m2 );
-        models( 0, 1 ) = m3;
-        models( 1, 0 ) = m3;
+        setHorizon();
     }
 
-    ForceModels( MaterialType t, const ModelType m1, const ModelType m2,
-                 const ModelType m12 )
+    ForceModels( MaterialType t, const std::tuple<ModelType...> m )
         : type( t )
+        , models( m )
+        , delta( 0.0 )
     {
-        setHorizon( m1, m2 );
-
-        models( 0, 0 ) = m1;
-        models( 1, 1 ) = m2;
-        models( 0, 1 ) = m12;
-        models( 1, 0 ) = m12;
+        setHorizon();
     }
 
-    void setHorizon( const ModelType m1, const ModelType m2 )
+    template <std::size_t I, std::size_t J, std::enable_if_t<I == J>>
+    auto get()
     {
-        delta = 0.0;
-        if ( m1.delta > delta )
-            delta = m1.delta;
-        if ( m2.delta > delta )
-            delta = m2.delta;
+        return std::get<I>( models );
+    }
+
+    template <std::size_t I, std::size_t J, std::enable_if_t<I != J>>
+    auto get()
+    {
+        // FIXME: only true for binary.
+        return std::get<2>( models );
+    }
+
+    template <>
+    void setHorizon()
+    {
+    }
+    template <typename FirstModel>
+    void setHorizon( const FirstModel m, const ModelType... )
+    {
+        if ( m.delta > delta )
+            delta = m.delta;
     }
 
     KOKKOS_INLINE_FUNCTION auto getModel( const int i, const int j ) const
     {
         const int type_i = type( i );
         const int type_j = type( j );
-        auto model = models( type_i, type_j );
+        return std::get<type_i, type_j>( models );
     }
 
     template <typename... Args>
@@ -91,7 +101,7 @@ struct ForceModels
 
     double delta;
     MaterialType type;
-    Kokkos::View<ModelType[2][2], typename MaterialType::memory_space> models;
+    std::tuple<ModelType...> models;
 };
 
 template <typename ParticleType, typename... ModelType>
@@ -100,6 +110,24 @@ auto createMultiForceModel( ParticleType particles, ModelType... models )
     auto type = particles.sliceType();
     using material_type = decltype( type );
     return ForceModels<material_type, ModelType...>( type, models... );
+}
+
+template <typename ParticleType, typename... ModelType>
+auto createMultiForceModel( ParticleType particles, AverageTag,
+                            ModelType... models )
+{
+    auto tuple = std::make_tuple( models... );
+    auto m1 = std::get<0>( tuple );
+    auto m2 = std::get<1>( tuple );
+
+    using first_model = std::tuple_element_t<0, ModelType...>;
+    auto m12 = std::make_tuple( first_model( m1, m2 ) );
+    auto all_models = std::tuple_cat( models..., m12 );
+
+    auto type = particles.sliceType();
+    using material_type = decltype( type );
+    return ForceModels<material_type, std::tuple<ModelType..., first_model>>(
+        type, all_models );
 }
 
 template <typename TemperatureType>
