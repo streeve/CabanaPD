@@ -41,7 +41,7 @@ void kalthoffWinklerExample( const std::string filename )
     double nu = 1.0 / 3.0;
     double K = E / ( 3.0 * ( 1.0 - 2.0 * nu ) );
     double G0 = inputs["fracture_energy"];
-    double G = E / ( 2.0 * ( 1.0 + nu ) ); // Only for LPS.
+    // double G = E / ( 2.0 * ( 1.0 + nu ) ); // Only for LPS.
     double delta = inputs["horizon"];
     delta += 1e-10;
 

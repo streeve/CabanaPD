@@ -87,8 +87,9 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureIndependent>
     double s0;
     double bond_break_coeff;
 
-    ForceModel( const double delta, const double K, const double G0 )
-        : base_type( delta, K )
+    ForceModel( const double delta, const double _K, const double _G0 )
+        : base_type( delta, _K )
+        , G0( _G0 )
     {
         s0 = Kokkos::sqrt( 5.0 * G0 / 9.0 / K / delta );
         bond_break_coeff = ( 1.0 + s0 ) * ( 1.0 + s0 );
