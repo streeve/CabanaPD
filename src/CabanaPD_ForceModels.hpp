@@ -27,7 +27,7 @@ struct BaseForceModel
 
     // No-op for temperature.
     KOKKOS_INLINE_FUNCTION
-    void thermalStretch( double&, const int, const int ) const {}
+    void thermalStretch( const int, const int, double& ) const {}
 };
 
 struct AverageTag
@@ -41,67 +41,110 @@ struct ForceModels
 {
     using material_type = MultiMaterial;
 
+    using tuple_type = std::tuple<ModelType...>;
+    using first_model = typename std::tuple_element<0, tuple_type>::type;
+    using model_type = typename first_model::model_type;
+    using base_model = typename first_model::base_model;
+    using thermal_type = typename first_model::thermal_type;
+    using fracture_type = typename first_model::fracture_type;
+
     ForceModels( MaterialType t, const ModelType... m )
-        : type( t )
+        : delta( 0.0 )
+        , type( t )
         , models( std::make_tuple( m... ) )
-        , delta( 0.0 )
     {
         setHorizon();
     }
 
-    ForceModels( MaterialType t, const std::tuple<ModelType...> m )
-        : type( t )
+    ForceModels( MaterialType t, const tuple_type m )
+        : delta( 0.0 )
+        , type( t )
         , models( m )
-        , delta( 0.0 )
     {
         setHorizon();
     }
 
-    template <std::size_t I, std::size_t J, std::enable_if_t<I == J>>
-    auto get()
-    {
-        return std::get<I>( models );
-    }
-
-    template <std::size_t I, std::size_t J, std::enable_if_t<I != J>>
-    auto get()
-    {
-        // FIXME: only true for binary.
-        return std::get<2>( models );
-    }
-
-    template <>
     void setHorizon()
     {
+        std::apply( [this]( auto&&... m ) { ( this->maxDelta( m ), ... ); },
+                    models );
     }
-    template <typename FirstModel>
-    void setHorizon( const FirstModel m, const ModelType... )
+
+    template <typename Model>
+    auto maxDelta( Model m )
     {
         if ( m.delta > delta )
             delta = m.delta;
-    }
-
-    KOKKOS_INLINE_FUNCTION auto getModel( const int i, const int j ) const
-    {
-        const int type_i = type( i );
-        const int type_j = type( j );
-        return std::get<type_i, type_j>( models );
     }
 
     template <typename... Args>
     KOKKOS_INLINE_FUNCTION auto forceCoeff( const int i, const int j,
                                             Args... args ) const
     {
-        auto model = getModel( i, j );
-        return model.forceCoeff( args... );
+        const int type_i = type( i );
+        const int type_j = type( j );
+        if ( type_i == type_j )
+            if ( type_i == 0 )
+                return std::get<0>( models ).forceCoeff( i, j, args... );
+            else
+                return std::get<1>( models ).forceCoeff( i, j, args... );
+        else
+            return std::get<2>( models ).forceCoeff( i, j, args... );
+    }
+
+    template <typename... Args>
+    KOKKOS_INLINE_FUNCTION auto energy( const int i, const int j,
+                                        Args... args ) const
+    {
+        const int type_i = type( i );
+        const int type_j = type( j );
+        if ( type_i == type_j )
+            if ( type_i == 0 )
+                return std::get<0>( models ).energy( i, j, args... );
+            else
+                return std::get<1>( models ).energy( i, j, args... );
+        else
+            return std::get<2>( models ).energy( i, j, args... );
+    }
+
+    template <typename... Args>
+    KOKKOS_INLINE_FUNCTION auto thermalStretch( const int i, const int j,
+                                                Args... args ) const
+    {
+        const int type_i = type( i );
+        const int type_j = type( j );
+        if ( type_i == type_j )
+            if ( type_i == 0 )
+                return std::get<0>( models ).thermalStretch( i, j, args... );
+            else
+                return std::get<1>( models ).thermalStretch( i, j, args... );
+        else
+            return std::get<2>( models ).thermalStretch( i, j, args... );
+    }
+
+    template <typename... Args>
+    KOKKOS_INLINE_FUNCTION auto criticalStretch( const int i, const int j,
+                                                 Args... args ) const
+    {
+        const int type_i = type( i );
+        const int type_j = type( j );
+        if ( type_i == type_j )
+            if ( type_i == 0 )
+                return std::get<0>( models ).criticalStretch( i, j, args... );
+            else
+                return std::get<1>( models ).criticalStretch( i, j, args... );
+        else
+            return std::get<2>( models ).criticalStretch( i, j, args... );
     }
 
     auto horizon( const int ) { return delta; }
     auto maxHorizon() { return delta; }
 
+    void update( const MaterialType _type ) { type = _type; }
+
     double delta;
     MaterialType type;
-    std::tuple<ModelType...> models;
+    tuple_type models;
 };
 
 template <typename ParticleType, typename... ModelType>
@@ -120,14 +163,15 @@ auto createMultiForceModel( ParticleType particles, AverageTag,
     auto m1 = std::get<0>( tuple );
     auto m2 = std::get<1>( tuple );
 
-    using first_model = std::tuple_element_t<0, ModelType...>;
+    using first_model =
+        typename std::tuple_element<0, std::tuple<ModelType...>>::type;
     auto m12 = std::make_tuple( first_model( m1, m2 ) );
-    auto all_models = std::tuple_cat( models..., m12 );
+    auto all_models = std::tuple_cat( tuple, m12 );
 
     auto type = particles.sliceType();
     using material_type = decltype( type );
-    return ForceModels<material_type, std::tuple<ModelType..., first_model>>(
-        type, all_models );
+    return ForceModels<material_type, ModelType..., first_model>( type,
+                                                                  all_models );
 }
 
 template <typename TemperatureType>
@@ -157,7 +201,7 @@ struct BaseTemperatureModel
 
     // Update stretch with temperature effects.
     KOKKOS_INLINE_FUNCTION
-    void thermalStretch( double& s, const int i, const int j ) const
+    void thermalStretch( const int i, const int j, double& s ) const
     {
         double temp_avg = 0.5 * ( temperature( i ) + temperature( j ) ) - temp0;
         s -= alpha * temp_avg;

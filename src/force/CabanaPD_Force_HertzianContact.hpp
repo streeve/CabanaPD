@@ -26,7 +26,8 @@ namespace CabanaPD
   Normal repulsion forces
 ******************************************************************************/
 template <class MemorySpace>
-class Force<MemorySpace, HertzianModel> : public BaseForce<MemorySpace>
+class Force<MemorySpace, HertzianModel, HertzianModel, NoFracture>
+    : public BaseForce<MemorySpace>
 {
   public:
     using base_type = BaseForce<MemorySpace>;

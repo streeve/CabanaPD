@@ -103,17 +103,26 @@ class SolverNoFracture
     using particle_type = ParticleType;
     using integrator_type = Integrator<exec_space>;
     using force_model_type = ForceModelType;
-    using force_type = Force<memory_space, force_model_type>;
-    using comm_type = Comm<particle_type, typename force_model_type::base_model,
-                           typename force_model_type::material_type,
-                           typename force_model_type::thermal_type::base_type>;
+    using force_model_tag = typename force_model_type::model_type;
+    using force_fracture_type = typename force_model_type::fracture_type;
+    using force_type = Force<memory_space, force_model_type, force_model_tag,
+                             force_fracture_type>;
+    using force_thermal_type =
+        typename force_model_type::thermal_type::base_type;
+    using comm_type =
+        Comm<particle_type, typename force_model_type::base_model,
+             typename force_model_type::material_type, force_thermal_type>;
     using neigh_iter_tag = Cabana::SerialOpTag;
     using input_type = InputType;
 
     // Optional module types.
     using heat_transfer_type = HeatTransfer<memory_space, force_model_type>;
-    using contact_type = Force<memory_space, ContactModelType>;
     using contact_model_type = ContactModelType;
+    using contact_model_tag = typename contact_model_type::model_type;
+    using contact_base_model_type = typename contact_model_type::base_model;
+    using contact_fracture_type = typename contact_model_type::fracture_type;
+    using contact_type = Force<memory_space, contact_model_type,
+                               contact_model_tag, contact_fracture_type>;
 
     SolverNoFracture( input_type _inputs,
                       std::shared_ptr<particle_type> _particles,

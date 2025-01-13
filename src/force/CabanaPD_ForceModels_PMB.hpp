@@ -26,6 +26,7 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
 {
     using base_type = BaseForceModel;
     using base_model = PMB;
+    using model_type = PMB;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
     using material_type = typename base_type::material_type;
@@ -43,7 +44,8 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
     }
 
     // Average from existing models.
-    ForceModel( const ForceModel& model1, const ForceModel& model2 )
+    template <typename ModelType1, typename ModelType2>
+    ForceModel( const ModelType1& model1, const ModelType2& model2 )
         : base_type( model1.delta )
     {
         K = ( model1.K + model2.K ) / 2.0;
@@ -58,7 +60,8 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
     }
 
     KOKKOS_INLINE_FUNCTION
-    auto energy( const double s, const double xi, const double vol ) const
+    auto energy( const int, const int, const double s, const double xi,
+                 const double vol ) const
     {
         // 0.25 factor is due to 1/2 from outside the integral and 1/2 from
         // the integrand (pairwise potential).
@@ -71,6 +74,7 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureIndependent>
     : public ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
 {
     using base_type = ForceModel<PMB, Elastic, NoFracture>;
+    using model_type = PMB;
     using base_model = typename base_type::base_model;
     using fracture_type = Fracture;
     using thermal_type = base_type::thermal_type;
@@ -91,7 +95,8 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureIndependent>
     }
 
     // Average from existing models.
-    ForceModel( const ForceModel& model1, const ForceModel& model2 )
+    template <typename ModelType1, typename ModelType2>
+    ForceModel( const ModelType1& model1, const ModelType2& model2 )
         : base_type( model1, model2 )
     {
         G0 = ( model1.G0 + model2.G0 ) / 2.0;
@@ -114,6 +119,7 @@ struct ForceModel<LinearPMB, Elastic, NoFracture, TemperatureIndependent>
     : public ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
 {
     using base_type = ForceModel<PMB, Elastic, NoFracture>;
+    using model_type = LinearPMB;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = typename base_type::thermal_type;
@@ -130,6 +136,7 @@ struct ForceModel<LinearPMB, Elastic, Fracture, TemperatureIndependent>
     : public ForceModel<PMB, Elastic, Fracture, TemperatureIndependent>
 {
     using base_type = ForceModel<PMB>;
+    using model_type = LinearPMB;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = typename base_type::thermal_type;
@@ -154,6 +161,7 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureDependent,
     using base_type =
         ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>;
     using base_temperature_type = BaseTemperatureModel<TemperatureType>;
+    using model_type = PMB;
     using base_model = PMB;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureDependent;
@@ -206,6 +214,7 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureDependent, TemperatureType>
     using base_type =
         ForceModel<PMB, Elastic, Fracture, TemperatureIndependent>;
     using base_temperature_type = BaseTemperatureModel<TemperatureType>;
+    using model_type = PMB;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = TemperatureDependent;
@@ -272,6 +281,7 @@ struct ForceModel<PMB, Elastic, NoFracture, DynamicTemperature, TemperatureType>
     using base_type = ForceModel<PMB, Elastic, NoFracture, TemperatureDependent,
                                  TemperatureType>;
     using base_temperature_type = BaseDynamicTemperatureModel;
+    using model_type = PMB;
     using base_model = PMB;
     using fracture_type = NoFracture;
     using thermal_type = DynamicTemperature;
@@ -323,6 +333,7 @@ struct ForceModel<PMB, Fracture, DynamicTemperature, TemperatureType>
     using base_type =
         ForceModel<PMB, Fracture, TemperatureDependent, TemperatureType>;
     using base_temperature_type = BaseDynamicTemperatureModel;
+    using model_type = PMB;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = DynamicTemperature;

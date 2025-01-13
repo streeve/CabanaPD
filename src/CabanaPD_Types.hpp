@@ -37,15 +37,6 @@ struct MultiMaterial
 {
 };
 
-// Contact and DEM (contact without PD) tags.
-struct NoContact
-{
-};
-template <class>
-struct is_contact : public std::false_type
-{
-};
-
 // Thermal tags.
 struct TemperatureIndependent
 {
@@ -80,6 +71,19 @@ struct is_heat_transfer : public std::false_type
 };
 template <>
 struct is_heat_transfer<DynamicTemperature> : public std::true_type
+{
+};
+
+// Contact and DEM (contact without PD) tags.
+struct NoContact
+{
+    using base_model = std::false_type;
+    using model_type = std::false_type;
+    using thermal_type = TemperatureIndependent;
+    using fracture_type = NoFracture;
+};
+template <class>
+struct is_contact : public std::false_type
 {
 };
 
