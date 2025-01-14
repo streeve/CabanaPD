@@ -77,19 +77,37 @@ struct ForceModels
             delta = m.delta;
     }
 
+    KOKKOS_INLINE_FUNCTION int getIndex( const int i, const int j ) const
+    {
+        const int type_i = type( i );
+        const int type_j = type( j );
+        // FIXME: only for binary.
+        if ( type_i == type_j )
+            return type_i;
+        else
+            return 2;
+    }
+
+    // Extract model index and hide template indexing.
     template <typename... Args>
     KOKKOS_INLINE_FUNCTION auto forceCoeff( const int i, const int j,
                                             Args... args ) const
     {
-        const int type_i = type( i );
-        const int type_j = type( j );
-        if ( type_i == type_j )
-            if ( type_i == 0 )
-                return std::get<0>( models ).forceCoeff( i, j, args... );
-            else
-                return std::get<1>( models ).forceCoeff( i, j, args... );
+        auto t = getIndex( i, j );
+        return forceCoeff<0>( t, i, j, std::forward<Args>( args )... );
+    }
+
+    template <std::size_t N, typename... Args>
+    KOKKOS_INLINE_FUNCTION auto forceCoeff( const int t, Args... args ) const
+    {
+        if ( N == t )
+            return std::get<N>( models ).forceCoeff(
+                std::forward<Args>( args )... );
+
+        if constexpr ( N + 1 < std::tuple_size_v<tuple_type> )
+            return forceCoeff<N + 1>( t, std::forward<Args>( args )... );
         else
-            return std::get<2>( models ).forceCoeff( i, j, args... );
+            throw std::runtime_error( "Invalid model index." );
     }
 
     template <typename... Args>
