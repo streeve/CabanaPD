@@ -119,9 +119,9 @@ class Force<MemorySpace, ModelType, PMB, NoFracture>
             double rx, ry, rz;
             getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
 
-            model.thermalStretch( i, j, s );
+            s = model( ThermalStretchTag{}, i, j, s );
 
-            const double coeff = model.forceCoeff( i, j, s, vol( j ) );
+            const double coeff = model( ForceCoeffTag{}, i, j, s, vol( j ) );
             fx_i = coeff * rx / r;
             fy_i = coeff * ry / r;
             fz_i = coeff * rz / r;
@@ -158,9 +158,9 @@ class Force<MemorySpace, ModelType, PMB, NoFracture>
             double xi, r, s;
             getDistance( x, u, i, j, xi, r, s );
 
-            model.thermalStretch( i, j, s );
+            s = model( ThermalStretchTag{}, i, j, s );
 
-            double w = model.energy( i, j, s, xi, vol( j ) );
+            double w = model( EnergyTag{}, i, j, s, xi, vol( j ) );
             W( i ) += w;
             Phi += w * vol( i );
         };
@@ -239,7 +239,7 @@ class Force<MemorySpace, ModelType, PMB, Fracture>
                 double rx, ry, rz;
                 getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
 
-                model.thermalStretch( i, j, s );
+                s = model( ThermalStretchTag{}, i, j, s );
 
                 // Break if beyond critical stretch unless in no-fail zone.
                 if ( model.criticalStretch( i, j, r, xi ) && !nofail( i ) &&
@@ -250,7 +250,8 @@ class Force<MemorySpace, ModelType, PMB, Fracture>
                 // Else if statement is only for performance.
                 else if ( mu( i, n ) > 0 )
                 {
-                    const double coeff = model.forceCoeff( i, j, s, vol( j ) );
+                    const double coeff =
+                        model( ForceCoeffTag{}, i, j, s, vol( j ) );
 
                     double muij = mu( i, n );
                     fx_i = muij * coeff * rx / r;
@@ -300,9 +301,10 @@ class Force<MemorySpace, ModelType, PMB, Fracture>
                 double xi, r, s;
                 getDistance( x, u, i, j, xi, r, s );
 
-                model.thermalStretch( i, j, s );
+                s = model( ThermalStretchTag{}, i, j, s );
 
-                double w = mu( i, n ) * model.energy( i, j, s, xi, vol( j ) );
+                double w =
+                    mu( i, n ) * model( EnergyTag{}, i, j, s, xi, vol( j ) );
                 W( i ) += w;
 
                 phi_i += mu( i, n ) * vol( j );
@@ -373,7 +375,7 @@ class Force<MemorySpace, ModelType, LinearPMB, NoFracture>
             getLinearizedDistanceComponents( x, u, i, j, xi, linear_s, xi_x,
                                              xi_y, xi_z );
 
-            model.thermalStretch( i, j, linear_s );
+            s = model( ThermalStretchTag{}, i, j, linear_s );
 
             const double coeff = model.forceCoeff( i, j, linear_s, vol( j ) );
             fx_i = coeff * xi_x / xi;
@@ -412,9 +414,9 @@ class Force<MemorySpace, ModelType, LinearPMB, NoFracture>
             double xi, linear_s;
             getLinearizedDistance( x, u, i, j, xi, linear_s );
 
-            model.thermalStretch( i, j, linear_s );
+            s = model( ThermalStretchTag{}, i, j, linear_s );
 
-            double w = model.energy( i, j, linear_s, xi, vol( j ) );
+            double w = model( EnergyTag{}, i, j, linear_s, xi, vol( j ) );
             W( i ) += w;
             Phi += w * vol( i );
         };

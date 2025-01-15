@@ -17,7 +17,21 @@
 
 namespace CabanaPD
 {
-struct BaseForceModel
+struct ForceCoeffTag
+{
+};
+struct EnergyTag
+{
+};
+struct ThermalStretchTag
+{
+};
+
+template <typename ThermalType, typename... DataTypes>
+BaseForceModel;
+
+template <>
+struct BaseForceModel<TemperatureIndependent>
 {
     using material_type = SingleMaterial;
     double delta;
@@ -27,7 +41,11 @@ struct BaseForceModel
 
     // No-op for temperature.
     KOKKOS_INLINE_FUNCTION
-    void thermalStretch( const int, const int, double& ) const {}
+    double operator()( ThermalStretchTag, const int, const int,
+                       const double ) const
+    {
+        return 0.0;
+    }
 };
 
 struct AverageTag
@@ -89,55 +107,27 @@ struct ForceModels
     }
 
     // Extract model index and hide template indexing.
-    template <typename... Args>
-    KOKKOS_INLINE_FUNCTION auto forceCoeff( const int i, const int j,
+    template <typename Tag, typename... Args>
+    KOKKOS_INLINE_FUNCTION auto operator()( Tag tag, const int i, const int j,
                                             Args... args ) const
     {
         auto t = getIndex( i, j );
-        return forceCoeff<0>( t, i, j, std::forward<Args>( args )... );
+        return apply<0>( t, tag, i, j, std::forward<Args>( args )... );
     }
 
-    template <std::size_t N, typename... Args>
-    KOKKOS_INLINE_FUNCTION auto forceCoeff( const int t, Args... args ) const
+    template <std::size_t N, typename Tag, typename... Args>
+    KOKKOS_INLINE_FUNCTION auto apply( const int t, Tag tag,
+                                       Args... args ) const
     {
+        // Call individual model.
         if ( N == t )
-            return std::get<N>( models ).forceCoeff(
-                std::forward<Args>( args )... );
+            return std::get<N>( models )( tag, std::forward<Args>( args )... );
 
+        // Recurse to find the right index.
         if constexpr ( N + 1 < std::tuple_size_v<tuple_type> )
-            return forceCoeff<N + 1>( t, std::forward<Args>( args )... );
+            return apply<N + 1>( t, tag, std::forward<Args>( args )... );
         else
             throw std::runtime_error( "Invalid model index." );
-    }
-
-    template <typename... Args>
-    KOKKOS_INLINE_FUNCTION auto energy( const int i, const int j,
-                                        Args... args ) const
-    {
-        const int type_i = type( i );
-        const int type_j = type( j );
-        if ( type_i == type_j )
-            if ( type_i == 0 )
-                return std::get<0>( models ).energy( i, j, args... );
-            else
-                return std::get<1>( models ).energy( i, j, args... );
-        else
-            return std::get<2>( models ).energy( i, j, args... );
-    }
-
-    template <typename... Args>
-    KOKKOS_INLINE_FUNCTION auto thermalStretch( const int i, const int j,
-                                                Args... args ) const
-    {
-        const int type_i = type( i );
-        const int type_j = type( j );
-        if ( type_i == type_j )
-            if ( type_i == 0 )
-                return std::get<0>( models ).thermalStretch( i, j, args... );
-            else
-                return std::get<1>( models ).thermalStretch( i, j, args... );
-        else
-            return std::get<2>( models ).thermalStretch( i, j, args... );
     }
 
     template <typename... Args>
@@ -193,8 +183,10 @@ auto createMultiForceModel( ParticleType particles, AverageTag,
 }
 
 template <typename TemperatureType>
-struct BaseTemperatureModel
+struct BaseForceModel<TemperatureDependent, TemperatureType>
 {
+    using material_type = SingleMaterial;
+
     double alpha;
     double temp0;
 
@@ -219,17 +211,19 @@ struct BaseTemperatureModel
 
     // Update stretch with temperature effects.
     KOKKOS_INLINE_FUNCTION
-    void thermalStretch( const int i, const int j, double& s ) const
+    auto operator()( ThermalStretchTag, const int i, const int j,
+                     const double s ) const
     {
         double temp_avg = 0.5 * ( temperature( i ) + temperature( j ) ) - temp0;
-        s -= alpha * temp_avg;
+        return s - ( alpha * temp_avg );
     }
 };
 
 // This class stores temperature parameters needed for heat transfer, but not
 // the temperature itself (stored instead in the static temperature class
 // above).
-struct BaseDynamicTemperatureModel
+template <typename TemperatureType>
+struct struct BaseForceModel<DynamicTemperature, TemperatureType>
 {
     double delta;
 
