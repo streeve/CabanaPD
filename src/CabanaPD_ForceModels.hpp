@@ -189,6 +189,9 @@ struct ForceModels
 template <typename ParticleType, typename... ModelType>
 auto createMultiForceModel( ParticleType particles, ModelType... models )
 {
+    static_assert( std::tuple_size_v<std::tuple<ModelType...>> == 3,
+                   "Only binary material systems supported." );
+
     auto type = particles.sliceType();
     using material_type = decltype( type );
     return ForceModels<material_type, ModelType...>( type, models... );
@@ -198,6 +201,9 @@ template <typename ParticleType, typename... ModelType>
 auto createMultiForceModel( ParticleType particles, AverageTag,
                             ModelType... models )
 {
+    static_assert( std::tuple_size_v<std::tuple<ModelType...>> == 2,
+                   "Only binary material systems supported." );
+
     auto tuple = std::make_tuple( models... );
     auto m1 = std::get<0>( tuple );
     auto m2 = std::get<1>( tuple );
