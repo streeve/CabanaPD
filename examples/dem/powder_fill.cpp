@@ -153,6 +153,7 @@ void powderSettlingExample( const std::string filename )
     //                   Boundary condition
     // ====================================================
     f = cabana_pd->particles->sliceForce();
+    rho = cabana_pd->particles->sliceDensity();
     auto body_functor = KOKKOS_LAMBDA( const int pid, const double )
     {
         f( pid, 2 ) -= 9.8 * rho( pid ); // * vol( pid );
