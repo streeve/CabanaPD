@@ -242,8 +242,8 @@ class Force<MemorySpace, ModelType, PMB, Fracture>
                 s = model( ThermalStretchTag{}, i, j, s );
 
                 // Break if beyond critical stretch unless in no-fail zone.
-                if ( model.criticalStretch( i, j, r, xi ) && !nofail( i ) &&
-                     !nofail( j ) )
+                if ( model( CriticalStretchTag{}, i, j, r, xi ) &&
+                     !nofail( i ) && !nofail( j ) )
                 {
                     mu( i, n ) = 0;
                 }
@@ -375,9 +375,10 @@ class Force<MemorySpace, ModelType, LinearPMB, NoFracture>
             getLinearizedDistanceComponents( x, u, i, j, xi, linear_s, xi_x,
                                              xi_y, xi_z );
 
-            s = model( ThermalStretchTag{}, i, j, linear_s );
+            linear_s = model( ThermalStretchTag{}, i, j, linear_s );
 
-            const double coeff = model.forceCoeff( i, j, linear_s, vol( j ) );
+            const double coeff =
+                model( ForceCoeffTag{}, i, j, linear_s, vol( j ) );
             fx_i = coeff * xi_x / xi;
             fy_i = coeff * xi_y / xi;
             fz_i = coeff * xi_z / xi;
@@ -414,7 +415,7 @@ class Force<MemorySpace, ModelType, LinearPMB, NoFracture>
             double xi, linear_s;
             getLinearizedDistance( x, u, i, j, xi, linear_s );
 
-            s = model( ThermalStretchTag{}, i, j, linear_s );
+            linear_s = model( ThermalStretchTag{}, i, j, linear_s );
 
             double w = model( EnergyTag{}, i, j, linear_s, xi, vol( j ) );
             W( i ) += w;
