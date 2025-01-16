@@ -10,4 +10,7 @@ target_link_libraries(CrackBranching LINK_PUBLIC CabanaPD)
 add_executable(FragmentingCylinder fragmenting_cylinder.cpp)
 target_link_libraries(FragmentingCylinder LINK_PUBLIC CabanaPD)
 
-install(TARGETS ElasticWave KalthoffWinkler CrackBranching FragmentingCylinder DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_executable(ImpactTest impact_test.cpp)
+target_link_libraries(ImpactTest LINK_PUBLIC CabanaPD)
+
+install(TARGETS ElasticWave KalthoffWinkler CrackBranching FragmentingCylinder ImpactTest DESTINATION ${CMAKE_INSTALL_BINDIR})
