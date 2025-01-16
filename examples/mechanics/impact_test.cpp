@@ -76,7 +76,8 @@ void ballDiskImpactExample( const std::string filename )
     double ball_radius = 1.0;
     double ball_x_center = 0.0;
     double ball_y_center = 0.0;
-    double ball_z_center = 0.6 + ball_radius;
+    // Include an additional delta spacing
+    double ball_z_center = 0.5 * disk_thickness + 2 * delta + ball_radius;
 
     // Create particles only inside ball and inside disk
     auto init_op = KOKKOS_LAMBDA( const int, const double x[3] )
