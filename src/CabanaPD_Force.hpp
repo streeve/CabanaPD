@@ -134,14 +134,13 @@ class Force<MemorySpace, BaseForceModel>
 {
   protected:
     bool _half_neigh;
+    double grid_delta[3];
 
     Timer _timer;
     Timer _energy_timer;
 
   public:
-    using neighbor_list_type =
-        Cabana::VerletList<MemorySpace, Cabana::FullNeighborTag,
-                           Cabana::VerletLayout2D, Cabana::TeamOpTag>;
+    using neighbor_list_type = Cabana::LinkedCellList<MemorySpace>;
     neighbor_list_type _neigh_list;
 
     // Primary constructor: use positions and construct neighbors.
@@ -149,10 +148,11 @@ class Force<MemorySpace, BaseForceModel>
     Force( const bool half_neigh, const double delta,
            const ParticleType& particles, const double tol = 1e-14 )
         : _half_neigh( half_neigh )
+        , grid_delta{ delta + tol, delta + tol, delta + tol }
         , _neigh_list( neighbor_list_type(
               particles.sliceReferencePosition(), particles.frozenOffset(),
-              particles.localOffset(), delta + tol, 1.0,
-              particles.ghost_mesh_lo, particles.ghost_mesh_hi ) )
+              particles.localOffset(), grid_delta, particles.ghost_mesh_lo,
+              particles.ghost_mesh_hi ) )
     {
     }
 
@@ -164,9 +164,10 @@ class Force<MemorySpace, BaseForceModel>
            const std::size_t local_offset, const double mesh_min[3],
            const double mesh_max[3], const double tol = 1e-14 )
         : _half_neigh( half_neigh )
+        , grid_delta{ delta + tol, delta + tol, delta + tol }
         , _neigh_list( neighbor_list_type( positions, frozen_offset,
-                                           local_offset, delta + tol, 1.0,
-                                           mesh_min, mesh_max ) )
+                                           local_offset, grid_delta, mesh_min,
+                                           mesh_max ) )
     {
     }
 

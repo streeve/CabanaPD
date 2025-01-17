@@ -51,9 +51,9 @@ class Force<MemorySpace, NormalRepulsionModel>
     template <class ParticleType>
     Force( const bool half_neigh, const ParticleType& particles,
            const NormalRepulsionModel model )
-        : base_type( half_neigh, model.Rc, particles.sliceCurrentPosition(),
-                     particles.frozenOffset(), particles.localOffset(),
-                     particles.ghost_mesh_lo, particles.ghost_mesh_hi )
+        : base_type( half_neigh, model.Rc, particles.sliceCurrentPosition(), 0,
+                     particles.localOffset(), particles.ghost_mesh_lo,
+                     particles.ghost_mesh_hi )
         , _model( model )
     {
         for ( int d = 0; d < particles.dim; d++ )
@@ -78,7 +78,7 @@ class Force<MemorySpace, NormalRepulsionModel>
         const int n_local = particles.localOffset();
 
         _neigh_timer.start();
-        _neigh_list.build( y, n_frozen, n_local, Rc, 1.0, mesh_min, mesh_max );
+        _neigh_list.build( y, 0, n_local );
         _neigh_timer.stop();
 
         auto contact_full = KOKKOS_LAMBDA( const int i, const int j )
