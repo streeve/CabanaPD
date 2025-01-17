@@ -223,7 +223,7 @@ class SolverNoFracture
         comm->gatherWeightedVolume();
 
         // Compute initial internal forces and energy.
-        updateForce();
+        updateForce( 0.0 );
         computeEnergy( *force, *particles, neigh_iter_tag() );
 
         if ( initial_output )
@@ -254,6 +254,9 @@ class SolverNoFracture
             particles->output( 0, 0.0, output_reference );
     }
 
+    // FIXME: bad name
+    void update() { force->update( *particles, 0, true ); }
+
     template <typename BoundaryType>
     void run( BoundaryType boundary_condition )
     {
@@ -265,7 +268,7 @@ class SolverNoFracture
             _step_timer.start();
 
             // Integrate - velocity Verlet first half.
-            integrator->initialHalfStep( *particles );
+            auto max_displacement = integrator->initialHalfStep( *particles );
 
             // Update ghost particles.
             comm->gatherDisplacement();
@@ -288,10 +291,11 @@ class SolverNoFracture
                 comm->gatherTemperature();
 
             // Compute internal forces.
-            updateForce();
+            updateForce( max_displacement );
 
             if constexpr ( is_contact<contact_model_type>::value )
-                computeForce( *contact, *particles, neigh_iter_tag{}, false );
+                computeForce( *contact, *particles, max_displacement,
+                              neigh_iter_tag{}, false );
 
             // Add force boundary condition.
             if ( boundary_condition.forceUpdate() )
@@ -317,16 +321,17 @@ class SolverNoFracture
             _step_timer.start();
 
             // Integrate - velocity Verlet first half.
-            integrator->initialHalfStep( *particles );
+            auto max_displacement = integrator->initialHalfStep( *particles );
 
             // Update ghost particles.
             comm->gatherDisplacement();
 
             // Compute internal forces.
-            updateForce();
+            updateForce( max_displacement );
 
             if constexpr ( is_contact<contact_model_type>::value )
-                computeForce( *contact, *particles, neigh_iter_tag{}, false );
+                computeForce( *contact, *particles, max_displacement,
+                              neigh_iter_tag{}, false );
 
             if constexpr ( is_temperature_dependent<
                                typename force_model_type::thermal_type>::value )
@@ -344,14 +349,14 @@ class SolverNoFracture
 
     // Compute and communicate fields needed for force computation and update
     // forces.
-    void updateForce()
+    void updateForce( const double max_displacement )
     {
         // Compute and communicate dilatation for LPS (does nothing for PMB).
         force->computeDilatation( *particles, neigh_iter_tag{} );
         comm->gatherDilatation();
 
         // Compute internal forces.
-        computeForce( *force, *particles, neigh_iter_tag{} );
+        computeForce( *force, *particles, max_displacement, neigh_iter_tag{} );
     }
 
     void output( const int step )
@@ -601,7 +606,7 @@ class SolverFracture
             _step_timer.start();
 
             // Integrate - velocity Verlet first half.
-            integrator->initialHalfStep( *particles );
+            auto max_displacement = integrator->initialHalfStep( *particles );
 
             // Add non-force boundary condition.
             if ( !boundary_condition.forceUpdate() )
@@ -618,7 +623,8 @@ class SolverFracture
             updateForce();
 
             if constexpr ( is_contact<contact_model_type>::value )
-                computeForce( *contact, *particles, neigh_iter_tag{}, false );
+                computeForce( *contact, *particles, max_displacement,
+                              neigh_iter_tag{}, false );
 
             // Add force boundary condition.
             if ( boundary_condition.forceUpdate() )
@@ -644,7 +650,7 @@ class SolverFracture
             _step_timer.start();
 
             // Integrate - velocity Verlet first half.
-            integrator->initialHalfStep( *particles );
+            auto max_displacement = integrator->initialHalfStep( *particles );
 
             if constexpr ( is_temperature_dependent<
                                typename force_model_type::thermal_type>::value )
@@ -657,7 +663,8 @@ class SolverFracture
             updateForce();
 
             if constexpr ( is_contact<contact_model_type>::value )
-                computeForce( *contact, *particles, neigh_iter_tag{}, false );
+                computeForce( *contact, *particles, max_displacement,
+                              neigh_iter_tag{}, false );
 
             // Integrate - velocity Verlet second half.
             integrator->finalHalfStep( *particles );

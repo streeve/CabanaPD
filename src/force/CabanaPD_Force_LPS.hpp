@@ -163,7 +163,7 @@ class Force<MemorySpace, ForceModel<LPS, Elastic, NoFracture>>
     template <class ForceType, class PosType, class ParticleType,
               class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
-                           const ParticleType& particles,
+                           const ParticleType& particles, const double,
                            ParallelType& neigh_op_tag )
     {
         _timer.start();
@@ -541,7 +541,7 @@ class Force<MemorySpace, ForceModel<LinearLPS, Elastic, NoFracture>>
     template <class ForceType, class PosType, class ParticleType,
               class ParallelType>
     void computeForceFull( ForceType& f, const PosType& x, const PosType& u,
-                           const ParticleType& particles,
+                           const ParticleType& particles, const double,
                            ParallelType& neigh_op_tag )
     {
         _timer.start();

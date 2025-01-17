@@ -25,19 +25,24 @@ namespace CabanaPD
 ******************************************************************************/
 struct ContactModel
 {
+    // PD neighbor search radius.
     double delta;
+    // Contact neighbor search radius.
     double Rc;
+    // Extend neighbor search radius to reuse lists.
+    double Rc_extend;
 
     ContactModel(){};
     // PD horizon
     // Contact radius
-    ContactModel( const double _delta, const double _Rc )
+    ContactModel( const double _delta, const double _Rc,
+                  const double _Rc_extend )
         : delta( _delta )
-        , Rc( _Rc ){};
+        , Rc( _Rc )
+        , Rc_extend( _Rc_extend ){};
 };
 
 /* Normal repulsion */
-
 struct NormalRepulsionModel : public ContactModel
 {
     // FIXME: This is for use as the primary force model.
@@ -47,13 +52,15 @@ struct NormalRepulsionModel : public ContactModel
 
     using ContactModel::delta;
     using ContactModel::Rc;
+    using ContactModel::Rc_extend;
 
     double c;
     double K;
 
     NormalRepulsionModel(){};
-    NormalRepulsionModel( const double delta, const double Rc, const double _K )
-        : ContactModel( delta, Rc )
+    NormalRepulsionModel( const double delta, const double Rc,
+                          const double Rc_extend, const double _K )
+        : ContactModel( delta, Rc, Rc_extend )
         , K( _K )
     {
         set_param( delta, Rc, K );
