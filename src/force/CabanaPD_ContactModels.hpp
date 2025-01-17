@@ -36,7 +36,6 @@ struct ContactModel
 };
 
 /* Normal repulsion */
-
 struct NormalRepulsionModel : public ContactModel
 {
     // FIXME: This is for use as the primary force model.
@@ -59,13 +58,26 @@ struct NormalRepulsionModel : public ContactModel
         c = 18.0 * K / ( pi * delta * delta * delta * delta );
     }
 
-    KOKKOS_INLINE_FUNCTION
-    auto forceCoeff( const double r, const double vol ) const
+    template <class PositionType>
+    KOKKOS_INLINE_FUNCTION auto force( const PositionType& x,
+                                       const PositionType& u, const int i,
+                                       const int j, const double vol ) const
     {
+        double xi, r, s;
+        double rx, ry, rz;
+        getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+
         // Contact "stretch"
         const double sc = ( r - Rc ) / delta;
         // Normal repulsion uses a 15 factor compared to the PMB force
-        return 15.0 * c * sc * vol;
+        auto coeff = 15.0 * c * sc * vol;
+        auto coeff_r = coeff / r;
+
+        Kokkos::Array<double, 3> f_i;
+        f_i[0] = coeff_r * rx;
+        f_i[1] = coeff_r * ry;
+        f_i[2] = coeff_r * rz;
+        return f_i;
     }
 };
 

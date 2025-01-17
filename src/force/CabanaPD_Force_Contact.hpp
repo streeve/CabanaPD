@@ -82,22 +82,11 @@ class Force<MemorySpace, NormalRepulsionModel>
 
         auto contact_full = KOKKOS_LAMBDA( const int i, const int j )
         {
-            double fcx_i = 0.0;
-            double fcy_i = 0.0;
-            double fcz_i = 0.0;
+            const auto f_i = model.force( x, u, i, j, vol( j ) );
 
-            double xi, r, s;
-            double rx, ry, rz;
-            getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
-
-            const double coeff = model.forceCoeff( r, vol( j ) );
-            fcx_i = coeff * rx / r;
-            fcy_i = coeff * ry / r;
-            fcz_i = coeff * rz / r;
-
-            fc( i, 0 ) += fcx_i;
-            fc( i, 1 ) += fcy_i;
-            fc( i, 2 ) += fcz_i;
+            fc( i, 0 ) += f_i[0];
+            fc( i, 1 ) += f_i[1];
+            fc( i, 2 ) += f_i[2];
         };
 
         _timer.start();

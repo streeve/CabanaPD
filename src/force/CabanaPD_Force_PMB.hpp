@@ -115,13 +115,6 @@ class Force<MemorySpace, ForceModel<PMB, Elastic, NoFracture, ModelParams...>>
             double fy_i = 0.0;
             double fz_i = 0.0;
 
-            double xi, r, s;
-            double rx, ry, rz;
-            getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
-
-            model.thermalStretch( s, i, j );
-
-            const double coeff = model.forceCoeff( s, vol( j ) );
             fx_i = coeff * rx / r;
             fy_i = coeff * ry / r;
             fz_i = coeff * rz / r;

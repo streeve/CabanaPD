@@ -41,9 +41,19 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
         c = 18.0 * K / ( pi * delta * delta * delta * delta );
     }
 
-    KOKKOS_INLINE_FUNCTION
-    auto forceCoeff( const double s, const double vol ) const
+    template <class PositionType>
+    KOKKOS_INLINE_FUNCTION auto force( const PositionType& x,
+                                       const PositionType& u, const int i,
+                                       const int j, const double vol ) const
     {
+        double xi, r, s;
+        double rx, ry, rz;
+        getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+
+        thermalStretch( s, i, j );
+
+        const double coeff = forceCoeff( s, vol );
+
         return c * s * vol;
     }
 

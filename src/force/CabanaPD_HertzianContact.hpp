@@ -61,6 +61,10 @@ struct HertzianModel : public ContactModel
     auto forceCoeff( const double r, const double vn, const double vol,
                      const double rho ) const
     {
+        double xi, r, s;
+        double rx, ry, rz;
+        getDistanceComponents( x, u, i, j, xi, r, s, rx, ry, rz );
+
         // Contact "overlap"
         const double delta_n = ( r - 2.0 * radius );
 
