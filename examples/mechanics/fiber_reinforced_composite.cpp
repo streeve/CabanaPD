@@ -19,7 +19,7 @@
 #include <CabanaPD.hpp>
 
 // Generate a unidirectional fiber-reinforced composite geometry
-void kalthoffWinklerExample( const std::string filename )
+void fiberReinforcedCompositeExample( const std::string filename )
 {
     // ====================================================
     //             Use default Kokkos spaces
@@ -80,9 +80,9 @@ void kalthoffWinklerExample( const std::string filename )
     auto x = particles->sliceReferencePosition();
     auto type = particles->sliceType();
 
-    // Fiber-reinforced composite geometry
-    int Nfx = inputs["fiber_numbers"][0]; // Number of fibers in x-direction
-    int Nfy = inputs["fiber_numbers"][1]; // Number of fibers in y-direction
+    // Fiber-reinforced composite geometry parameters
+    int Nfx = inputs["number_of_fibers"][0];
+    int Nfy = inputs["number_of_fibers"][1];
     double Rf = inputs["fiber_radius"];
 
     // Fiber grid spacings
@@ -94,15 +94,15 @@ void kalthoffWinklerExample( const std::string filename )
         // Density
         rho( pid ) = rho0;
 
-        // Set x- and y-coordinates of grid point
+        // x- and y-coordinates of particle
         double xi = x( pid, 0 );
         double yi = x( pid, 1 );
 
         // Find nearest fiber grid center point
-        double Ixf = floor( xi / dxf );
-        double Iyf = floor( yi / dyf );
-        double XI = 0.5 * dxf + dxf * Ixf;
-        double YI = 0.5 * dyf + dyf * Iyf;
+        double Ixf = floor( ( xi - low_corner[0] ) / dxf );
+        double Iyf = floor( ( yi - low_corner[1] ) / dyf );
+        double XI = low_corner[0] + 0.5 * dxf + dxf * Ixf;
+        double YI = low_corner[1] + 0.5 * dyf + dyf * Iyf;
 
         if ( ( xi - XI ) * ( xi - XI ) + ( yi - YI ) * ( yi - YI ) <
              Rf * Rf + 1e-10 )
@@ -131,7 +131,7 @@ int main( int argc, char* argv[] )
     MPI_Init( &argc, &argv );
     Kokkos::initialize( argc, argv );
 
-    kalthoffWinklerExample( argv[1] );
+    fiberReinforcedCompositeExample( argv[1] );
 
     Kokkos::finalize();
     MPI_Finalize();
