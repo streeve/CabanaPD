@@ -85,7 +85,6 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // Fiber-reinforced composite geometry parameters
     double Vf = inputs["fiber_volume_fraction"];
     double Df = inputs["fiber_diameter"];
-
     // FIXME: Need to generalize from 3 to Nplies number of plies
     std::array<double, 3> stacking_sequence = inputs["stacking_sequence"];
 
@@ -150,7 +149,7 @@ void fiberReinforcedCompositeExample( const std::string filename )
         double yi = x( pid, 1 );
         double zi = x( pid, 2 );
 
-        // Find ply of particle
+        // Find ply number of particle (counting from 0)
         double nply = std::floor( ( zi - low_corner[2] ) / dzply );
 
         // Ply fiber orientation (in radians)
@@ -160,8 +159,8 @@ void fiberReinforcedCompositeExample( const std::string filename )
         double yinew =
             -std::sin( theta ) * ( xi - Xc ) + std::cos( theta ) * ( yi - Yc );
 
-        // Find center of ply in z-direction
-        double Zply_bot = low_corner[2] + ( nply - 1 ) * dzply;
+        // Find center of ply in z-direction (recall first ply has nply = 0)
+        double Zply_bot = low_corner[2] + nply * dzply;
         double Zply_top = Zply_bot + dzply;
         double Zcply = 0.5 * ( Zply_bot + Zply_top );
 
@@ -176,7 +175,7 @@ void fiberReinforcedCompositeExample( const std::string filename )
 
         // Check if point belongs to fiber
         if ( ( yinew - YI ) * ( yinew - YI ) + ( zinew - ZI ) * ( zinew - ZI ) <
-             Rf * Rf + 1e-10 )
+             Rf * Rf + 1e-8 )
             type( pid ) = 1;
     };
     particles->updateParticles( exec_space{}, init_functor );
