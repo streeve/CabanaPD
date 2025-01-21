@@ -299,8 +299,7 @@ class Solver
         // FIXME: Will need to rebuild ghosts.
     }
 
-    // FIXME: bad name
-    void update() { force->update( *particles, 0, true ); }
+    void updateNeighbors() { force->update( *particles, 0.0, true ); }
 
     template <typename BoundaryType>
     void run( BoundaryType boundary_condition )
@@ -471,8 +470,8 @@ class Solver
                 comm_time = comm->time();
             double integrate_time = integrator->time();
             double force_time = force->time();
-            double neigh_time = force->neighTime();
             double energy_time = force->timeEnergy();
+            double neigh_time = force->timeNeighbor();
             double output_time = particles->timeOutput();
             _total_time += step_time;
             auto rate = static_cast<double>( particles->numGlobal() *
