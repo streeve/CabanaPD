@@ -67,11 +67,15 @@ class BaseForceContact : public Force<MemorySpace, BaseForceModel>
                  const bool require_update = false )
     {
         _neigh_timer.start();
-        const auto y = particles.sliceCurrentPosition();
+        const auto u_neigh = particles.sliceDisplacementNeighborBuild();
         if ( max_displacement > Rc_extend || require_update )
+        {
+            const auto y = particles.sliceCurrentPosition();
             _neigh_list.build( y, particles.frozenOffset(),
                                particles.localOffset(), Rc, 1.0, mesh_min,
                                mesh_max );
+            Cabana::deep_copy( u_neigh );
+        }
         _neigh_timer.stop();
     }
 

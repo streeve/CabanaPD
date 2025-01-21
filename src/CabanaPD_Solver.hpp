@@ -255,7 +255,7 @@ class SolverNoFracture
     }
 
     // FIXME: bad name
-    void update() { force->update( *particles, 0, true ); }
+    void update() { force->update( *particles, 0.0, true ); }
 
     template <typename BoundaryType>
     void run( BoundaryType boundary_condition )

@@ -179,7 +179,10 @@ class Force<MemorySpace, BaseForceModel>
     }
 
     // FIXME: should it be possible to update this list?
-    void update( const int, const int, const double, const bool = false ) {}
+    template <class ParticleType>
+    void update( const ParticleType&, const double, const bool = false )
+    {
+    }
 
     unsigned getMaxLocalNeighbors()
     {

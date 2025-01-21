@@ -163,6 +163,7 @@ void powderSettlingExample( const std::string filename )
     // ====================================================
     //                   Simulation run
     // ====================================================
+    cabana_pd->update();
     cabana_pd->run( gravity );
 }
 
