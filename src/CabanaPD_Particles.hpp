@@ -79,11 +79,13 @@
 namespace CabanaPD
 {
 template <class MemorySpace, class ModelType, class ThermalType,
-          class OutputType = BaseOutput, int Dimension = 3>
+          class OutputType = BaseOutput, class NoFailType = std::false_type,
+          int Dimension = 3>
 class Particles;
 
 template <class MemorySpace, int Dimension>
-class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
+class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput,
+                std::false_type, Dimension>
 {
   public:
     using self_type = Particles<MemorySpace, PMB, TemperatureIndependent,
@@ -115,7 +117,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     using aosoa_u_type = Cabana::AoSoA<vector_type, memory_space, 1>;
     using aosoa_y_type = Cabana::AoSoA<vector_type, memory_space, 1>;
     using aosoa_vol_type = Cabana::AoSoA<scalar_type, memory_space, 1>;
-    using aosoa_nofail_type = Cabana::AoSoA<int_type, memory_space, 1>;
     using aosoa_other_type = Cabana::AoSoA<other_types, memory_space>;
     // Using grid here for the particle init.
     using plist_x_type =
@@ -288,7 +289,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         auto rho = sliceDensity();
         auto u = sliceDisplacement();
         auto vol = sliceVolume();
-        auto nofail = sliceNoFail();
 
         // Initialize particles.
         auto create_functor =
@@ -315,7 +315,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
 
             // FIXME: hardcoded.
             type( pid ) = 0;
-            nofail( pid ) = 0;
             rho( pid ) = 1.0;
 
             return create;
@@ -356,7 +355,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         auto type = sliceType();
         auto rho = sliceDensity();
         auto u = sliceDisplacement();
-        auto nofail = sliceNoFail();
 
         static_assert(
             Cabana::is_accessible_from<
@@ -378,7 +376,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
                     f( pid, d ) = 0.0;
                 }
                 type( pid ) = 0;
-                nofail( pid ) = 0;
                 rho( pid ) = 1.0;
             } );
 
@@ -477,15 +474,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     auto sliceType() { return Cabana::slice<2>( _aosoa_other, "type" ); }
     auto sliceType() const { return Cabana::slice<2>( _aosoa_other, "type" ); }
 
-    auto sliceNoFail()
-    {
-        return Cabana::slice<0>( _aosoa_nofail, "no_fail_region" );
-    }
-    auto sliceNoFail() const
-    {
-        return Cabana::slice<0>( _aosoa_nofail, "no_fail_region" );
-    }
-
     auto getForce() { return _plist_f; }
     auto getReferencePosition() { return _plist_x; }
 
@@ -523,7 +511,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         _aosoa_vol.resize( referenceOffset() );
         _plist_f.aosoa().resize( localOffset() );
         _aosoa_other.resize( localOffset() );
-        _aosoa_nofail.resize( referenceOffset() );
         size = _plist_x.size();
         _timer.stop();
     };
@@ -579,7 +566,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     aosoa_u_type _aosoa_u;
     aosoa_y_type _aosoa_y;
     aosoa_vol_type _aosoa_vol;
-    aosoa_nofail_type _aosoa_nofail;
     aosoa_other_type _aosoa_other;
 
     plist_x_type _plist_x;
@@ -594,10 +580,11 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     Timer _timer;
 };
 
-template <class MemorySpace, int Dimension>
-class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput, Dimension>
+template <class MemorySpace, class NoFailType, int Dimension>
+class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput,
+                NoFailType, Dimension>
     : public Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput,
-                       Dimension>
+                       NoFailType, Dimension>
 {
   public:
     using self_type = Particles<MemorySpace, LPS, TemperatureIndependent,
@@ -725,10 +712,11 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput, Dimension>
     using base_type::_timer;
 };
 
-template <class MemorySpace, int Dimension>
-class Particles<MemorySpace, PMB, TemperatureDependent, BaseOutput, Dimension>
+template <class MemorySpace, class NoFailType, int Dimension>
+class Particles<MemorySpace, PMB, TemperatureDependent, BaseOutput, NoFailType,
+                Dimension>
     : public Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput,
-                       Dimension>
+                       NoFailType, Dimension>
 {
   public:
     using self_type = Particles<MemorySpace, PMB, TemperatureDependent,
@@ -846,16 +834,18 @@ class Particles<MemorySpace, PMB, TemperatureDependent, BaseOutput, Dimension>
     aosoa_temp_type _aosoa_temp;
 };
 
-template <class MemorySpace, class ModelType, class ThermalType, int Dimension>
-class Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>
+template <class MemorySpace, class ModelType, class ThermalType,
+          class NoFailType, int Dimension>
+class Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, NoFailType,
+                Dimension>
     : public Particles<MemorySpace, ModelType, ThermalType, BaseOutput,
-                       Dimension>
+                       NoFailType, Dimension>
 {
   public:
-    using self_type =
-        Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>;
-    using base_type =
-        Particles<MemorySpace, ModelType, ThermalType, BaseOutput, Dimension>;
+    using self_type = Particles<MemorySpace, ModelType, ThermalType,
+                                EnergyOutput, NoFailType, Dimension>;
+    using base_type = Particles<MemorySpace, ModelType, ThermalType, BaseOutput,
+                                NoFailType, Dimension>;
     using thermal_type = typename base_type::thermal_type;
     using output_type = EnergyOutput;
     using memory_space = typename base_type::memory_space;
@@ -952,6 +942,84 @@ class Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>
     }
 
     aosoa_output_type _aosoa_output;
+};
+
+template <class MemorySpace, class ModelType, class ThermalType,
+          class OutputType, int Dimension>
+class Particles<MemorySpace, ModelType, ThermalType, EnergyOutput,
+                std::true_type, Dimension>
+    : public Particles<MemorySpace, ModelType, ThermalType, OutputType,
+                       std::false_type, Dimension>
+{
+  public:
+    using self_type = Particles<MemorySpace, ModelType, ThermalType, OutputType,
+                                std::true_type, Dimension>;
+    using base_type = Particles<MemorySpace, ModelType, ThermalType, OutputType,
+                                std::false_type, Dimension>;
+    using thermal_type = typename base_type::thermal_type;
+    using output_type = typename base_type::output_type;
+    using memory_space = typename base_type::memory_space;
+    using base_type::dim;
+
+    // energy, damage
+    using aosoa_nofail_type =
+        Cabana::AoSoA<typename base_type::int_type, memory_space, 1>;
+
+    // Base constructor.
+    template <typename... Args>
+    Particles( Args&&... args )
+        : base_type( std::forward<Args>( args )... )
+    {
+        _aosoa_nofail = aosoa_nofail_type( "Particle No-fail Region",
+                                           base_type::localOffset() );
+        init_output();
+    }
+
+    template <typename... Args>
+    void createParticles( Args&&... args )
+    {
+        // Forward arguments to standard or custom particle creation.
+        base_type::createParticles( std::forward<Args>( args )... );
+        _aosoa_nofail.resize( base_type::localOffset() );
+    }
+
+    auto sliceNoFail()
+    {
+        return Cabana::slice<0>( _aosoa_nofail, "no_fail_region" );
+    }
+    auto sliceNoFail() const
+    {
+        return Cabana::slice<0>( _aosoa_nofail, "no_fail_region" );
+    }
+
+    void resize( int new_local, int new_ghost )
+    {
+        base_type::resize( new_local, new_ghost );
+        _aosoa_nofail.resize( base_type::referenceOffset() );
+    }
+
+    template <typename... OtherFields>
+    void output( const int output_step, const double output_time,
+                 const bool use_reference, OtherFields&&... other )
+    {
+        base_type::output( output_step, output_time, use_reference,
+                           sliceNoFail(),
+                           std::forward<OtherFields>( other )... );
+    }
+
+    friend class Comm<self_type, PMB, TemperatureIndependent>;
+    friend class Comm<self_type, LPS, TemperatureIndependent>;
+    friend class Comm<self_type, PMB, TemperatureDependent>;
+    friend class Comm<self_type, LPS, TemperatureDependent>;
+
+  protected:
+    void init_output()
+    {
+        auto nofail = sliceNoFail();
+        Cabana::deep_copy( nofail, 0.0 );
+    }
+
+    aosoa_output_type _aosoa_nofail;
 };
 
 template <typename MemorySpace, typename ModelType, typename ExecSpace,
