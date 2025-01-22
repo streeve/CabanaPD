@@ -85,8 +85,7 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // Fiber-reinforced composite geometry parameters
     double Vf = inputs["fiber_volume_fraction"];
     double Df = inputs["fiber_diameter"];
-    // FIXME: Need to generalize from 3 to Nplies number of plies
-    std::array<double, 3> stacking_sequence = inputs["stacking_sequence"];
+    std::vector<double> stacking_sequence = inputs["stacking_sequence"];
 
     // Fiber radius
     double Rf = 0.5 * Df;
@@ -97,7 +96,7 @@ void fiberReinforcedCompositeExample( const std::string filename )
     double Lz = system_size[2];
 
     // Number of plies
-    int Nplies = sizeof( stacking_sequence ) / sizeof( stacking_sequence[0] );
+    auto Nplies = stacking_sequence.size();
     // Ply thickness (in z-direction)
     double dzply = Lz / Nplies;
 

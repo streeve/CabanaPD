@@ -6,7 +6,7 @@
     "fracture_energy"        : {"value": 42408, "unit": "J/m^2"},
     "horizon"                : {"value": 8.3334e-04, "unit": "m"}, 
     "fiber_volume_fraction"  : {"value": 0.30},
-    "fiber_diameter"         : {"value": 0.01, "unit": "m"},
+    "fiber_diameter"         : {"value": 0.005, "unit": "m"},
     "stacking_sequence"      : {"value": [0, 45, 90]},
     "final_time"             : {"value": 2e-7, "unit": "s"},
     "timestep"               : {"value": 1e-7, "unit": "s"},
