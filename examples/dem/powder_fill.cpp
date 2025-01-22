@@ -59,7 +59,8 @@ void powderSettlingExample( const std::string filename )
     //                    Force model
     // ====================================================
     using model_type = CabanaPD::HertzianModel;
-    model_type contact_model( delta / m * 0.9, radius, nu, E, e );
+    double cutoff = delta / m * 0.9;
+    model_type contact_model( cutoff, cutoff, radius, nu, E, e );
 
     // ====================================================
     //            Custom particle initialization

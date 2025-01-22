@@ -28,8 +28,7 @@ struct HertzianModel : public ContactModel
     using thermal_type = TemperatureIndependent;
 
     using ContactModel::Rc; // Contact horizon (should be > 2*radius)
-    // Extend neighbor search radius to reuse lists.
-    double Rc_extend;
+    using ContactModel::Rc_extend;
 
     double nu;     // Poisson's ratio
     double radius; // Actual radius
@@ -42,7 +41,6 @@ struct HertzianModel : public ContactModel
                    const double _radius, const double _nu, const double _E,
                    const double _e )
         : ContactModel( 1.0, _Rc, _Rc_extend )
-        , Rc_extend( _Rc_extend )
     {
         set_param( _radius, _nu, _E, _e );
     }

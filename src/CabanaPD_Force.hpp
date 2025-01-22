@@ -237,6 +237,7 @@ class Force<MemorySpace, BaseForceModel>
 
     auto time() { return _timer.time(); };
     auto timeEnergy() { return _energy_timer.time(); };
+    auto timeNeighbor() { return 0.0; };
 };
 
 /******************************************************************************
