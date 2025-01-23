@@ -238,7 +238,7 @@ class BaseFracture
 {
   protected:
     using memory_space = MemorySpace;
-    using NeighborView = typename Kokkos::View<int**, memory_space>;
+    using NeighborView = typename Kokkos::View<bool**, memory_space>;
     NeighborView _mu;
 
   public:
