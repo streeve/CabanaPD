@@ -394,6 +394,9 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
                     MPI_SUM, 0, MPI_COMM_WORLD );
     }
 
+    auto numBlock() { return local_grid->globalGrid().totalNumBlock(); }
+    auto blockId() { return local_grid->globalGrid().blockId(); }
+
     template <class ExecSpace, class FunctorType>
     void updateParticles( const ExecSpace, const FunctorType init_functor,
                           const bool update_frozen = false )
