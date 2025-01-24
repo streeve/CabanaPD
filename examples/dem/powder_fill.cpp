@@ -36,10 +36,8 @@ void powderSettlingExample( const std::string filename )
     //                Material parameters
     // ====================================================
     double rho0 = inputs["density"];
-    double vol0 = inputs["volume"];
     double delta = inputs["horizon"];
     delta += 1e-10;
-    double radius = inputs["radius"];
     double nu = inputs["poisson_ratio"];
     double E = inputs["elastic_modulus"];
     double e = inputs["restitution"];
@@ -59,31 +57,25 @@ void powderSettlingExample( const std::string filename )
     //                    Force model
     // ====================================================
     using model_type = CabanaPD::HertzianModel;
-    model_type contact_model( delta / m * 0.9, radius, nu, E, e );
+    model_type contact_model( delta, nu, E, e );
 
     // ====================================================
     //            Custom particle initialization
     // ====================================================
-    double d_out = inputs["outer_cylinder_diameter"];
-    double d_in = inputs["inner_cylinder_diameter"];
-    double Rout = 0.5 * d_out;
-    double Rin = 0.5 * d_in;
-    double Wall_th = inputs["wall_thickness"];
+    double cylinder_diameter = inputs["cylinder_diameter"];
+    double cylinder_out = 0.5 * cylinder_diameter;
+    double thickness = inputs["wall_thickness"];
+    double cylinder_in = cylinder_out - thickness;
 
     // Create container.
     auto create_container = KOKKOS_LAMBDA( const int, const double x[3] )
     {
         double rsq = x[0] * x[0] + x[1] * x[1];
 
-        // Convert domain block into hollow cylinder
-        if ( rsq > Rout * Rout || rsq < ( Rin - Wall_th ) * ( Rin - Wall_th ) )
+        if ( rsq > cylinder_out * cylinder_out ||
+             ( rsq < ( cylinder_in ) * ( cylinder_in ) &&
+               x[2] > low_corner[2] + thickness ) )
             return false;
-        // Leave remaining bottom wall particles and remove particles in between
-        // inner and outer cylinder
-        if ( x[2] > low_corner[2] + Wall_th && rsq > Rin * Rin &&
-             rsq < ( Rout - Wall_th ) * ( Rout - Wall_th ) )
-            return false;
-
         return true;
     };
     // Container particles should be frozen, never updated.
@@ -95,10 +87,8 @@ void powderSettlingExample( const std::string filename )
     auto create_powder = KOKKOS_LAMBDA( const int, const double x[3] )
     {
         double rsq = x[0] * x[0] + x[1] * x[1];
-
-        // Only create particles in between inner and outer cylinder.
-        if ( x[2] > low_corner[2] + Wall_th && rsq > ( Rin ) * ( Rin ) &&
-             rsq < ( Rout - Wall_th ) * ( Rout - Wall_th ) )
+        if ( rsq < ( cylinder_in ) * ( cylinder_in ) &&
+             x[2] > low_corner[2] + thickness )
             return true;
 
         return false;
@@ -108,11 +98,11 @@ void powderSettlingExample( const std::string filename )
 
     // Set density/volumes.
     auto rho = particles->sliceDensity();
-    auto vol = particles->sliceVolume();
+    // auto vol = particles->sliceVolume();
     auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
         rho( pid ) = rho0;
-        vol( pid ) = vol0;
+        // vol( pid ) = vol0;
     };
     particles->updateParticles( exec_space{}, init_functor );
 
@@ -137,7 +127,7 @@ void powderSettlingExample( const std::string filename )
     auto remove_functor = KOKKOS_LAMBDA( const int pid, int& k )
     {
         auto f_mag = Kokkos::hypot( f( pid, 0 ), f( pid, 1 ), f( pid, 2 ) );
-        if ( f_mag > 1e8 )
+        if ( f_mag > 1e6 )
             keep( pid - num_frozen ) = 0;
         else
             k++;
@@ -156,7 +146,7 @@ void powderSettlingExample( const std::string filename )
     rho = cabana_pd->particles->sliceDensity();
     auto body_functor = KOKKOS_LAMBDA( const int pid, const double )
     {
-        f( pid, 2 ) -= 9.8 * rho( pid ); // * vol( pid );
+        f( pid, 2 ) -= 9.8 * rho( pid );
     };
     auto gravity = CabanaPD::createBodyTerm( body_functor, true );
 

@@ -20,14 +20,14 @@
 
 namespace CabanaPD
 {
-struct HertzianModel : public ContactModel
+struct HertzianModel
 {
     // FIXME: This is for use as the primary force model.
     using base_model = PMB;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
 
-    using ContactModel::Rc; // Contact horizon (should be > 2*radius)
+    double Rc; // Contact horizon (should be > 2*radius)
 
     double nu;     // Poisson's ratio
     double radius; // Actual radius
@@ -39,12 +39,12 @@ struct HertzianModel : public ContactModel
     double coeff_h_n;
     double coeff_h_d;
 
-    HertzianModel( const double _Rc, const double _radius, const double _nu,
-                   const double _E, const double _e )
-        : ContactModel( 1.0, _Rc )
+    HertzianModel( const double _radius, const double _nu, const double _E,
+                   const double _e )
+        : nu( _nu )
+        , radius( _radius )
     {
-        nu = _nu;
-        radius = _radius;
+        Rc = 2.0 * _radius;
         Rs = 0.5 * radius;
         Es = _E / ( 2.0 * Kokkos::pow( 1.0 - nu, 2.0 ) );
         e = _e;
