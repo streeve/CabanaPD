@@ -87,12 +87,21 @@ struct BaseDynamicTemperatureModel
         constant_microconductivity = _constant_microconductivity;
     }
 
-    KOKKOS_INLINE_FUNCTION double microconductivity_function( double r ) const
+    KOKKOS_INLINE_FUNCTION double microconductivityFunction( double r ) const
     {
         if ( constant_microconductivity )
             return thermal_coeff;
         else
             return 4.0 * thermal_coeff * ( 1.0 - r / delta );
+    }
+
+    KOKKOS_INLINE_FUNCTION double conduction( const double temp_i,
+                                              const double temp_j,
+                                              const double vol,
+                                              const double xi ) const
+    {
+        const double coeff = microconductivityFunction( xi );
+        return coeff * ( temp_j - temp_i ) / xi / xi * vol;
     }
 };
 

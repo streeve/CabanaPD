@@ -72,9 +72,8 @@ class HeatTransfer<MemorySpace, ForceModel<PMB, MechanicsType, NoFracture,
             double xi, r, s;
             getDistance( x, u, i, j, xi, r, s );
 
-            const double coeff = model.microconductivity_function( xi );
             conduction( i ) +=
-                coeff * ( temp( j ) - temp( i ) ) / xi / xi * vol( j );
+                model.conduction( temp( i ), temp( j ), vol( j ), xi );
         };
 
         Kokkos::RangePolicy<exec_space> policy( particles.frozenOffset(),
@@ -186,9 +185,8 @@ class HeatTransfer<MemorySpace, ForceModel<PMB, MechanicsType, Fracture,
                 // Only include unbroken bonds.
                 if ( mu( i, n ) > 0 )
                 {
-                    const double coeff = model.microconductivity_function( xi );
                     conduction( i ) +=
-                        coeff * ( temp( j ) - temp( i ) ) / xi / xi * vol( j );
+                        model.conduction( temp( i ), temp( j ), vol( j ), xi );
                 }
             }
         };
