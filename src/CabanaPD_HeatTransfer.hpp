@@ -137,9 +137,8 @@ class HeatTransfer<MemorySpace, ForceModel<PMB, MechanicsType, Fracture,
     using fracture_type::_mu;
 
   public:
-    // This is necessary because of the indirect model inheritance.
-    // The intent is that these HeatTransfer classes merge as more details are
-    // merged into the respective models.
+    // Explicit base model construction is necessary because of the indirect
+    // model inheritance. This could be avoided with a BaseHeatTransfer object.
     template <class ForceType>
     HeatTransfer( const bool half_neigh, const ForceType& force,
                   const model_type model )
