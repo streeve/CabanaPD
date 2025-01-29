@@ -53,6 +53,7 @@ void testHertzianContact( const std::string filename )
     double rho0 = inputs["density"];
     double vol = inputs["volume"];
     double radius = inputs["radius"];
+    double radius_extend = inputs["radius_extend"];
     double nu = inputs["poisson_ratio"];
     double E = inputs["elastic_modulus"];
     double e = inputs["restitution"];
@@ -102,7 +103,8 @@ void testHertzianContact( const std::string filename )
     {
         // Density
         rho( p ) = rho0;
-        rp( p ) = radius;
+        // Search twice the physical radius.
+        rp( p ) = radius * 2.0;
         if ( p == 0 )
             v( p, 0 ) = -1.0;
         else
@@ -116,7 +118,8 @@ void testHertzianContact( const std::string filename )
     // ====================================================
     //            Force model
     // ====================================================
-    CabanaPD::HertzianModel contact_model( rp, radius, 0.0, nu, E, e );
+    CabanaPD::HertzianModel contact_model( rp, radius, radius_extend, nu, E,
+                                           e );
 
     // ====================================================
     //  Simulation run

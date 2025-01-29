@@ -210,7 +210,8 @@ void powderSettlingExample( const std::string filename )
     RandomSampleLogNormal<exec_space> random( 12345678 );
     auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
-        rp( pid ) = random.generate() * 1e-5; // should be microns..
+        // should be microns.. search twice the physical radius.
+        rp( pid ) = random.generate() * 1e-5 * 2.0;
         // std::cout << rp( pid ) << std::endl;
         rho( pid ) = rho0;
         vol( pid ) = rp( pid ) * rp( pid ) * rp( pid );

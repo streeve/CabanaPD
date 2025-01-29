@@ -23,6 +23,7 @@ namespace CabanaPD
 template <typename RadiusType>
 struct HertzianModel
 {
+    using base_type = ContactModel;
     // FIXME: This is for use as the primary force model.
     using base_model = PMB;
     using fracture_type = NoFracture;
@@ -42,7 +43,7 @@ struct HertzianModel
     HertzianModel( const RadiusType& _radius, const double _background_radius,
                    const double _extend, const double _nu, const double _E,
                    const double _e )
-        : radius( _radius )
+        : base_type( _radius, _extend )
         , background_radius( _background_radius )
         , radius_extend( _extend )
         , nu( _nu )
@@ -62,11 +63,14 @@ struct HertzianModel
     auto forceCoeff( const int i, const int j, const double r, const double vn,
                      const double vol, const double rho ) const
     {
+        // Search radius is twice the physical radius.
+        const double ri = radius( i ) / 2.0;
+        const double rj = radius( j ) / 2.0;
         // Contact "overlap"
-        const double delta_n = ( r - radius( i ) - radius( j ) );
+        const double delta_n = ( r - ri - rj );
 
         // Equivalent radius
-        double Rs = 0.5 * radius( i );
+        double Rs = 1.0 / ( 1.0 / ri + 1.0 / rj );
 
         // Hertz normal force coefficient
         double coeff = 0.0;
