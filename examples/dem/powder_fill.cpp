@@ -92,12 +92,13 @@ void powderSettlingExample( const std::string filename )
         CabanaPD::BaseOutput{}, create_container, 0, true );
 
     // Create powder.
+    double min_height = inputs["min_height"];
     auto create_powder = KOKKOS_LAMBDA( const int, const double x[3] )
     {
         double rsq = x[0] * x[0] + x[1] * x[1];
 
         // Only create particles in between inner and outer cylinder.
-        if ( x[2] > low_corner[2] + Wall_th && rsq > ( Rin ) * ( Rin ) &&
+        if ( x[2] > min_height && rsq > ( Rin ) * ( Rin ) &&
              rsq < ( Rout - Wall_th ) * ( Rout - Wall_th ) )
             return true;
 

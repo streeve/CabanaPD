@@ -11,6 +11,7 @@
     "outer_cylinder_diameter"  : {"value": 0.23749, "unit": "m"},
     "inner_cylinder_diameter"  : {"value": 0.13589, "unit": "m"}, 
     "wall_thickness"           : {"value": 0.0045, "unit": "m"},
+    "min_height"           : {"value": 0.01, "unit": "m"},
     "final_time"               : {"value": 4e0, "unit": "s"},
     "timestep"                 : {"value": 2e-6, "unit": "s"},
     "timestep_safety_factor"   : {"value": 0.9},
