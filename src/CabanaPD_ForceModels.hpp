@@ -24,7 +24,9 @@ struct BaseForceModel
     BaseForceModel( const double _delta )
         : delta( _delta ){};
 
-    // Only needed for models which store bond-based values.
+    // Only needed for models which store bond properties.
+    auto cutoff() const { return delta; }
+
     void updateBonds( const int, const int ) {}
 
     // No-op for temperature.
@@ -37,8 +39,8 @@ class BasePlasticity
 {
   protected:
     using memory_space = MemorySpace;
-    using NeighborView = typename Kokkos::View<double**, memory_space>;
-    NeighborView _s_p;
+    using neighbor_view = typename Kokkos::View<double**, memory_space>;
+    neighbor_view _s_p;
 
   public:
     // Must update later because number of neighbors not known at construction.
