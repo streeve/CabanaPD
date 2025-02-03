@@ -64,13 +64,9 @@ void compactTensionTestExample( const std::string filename )
     // ====================================================
     //    Custom particle generation and initialization
     // ====================================================
-    double LO = inputs["system_size"][0]; // Length overall
-    double WO = inputs["system_size"][1]; // Width overall
-    double T = inputs["system_size"][2];  // Thickness
     double G = inputs["gage_length"];
     double W = inputs["width_narrow_section"];
     double R = inputs["fillet_radius"];
-    double D = inputs["distance_between_grips"];
 
     // Do not create particles outside dogbone tensile test specimen region
     auto init_op = KOKKOS_LAMBDA( const int, const double x[3] )
@@ -155,10 +151,10 @@ void compactTensionTestExample( const std::string filename )
     double v0 = inputs["grip_velocity"];
 
     // Create region for each grip.
-    CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> left_grip(
+    CabanaPD::Region<CabanaPD::RectangularPrism> left_grip(
         low_corner[0], low_corner[0] + 0.025, low_corner[1], high_corner[1],
         low_corner[2], high_corner[2] );
-    CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> right_grip(
+    CabanaPD::Region<CabanaPD::RectangularPrism> right_grip(
         high_corner[0] - 0.025, high_corner[0], low_corner[1], high_corner[1],
         low_corner[2], high_corner[2] );
 
@@ -191,16 +187,26 @@ void compactTensionTestExample( const std::string filename )
     //                Boundary conditions
     // ====================================================
     // Reset forces on both grips.
-    std::vector<CabanaPD::RegionBoundary<CabanaPD::RectangularPrism>> grips = {
+    std::vector<CabanaPD::Region<CabanaPD::RectangularPrism>> grips = {
         left_grip, right_grip };
     auto bc = createBoundaryCondition( CabanaPD::ForceValueBCTag{}, 0.0,
                                        exec_space{}, *particles, grips, true );
 
     // ====================================================
+    //                Output
+    // ====================================================
+    CabanaPD::Region<CabanaPD::RectangularPrism> center(
+        -G / 4.0, G / 4.0, low_corner[1], high_corner[1], low_corner[2],
+        high_corner[2] );
+    auto output = CabanaPD::createOutputTimeSeries(
+        CabanaPD::ForceDisplacementTag{}, "force_displacement.txt", inputs,
+        exec_space{}, *particles, center );
+
+    // ====================================================
     //                   Simulation run
     // ====================================================
     cabana_pd->init();
-    cabana_pd->run( bc );
+    cabana_pd->run( bc, output );
 }
 
 // Initialize MPI+Kokkos.
