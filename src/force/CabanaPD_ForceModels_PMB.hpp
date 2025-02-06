@@ -224,8 +224,7 @@ struct ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
     // Fused density update using plastic dilatation.
     KOKKOS_INLINE_FUNCTION auto dilatation( const int i, const double s,
                                             const double xi, const double vol,
-                                            const double m_i,
-                                            const double theta_i_n ) const
+                                            const double ) const
     {
         double theta_i = coeff * s * xi * vol;
 
