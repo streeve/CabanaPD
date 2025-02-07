@@ -296,11 +296,9 @@ class Force<MemorySpace,
             phi( i ) = 1 - phi_i / vol_H_i;
         };
 
-        double strain_energy = 0.0;
-        Kokkos::RangePolicy<exec_space> policy( particles.frozenOffset(),
-                                                particles.localOffset() );
-        Kokkos::parallel_reduce( "CabanaPD::ForcePMBDamage::computeEnergyFull",
-                                 policy, energy_full, strain_energy );
+        double strain_energy = neighbor.reduceLinear(
+            exec_space{}, energy_full, particles,
+            "CabanaPD::ForcePMBDamage::computeEnergyFull" );
 
         _energy_timer.stop();
         return strain_energy;
