@@ -20,7 +20,7 @@
 
 #include <CabanaPD_Constants.hpp>
 
-// Generate a unidirectional fiber-reinforced composite geometry
+// Generate a unidirectional fiber-reinforced composite geometry.
 void fiberReinforcedCompositeExample( const std::string filename )
 {
     // ====================================================
@@ -37,12 +37,26 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // ====================================================
     //                Material parameters
     // ====================================================
-    double rho0 = inputs["density"];
-    double E = inputs["elastic_modulus"];
-    double nu = 1.0 / 3.0;
-    double K = E / ( 3.0 * ( 1.0 - 2.0 * nu ) );
-    double G0 = inputs["fracture_energy"];
-    // double G = E / ( 2.0 * ( 1.0 + nu ) ); // Only for LPS.
+
+    // std::array<double, 2> density = inputs["density"];
+    std::array<double, 2> density = inputs["density_temp"];
+
+    // Matrix material
+    double rho0_m = inputs["density_temp"][0];
+    double E_m = inputs["elastic_modulus_temp"][0];
+    double nu_m = 1.0 / 3.0;
+    double K_m = E_m / ( 3.0 * ( 1.0 - 2.0 * nu_m ) );
+    double G0_m = inputs["fracture_energy"][0];
+    // double G_m = E_m / ( 2.0 * ( 1.0 + nu_m ) ); // Only for LPS.
+
+    // Fiber material
+    double rho0_f = inputs["density_temp"][1];
+    double E_f = inputs["elastic_modulus_temp"][1];
+    double nu_f = 1.0 / 3.0;
+    double K_f = E_f / ( 3.0 * ( 1.0 - 2.0 * nu_f ) );
+    double G0_f = inputs["fracture_energy"][1];
+    // double G_f = E_f / ( 2.0 * ( 1.0 + nu_f ) ); // Only for LPS.
+
     double delta = inputs["horizon"];
     delta += 1e-10;
 
@@ -60,16 +74,19 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    using model_type1 = CabanaPD::ForceModel<CabanaPD::PMB>;
-    model_type1 force_model1( delta, K, G0 );
-    using model_type2 = CabanaPD::ForceModel<CabanaPD::LinearPMB>;
-    model_type2 force_model2( delta, K / 10.0, G0 / 10.0 );
+    // Matrix material
+    using model_matrix = CabanaPD::ForceModel<CabanaPD::PMB>;
+    model_matrix force_model_matrix( delta, K_m, G0_m );
+
+    // Fiber material
+    using model_fiber = CabanaPD::ForceModel<CabanaPD::PMB>;
+    model_fiber force_model_fiber( delta, K_f, G0_f );
 
     // ====================================================
     //                 Particle generation
     // ====================================================
     // Does not set displacements, velocities, etc.
-    auto particles = CabanaPD::createParticles<memory_space, model_type2>(
+    auto particles = CabanaPD::createParticles<memory_space, model_fiber>(
         exec_space(), low_corner, high_corner, num_cells, halo_width );
 
     // ====================================================
@@ -86,6 +103,9 @@ void fiberReinforcedCompositeExample( const std::string filename )
     double Vf = inputs["fiber_volume_fraction"];
     double Df = inputs["fiber_diameter"];
     std::vector<double> stacking_sequence = inputs["stacking_sequence"];
+    // std::vector<double> stacking_vector = inputs["stacking_sequence"];
+    // Kokkos::View<double*, memory_space> stacking_sequence(
+    // stacking_vector.data() );
 
     // Fiber radius
     double Rf = 0.5 * Df;
@@ -140,23 +160,21 @@ void fiberReinforcedCompositeExample( const std::string filename )
 
     auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
-        // Density
-        rho( pid ) = rho0;
-
         // Particle position
         double xi = x( pid, 0 );
         double yi = x( pid, 1 );
         double zi = x( pid, 2 );
 
         // Find ply number of particle (counting from 0)
-        double nply = std::floor( ( zi - low_corner[2] ) / dzply );
+        int nply = Kokkos::floor( ( zi - low_corner[2] ) / dzply );
 
         // Ply fiber orientation (in radians)
         double theta = stacking_sequence[nply] * CabanaPD::pi / 180;
+        // double theta = stacking_sequence(nply) * CabanaPD::pi / 180;
 
         // Translate then rotate y-coordinate of particle in XY-plane
-        double yinew =
-            -std::sin( theta ) * ( xi - Xc ) + std::cos( theta ) * ( yi - Yc );
+        double yinew = -Kokkos::sin( theta ) * ( xi - Xc ) +
+                       Kokkos::cos( theta ) * ( yi - Yc );
 
         // Find center of ply in z-direction (recall first ply has nply = 0)
         double Zply_bot = low_corner[2] + nply * dzply;
@@ -167,15 +185,25 @@ void fiberReinforcedCompositeExample( const std::string filename )
         double zinew = zi - Zcply;
 
         // Find nearest fiber grid center point in YZ plane
-        double Iyf = std::floor( yinew / dyf );
-        double Izf = std::floor( zinew / dzf );
+        double Iyf = Kokkos::floor( yinew / dyf );
+        double Izf = Kokkos::floor( zinew / dzf );
         double YI = 0.5 * dyf + dyf * Iyf;
         double ZI = 0.5 * dzf + dzf * Izf;
 
         // Check if point belongs to fiber
         if ( ( yinew - YI ) * ( yinew - YI ) + ( zinew - ZI ) * ( zinew - ZI ) <
              Rf * Rf + 1e-8 )
+        {
+            // Material type
             type( pid ) = 1;
+            // Density
+            rho( pid ) = rho0_f;
+        }
+        else
+        {
+            // Density
+            rho( pid ) = rho0_m;
+        }
     };
     particles->updateParticles( exec_space{}, init_functor );
 
@@ -183,7 +211,8 @@ void fiberReinforcedCompositeExample( const std::string filename )
     //                   Create solver
     // ====================================================
     auto models = CabanaPD::createMultiForceModel(
-        *particles, CabanaPD::AverageTag{}, force_model1, force_model2 );
+        *particles, CabanaPD::AverageTag{}, force_model_matrix,
+        force_model_fiber );
     auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
         inputs, particles, models );
 
