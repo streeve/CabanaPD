@@ -186,12 +186,13 @@ class SolverNoFracture
         }
 
         // Purposely delay creating initial contact ghosts until after reference
-        // neighbor list.
-        if constexpr ( is_contact<contact_model_type>::value )
+        // neighbor list. Needed for DEM or PD+contact.
+        if constexpr ( is_contact<force_model_type>::value ||
+                       is_contact<contact_model_type>::value )
             contact_comm = std::make_shared<contact_comm_type>( *particles );
 
         std::cout << particles->numLocal() << " " << particles->numGhost()
-                  << particles->numC << std::endl;
+                  << " " << particles->numContactGhost() << std::endl;
 
         print = print_rank();
         if ( print )
@@ -294,6 +295,11 @@ class SolverNoFracture
             if constexpr ( is_temperature_dependent<
                                typename force_model_type::thermal_type>::value )
                 comm->gatherTemperature();
+
+            // Ghosts must be up to date for any contact, DEM or PD+contact.
+            if constexpr ( is_contact<force_model_type>::value ||
+                           is_contact<contact_model_type>::value )
+                contact_comm->gather( *particles );
 
             // Compute internal forces.
             updateForce( max_displacement );
@@ -457,6 +463,18 @@ class SolverNoFracture
                  p_steps_per_sec / comm->mpi_size );
             out.close();
         }
+    }
+
+    template <typename KeepType>
+    void remove( const int num_keep, const KeepType& keep )
+    {
+        // Remove particles based on user View.
+        particles->remove( num_keep, keep );
+        // Recreate comm lists since they're out of date.
+        comm = std::make_shared<comm_type>( *particles );
+        if constexpr ( is_contact<force_model_type>::value ||
+                       is_contact<contact_model_type>::value )
+            contact_comm = std::make_shared<contact_comm_type>( *particles );
     }
 
     int num_steps;
