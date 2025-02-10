@@ -202,15 +202,15 @@ class Inputs
                 K[i] = E[i] / ( 3.0 * ( 1.0 - 2.0 * nu ) );
         }
 
-        // Support for multi-material: find the minimum product for the correct
-        // critical timestep.
-        std::vector<double> K_rho;
+        // Support for multi-material: find the minimum density-bulk modulus
+        // ratio for the correct critical timestep.
+        std::vector<double> rho_over_K;
         std::vector<double> rho = inputs["density"]["value"];
         for ( std::size_t i = 0; i < rho.size(); i++ )
-            K_rho[i] = K[i] * rho[i];
-        min_index = std::distance(
-            std::begin( K_rho ),
-            std::min_element( std::begin( K_rho ), std::end( K_rho ) ) );
+            rho_over_K[i] = rho[i] / K[i];
+        min_index = std::distance( std::begin( rho_over_K ),
+                                   std::min_element( std::begin( rho_over_K ),
+                                                     std::end( rho_over_K ) ) );
         auto min_K = K[min_index];
         auto min_rho = rho[min_index];
 
