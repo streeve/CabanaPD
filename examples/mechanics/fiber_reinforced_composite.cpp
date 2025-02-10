@@ -38,8 +38,9 @@ void fiberReinforcedCompositeExample( const std::string filename )
     //                Material parameters
     // ====================================================
 
-    // std::array<double, 2> density = inputs["density"];
-    std::array<double, 2> density = inputs["density_temp"];
+    // FIXME: We need to modify CabanaPD_Inputs.hpp, so that we can use arrays
+    // for density and elastic_modulus in the JSON file.
+    //        We use "density_temp" and "elastic_modulus_temp" as placeholders.
 
     // Matrix material
     double rho0_m = inputs["density_temp"][0];
@@ -133,13 +134,13 @@ void fiberReinforcedCompositeExample( const std::string filename )
     double Af = Ly * Lz / Nf;
     // Number of fibers in y-direction (assume Af is a square area)
     int Nfy = std::round( Ly / std::sqrt( Af ) );
-    // Ensure Nfy is even
+    // Ensure Nfy is even.
     if ( Nfy % 2 == 1 )
         Nfy = Nfy + 1;
 
     // Number of fibers in z-direction
     int Nfz = std::round( Nf / Nfy );
-    // Ensure number of fibers in z-direction within each ply is even
+    // Ensure number of fibers in z-direction within each ply is even.
     int nfz = std::round( Nfz / Nplies );
     if ( nfz % 2 == 0 )
     {
@@ -154,7 +155,7 @@ void fiberReinforcedCompositeExample( const std::string filename )
     double dyf = Ly / Nfy;
     double dzf = Lz / Nfz;
 
-    // Domain center
+    // Domain center x- and y-coordinates
     double Xc = 0.5 * ( low_corner[0] + high_corner[0] );
     double Yc = 0.5 * ( low_corner[1] + high_corner[1] );
 
@@ -165,26 +166,27 @@ void fiberReinforcedCompositeExample( const std::string filename )
         double yi = x( pid, 1 );
         double zi = x( pid, 2 );
 
-        // Find ply number of particle (counting from 0)
+        // Find ply number of particle (counting from 0).
         int nply = Kokkos::floor( ( zi - low_corner[2] ) / dzply );
 
         // Ply fiber orientation (in radians)
         double theta = stacking_sequence[nply] * CabanaPD::pi / 180;
         // double theta = stacking_sequence(nply) * CabanaPD::pi / 180;
 
-        // Translate then rotate y-coordinate of particle in XY-plane
+        // Translate then rotate (clockwise) y-coordinate of particle in
+        // XY-plane.
         double yinew = -Kokkos::sin( theta ) * ( xi - Xc ) +
                        Kokkos::cos( theta ) * ( yi - Yc );
 
-        // Find center of ply in z-direction (recall first ply has nply = 0)
+        // Find center of ply in z-direction (first ply has nply = 0).
         double Zply_bot = low_corner[2] + nply * dzply;
         double Zply_top = Zply_bot + dzply;
         double Zcply = 0.5 * ( Zply_bot + Zply_top );
 
-        // Translate point in z-direction
+        // Translate point in z-direction.
         double zinew = zi - Zcply;
 
-        // Find nearest fiber grid center point in YZ plane
+        // Find nearest fiber grid center point in YZ plane.
         double Iyf = Kokkos::floor( yinew / dyf );
         double Izf = Kokkos::floor( zinew / dzf );
         double YI = 0.5 * dyf + dyf * Iyf;
@@ -194,14 +196,14 @@ void fiberReinforcedCompositeExample( const std::string filename )
         if ( ( yinew - YI ) * ( yinew - YI ) + ( zinew - ZI ) * ( zinew - ZI ) <
              Rf * Rf + 1e-8 )
         {
-            // Material type
+            // Material type: 1 = fiber (default is 0 = matrix)
             type( pid ) = 1;
-            // Density
+            // Density (fiber)
             rho( pid ) = rho0_f;
         }
         else
         {
-            // Density
+            // Density (matrix)
             rho( pid ) = rho0_m;
         }
     };
