@@ -42,19 +42,22 @@ void fiberReinforcedCompositeExample( const std::string filename )
     double E_m = inputs["elastic_modulus"][0];
     double nu_m = 1.0 / 3.0;
     double K_m = E_m / ( 3.0 * ( 1.0 - 2.0 * nu_m ) );
-    double G0_m = inputs["fracture_energy"][0];
+    double G0_m = inputs["fracture_energy_matrix"];
     // double G_m = E_m / ( 2.0 * ( 1.0 + nu_m ) ); // Only for LPS.
+
+    // Read horizon first because it is needed to compute the fiber fracture
+    // energy.
+    double delta = inputs["horizon"];
+    delta += 1e-10;
 
     // Fiber material
     double rho0_f = inputs["density"][1];
     double E_f = inputs["elastic_modulus"][1];
     double nu_f = 1.0 / 3.0;
     double K_f = E_f / ( 3.0 * ( 1.0 - 2.0 * nu_f ) );
-    double G0_f = inputs["fracture_energy"][1];
+    double sc_f = inputs["critical_stretch_fiber"];
+    double G0_f = 9 * K_f * delta * ( sc_f * sc_f ) / 5;
     // double G_f = E_f / ( 2.0 * ( 1.0 + nu_f ) ); // Only for LPS.
-
-    double delta = inputs["horizon"];
-    delta += 1e-10;
 
     // ====================================================
     //                  Discretization
@@ -201,8 +204,6 @@ void fiberReinforcedCompositeExample( const std::string filename )
     };
     particles->updateParticles( exec_space{}, init_functor );
 
-    std::cout << "========== OK 1 ===========" << std::endl;
-
     // ====================================================
     //                   Create solver
     // ====================================================
@@ -211,8 +212,6 @@ void fiberReinforcedCompositeExample( const std::string filename )
         force_model_fiber );
     auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
         inputs, particles, models );
-
-    std::cout << "========== OK 2 ===========" << std::endl;
 
     // ====================================================
     //                   Simulation run
