@@ -103,10 +103,9 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // Fiber-reinforced composite geometry parameters
     double Vf = inputs["fiber_volume_fraction"];
     double Df = inputs["fiber_diameter"];
-    std::vector<double> stacking_sequence = inputs["stacking_sequence"];
-    // std::vector<double> stacking_vector = inputs["stacking_sequence"];
-    // Kokkos::View<double*, memory_space> stacking_sequence(
-    // stacking_vector.data() );
+    std::vector<double> stacking_vector = inputs["stacking_sequence"];
+    Kokkos::View<double*, memory_space> stacking_sequence(
+        stacking_vector.data(), stacking_vector.size() );
 
     // Fiber radius
     double Rf = 0.5 * Df;
@@ -170,8 +169,7 @@ void fiberReinforcedCompositeExample( const std::string filename )
         int nply = Kokkos::floor( ( zi - low_corner[2] ) / dzply );
 
         // Ply fiber orientation (in radians)
-        double theta = stacking_sequence[nply] * CabanaPD::pi / 180;
-        // double theta = stacking_sequence(nply) * CabanaPD::pi / 180;
+        double theta = stacking_sequence( nply ) * CabanaPD::pi / 180;
 
         // Translate then rotate (clockwise) y-coordinate of particle in
         // XY-plane.
