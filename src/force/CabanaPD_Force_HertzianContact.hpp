@@ -135,11 +135,14 @@ class Force<MemorySpace, HertzianModel> : public BaseForceContact<MemorySpace>
         return 0.0;
     }
 
+    auto timeNeighbor() { return _neigh_timer.time(); }
+
   protected:
     HertzianModel _model;
     using base_type::_half_neigh;
     using base_type::_neigh_list;
     using base_type::_timer;
+    Timer _neigh_timer;
 };
 
 } // namespace CabanaPD

@@ -240,6 +240,41 @@ class Force<MemorySpace, BaseForceModel>
     auto timeNeighbor() { return 0.0; };
 };
 
+template <class MemorySpace>
+class BaseFracture
+{
+  protected:
+    using memory_space = MemorySpace;
+    using NeighborView = typename Kokkos::View<int**, memory_space>;
+    NeighborView _mu;
+
+  public:
+    BaseFracture( const int local_particles, const int max_neighbors )
+    {
+        // Create View to track broken bonds.
+        // TODO: this could be optimized to ignore frozen particle bonds.
+        _mu = NeighborView(
+            Kokkos::ViewAllocateWithoutInitializing( "broken_bonds" ),
+            local_particles, max_neighbors );
+        Kokkos::deep_copy( _mu, 1 );
+    }
+
+    BaseFracture( NeighborView mu )
+        : _mu( mu )
+    {
+    }
+
+    template <class ExecSpace, class ParticleType, class PrenotchType,
+              class NeighborList>
+    void prenotch( ExecSpace exec_space, const ParticleType& particles,
+                   PrenotchType& prenotch, NeighborList& neigh_list )
+    {
+        prenotch.create( exec_space, _mu, particles, neigh_list );
+    }
+
+    auto getBrokenBonds() const { return _mu; }
+};
+
 /******************************************************************************
   Force free functions.
 ******************************************************************************/

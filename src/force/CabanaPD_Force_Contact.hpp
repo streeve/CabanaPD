@@ -179,11 +179,14 @@ class Force<MemorySpace, NormalRepulsionModel>
         return 0.0;
     }
 
+    auto timeNeighbor() { return _neigh_timer.time(); }
+
   protected:
     NormalRepulsionModel _model;
     using base_type::_half_neigh;
     using base_type::_neigh_list;
     using base_type::_timer;
+    Timer _neigh_timer;
 
     double mesh_max[3];
     double mesh_min[3];
