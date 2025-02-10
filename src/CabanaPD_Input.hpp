@@ -198,6 +198,10 @@ class Inputs
             std::vector<double> E = inputs["elastic_modulus"]["value"];
             // This is only exact for bond-based (PMB).
             double nu = 0.25;
+
+            // Resize K to match the size of E
+            K.resize( E.size() );
+
             for ( std::size_t i = 0; i < E.size(); i++ )
                 K[i] = E[i] / ( 3.0 * ( 1.0 - 2.0 * nu ) );
         }
