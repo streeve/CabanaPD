@@ -201,6 +201,8 @@ void fiberReinforcedCompositeExample( const std::string filename )
     };
     particles->updateParticles( exec_space{}, init_functor );
 
+    std::cout << "========== OK 1 ===========" << std::endl;
+
     // ====================================================
     //                   Create solver
     // ====================================================
@@ -209,6 +211,8 @@ void fiberReinforcedCompositeExample( const std::string filename )
         force_model_fiber );
     auto cabana_pd = CabanaPD::createSolverFracture<memory_space>(
         inputs, particles, models );
+
+    std::cout << "========== OK 2 ===========" << std::endl;
 
     // ====================================================
     //                   Simulation run
