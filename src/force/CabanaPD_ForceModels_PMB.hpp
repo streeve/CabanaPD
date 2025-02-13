@@ -176,66 +176,6 @@ struct ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
     }
 };
 
-template <typename DensityType>
-struct ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
-                  TemperatureIndependent, DynamicDensity, DensityType>
-    : public ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
-                        TemperatureIndependent,
-                        typename DensityType::memory_space>,
-      ForceModel<LPS, Elastic, Fracture, TemperatureIndependent>
-{
-    using base_type =
-        ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
-                   TemperatureIndependent, typename DensityType::memory_space>;
-    using lps_base_type =
-        ForceModel<LPS, Elastic, Fracture, TemperatureIndependent>;
-    using base_model = typename base_type::base_model;
-    using fracture_type = typename base_type::fracture_type;
-    using mechanics_type = typename base_type::mechanics_type;
-    using thermal_type = typename base_type::thermal_type;
-
-    using base_type::_s_p;
-    using base_type::bond_break_coeff;
-    using base_type::c;
-    using base_type::delta;
-    using base_type::G0;
-    using base_type::K;
-    using base_type::s0;
-    using base_type::s_Y;
-    double coeff;
-
-    double rho0;
-    DensityType rho;
-
-    // Define which base functions to use.
-    using base_type::energy;
-    using base_type::forceCoeff;
-
-    ForceModel( const double delta, const double K, const double G0,
-                const double sigma_y, const double _rho0,
-                const DensityType _rho )
-        : base_type( delta, K, G0, sigma_y )
-        , rho0( _rho0 )
-        , rho( _rho )
-    {
-        coeff = 3.0 / pi / delta / delta / delta / delta;
-    }
-
-    // Fused density update using plastic dilatation.
-    KOKKOS_INLINE_FUNCTION auto dilatation( const int i, const double s,
-                                            const double xi, const double vol,
-                                            const double ) const
-    {
-        double theta_i = coeff * s * xi * vol;
-
-        // Update density using updated dilatation.
-        // Note that this assumes zero initial plastic dilatation.
-        rho( i ) = rho0 * Kokkos::exp( theta_i ); // exp(theta_i - theta_i_0)
-
-        return theta_i;
-    }
-};
-
 template <>
 struct ForceModel<LinearPMB, Elastic, NoFracture, TemperatureIndependent>
     : public ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
@@ -316,18 +256,6 @@ auto createForceModel( ModelType, ElasticPerfectlyPlastic, ParticleType,
     return ForceModel<ModelType, ElasticPerfectlyPlastic, Fracture,
                       TemperatureIndependent, memory_space>( delta, K, G0,
                                                              sigma_y );
-}
-
-template <typename ParticleType>
-auto createForceModel( PMB, ElasticPerfectlyPlastic, ParticleType particles,
-                       const double delta, const double K, const double G0,
-                       const double sigma_y, const double rho0 )
-{
-    auto rho = particles.sliceDensity();
-    using rho_type = decltype( rho );
-    return ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
-                      TemperatureDependent, DynamicDensity, rho_type>(
-        delta, K, G0, sigma_y, rho0, rho );
 }
 
 // Default to Fracture.

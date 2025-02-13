@@ -57,7 +57,7 @@ void compactTensionTestExample( const std::string filename )
     // ====================================================
     //                Force model type
     // ====================================================
-    using model_type = CabanaPD::PMB;
+    using model_type = CabanaPD::LPS;
     using thermal_type = CabanaPD::TemperatureIndependent;
     using mechanics_type = CabanaPD::ElasticPerfectlyPlastic;
 
@@ -179,7 +179,7 @@ void compactTensionTestExample( const std::string filename )
     //                    Force model
     // ====================================================
     auto force_model = CabanaPD::createForceModel(
-        model_type{}, mechanics_type{}, *particles, delta, K, G0, sigma_y );
+        model_type{}, mechanics_type{}, *particles, delta, K, G, G0, sigma_y );
 
     // ====================================================
     //                   Create solver
