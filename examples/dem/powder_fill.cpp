@@ -166,6 +166,45 @@ void powderSettlingExample( const std::string filename )
     // ====================================================
     cabana_pd->update();
     cabana_pd->run( gravity );
+
+    // ====================================================
+    //                   Made up p2g/g2p
+    // ====================================================
+    // Do this first to get the coarser grid.
+    std::array<int, 3> downsample{ num_cells[0] / 2, num_cells[1] / 2,
+                                   num_cells[2] / 2 };
+    auto pd_particles = CabanaPD::createParticles<memory_space, model_type>(
+        exec_space(), low_corner, high_corner, downsample, halo_width,
+        CabanaPD::BaseOutput{}, create_powder );
+
+    // Interpolate to the background grid.
+    auto powder_positions = cabana_pd->particles->sliceCurrentPosition();
+    auto density = cabana_pd->particles->sliceDensity();
+    auto num_particles = cabana_pd->particles->localOffset();
+    auto scalar_p2g = Cabana::Grid::createScalarValueP2G( density, 0.125 );
+    auto scalar_layout = Cabana::Grid::createArrayLayout(
+        pd_particles->local_grid, 1, Cabana::Grid::Node() );
+    auto scalar_grid_field = Cabana::Grid::createArray<double, memory_space>(
+        "scalar_grid_field", scalar_layout );
+    auto scalar_halo = Cabana::Grid::createHalo(
+        Cabana::Grid::NodeHaloPattern<3>(), halo_width, *scalar_grid_field );
+    Cabana::Grid::p2g( scalar_p2g, powder_positions, num_particles,
+                       Cabana::Grid::Spline<0>(), *scalar_halo,
+                       *scalar_grid_field );
+    Cabana::Grid::Experimental::BovWriter::writeTimeStep(
+        "grid_density", 0, 0.0, *scalar_grid_field );
+
+    // Now interpolate to what would be the consolidation particles.
+    auto consolidation_positions = pd_particles->sliceCurrentPosition();
+    auto consolidation_density = pd_particles->sliceDensity();
+    auto pd_num_particles = pd_particles->localOffset();
+    auto scalar_value_g2p =
+        Cabana::Grid::createScalarValueG2P( consolidation_density, 1.0 );
+    Cabana::Grid::g2p( *scalar_grid_field, *scalar_halo,
+                       consolidation_positions, pd_num_particles,
+                       Cabana::Grid::Spline<0>(), scalar_value_g2p );
+    std::string name = "particles_pd";
+    pd_particles->output( name, 0, 0.0, true );
 }
 
 // Initialize MPI+Kokkos.

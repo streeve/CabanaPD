@@ -108,7 +108,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     // no-fail.
     using int_type = Cabana::MemberTypes<int>;
     // v, rho, type.
-    using other_types = Cabana::MemberTypes<double[dim], double>;
+    using other_types = Cabana::MemberTypes<double[dim], double, int>;
 
     // FIXME: add vector length.
     // FIXME: enable variable aosoa.
@@ -333,7 +333,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         auto x = sliceReferencePosition();
         auto v = sliceVelocity();
         auto f = sliceForce();
-        // auto type = sliceType();
+        auto type = sliceType();
         auto rho = sliceDensity();
         auto u = sliceDisplacement();
         auto vol = sliceVolume();
@@ -364,7 +364,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
             vol( pid ) = pv;
 
             // FIXME: hardcoded.
-            // type( pid ) = 0;
+            type( pid ) = 1;
             rho( pid ) = 1.0;
 
             return create;
@@ -400,7 +400,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         auto p_vol = sliceVolume();
         auto v = sliceVelocity();
         auto f = sliceForce();
-        // auto type = sliceType();
+        auto type = sliceType();
         auto rho = sliceDensity();
         auto u = sliceDisplacement();
         auto u_neigh = sliceDisplacementNeighborBuild();
@@ -425,7 +425,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
                     v( pid, d ) = 0.0;
                     f( pid, d ) = 0.0;
                 }
-                // type( pid ) = 0;
+                type( pid ) = 0;
                 rho( pid ) = 1.0;
             } );
         Kokkos::fence();
@@ -531,9 +531,8 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     {
         return Cabana::slice<1>( _aosoa_other, "density" );
     }
-    // auto sliceType() { return Cabana::slice<2>( _aosoa_other, "type" ); }
-    // auto sliceType() const { return Cabana::slice<2>( _aosoa_other, "type" );
-    // }
+    auto sliceType() { return Cabana::slice<2>( _aosoa_other, "type" ); }
+    auto sliceType() const { return Cabana::slice<2>( _aosoa_other, "type" ); }
 
     auto sliceNoFail()
     {
@@ -641,13 +640,25 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
                  [[maybe_unused]] const bool use_reference,
                  [[maybe_unused]] OtherFields&&... other )
     {
+        output( "particles", output_step, output_time, use_reference,
+                other... );
+    }
+
+    // TODO: enable ignoring frozen particles.
+    template <typename... OtherFields>
+    void output( [[maybe_unused]] const std::string name,
+                 [[maybe_unused]] const int output_step,
+                 [[maybe_unused]] const double output_time,
+                 [[maybe_unused]] const bool use_reference,
+                 [[maybe_unused]] OtherFields&&... other )
+    {
         _output_timer.start();
 
 #ifdef Cabana_ENABLE_HDF5
         Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
-            h5_config, "particles", MPI_COMM_WORLD, output_step, output_time,
+            h5_config, name, MPI_COMM_WORLD, output_step, output_time,
             localOffset(), getPosition( use_reference ), sliceForce(),
-            sliceDisplacement(), sliceVelocity(),
+            sliceDisplacement(), sliceVelocity(), sliceDensity(), sliceType(),
             std::forward<OtherFields>( other )... );
 #else
 #ifdef Cabana_ENABLE_SILO
