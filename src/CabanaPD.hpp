@@ -22,6 +22,7 @@
 #include <CabanaPD_ForceModels.hpp>
 #include <CabanaPD_Input.hpp>
 #include <CabanaPD_Integrate.hpp>
+#include <CabanaPD_Interpolation.hpp>
 #include <CabanaPD_Output.hpp>
 #include <CabanaPD_Particles.hpp>
 #include <CabanaPD_Prenotch.hpp>
