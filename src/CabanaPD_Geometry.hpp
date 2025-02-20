@@ -47,7 +47,8 @@ struct Region
     KOKKOS_INLINE_FUNCTION bool inside( const PositionType& x,
                                         const int pid ) const
     {
-        return user( x, pid );
+        double xp[3] = { x( pid, 0 ), x( pid, 1 ), x( pid, 2 ) };
+        return user( pid, xp );
     }
 };
 
