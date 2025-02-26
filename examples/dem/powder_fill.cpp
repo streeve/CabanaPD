@@ -64,11 +64,9 @@ void powderSettlingExample( const std::string filename )
     // ====================================================
     //            Custom particle initialization
     // ====================================================
-    double d_out = inputs["outer_cylinder_diameter"];
-    double d_in = inputs["inner_cylinder_diameter"];
-    double Rout = 0.5 * d_out;
-    double Rin = 0.5 * d_in;
-    double Wall_th = inputs["wall_thickness"];
+    double diameter = inputs["cylinder_diameter"];
+    double cylinder_radius = 0.5 * diameter;
+    double wall_thickness = inputs["wall_thickness"];
 
     // Create container.
     auto create_container = KOKKOS_LAMBDA( const int, const double x[3] )
@@ -76,12 +74,13 @@ void powderSettlingExample( const std::string filename )
         double rsq = x[0] * x[0] + x[1] * x[1];
 
         // Convert domain block into hollow cylinder
-        if ( rsq > Rout * Rout || rsq < ( Rin - Wall_th ) * ( Rin - Wall_th ) )
+        if ( rsq > cylinder_radius * cylinder_radius )
             return false;
         // Leave remaining bottom wall particles and remove particles in between
         // inner and outer cylinder
-        if ( x[2] > low_corner[2] + Wall_th && rsq > Rin * Rin &&
-             rsq < ( Rout - Wall_th ) * ( Rout - Wall_th ) )
+        if ( x[2] > low_corner[2] + wall_thickness &&
+             rsq < ( cylinder_radius - wall_thickness ) *
+                       ( cylinder_radius - wall_thickness ) )
             return false;
 
         return true;
@@ -98,8 +97,9 @@ void powderSettlingExample( const std::string filename )
         double rsq = x[0] * x[0] + x[1] * x[1];
 
         // Only create particles in between inner and outer cylinder.
-        if ( x[2] > min_height && rsq > ( Rin ) * ( Rin ) &&
-             rsq < ( Rout - Wall_th ) * ( Rout - Wall_th ) )
+        if ( x[2] > min_height &&
+             rsq < ( cylinder_radius - wall_thickness ) *
+                       ( cylinder_radius - wall_thickness ) )
             return true;
 
         return false;
