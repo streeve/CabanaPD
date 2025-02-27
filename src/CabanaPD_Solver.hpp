@@ -145,7 +145,8 @@ class Solver
         integrator = std::make_shared<integrator_type>( dt );
 
         // Add ghosts from other MPI ranks.
-        comm = std::make_shared<comm_type>( *particles );
+        if constexpr ( !is_contact<force_model_type>::value )
+            comm = std::make_shared<comm_type>( *particles );
 
         // Update temperature ghost size if needed.
         if constexpr ( is_temperature_dependent<
@@ -215,7 +216,8 @@ class Solver
                            typename force_model_type::fracture_type>::value )
         {
             force->computeWeightedVolume( *particles, neigh_iter_tag{} );
-            comm->gatherWeightedVolume();
+            if constexpr ( !is_contact<force_model_type>::value )
+                comm->gatherWeightedVolume();
         }
         // Compute initial internal forces and energy.
         updateForce();
@@ -311,7 +313,8 @@ class Solver
             integrator->initialHalfStep( *particles );
 
             // Update ghost particles.
-            comm->gatherDisplacement();
+            if constexpr ( !is_contact<force_model_type>::value )
+                comm->gatherDisplacement();
 
             if constexpr ( is_heat_transfer<
                                typename force_model_type::thermal_type>::value )
@@ -368,7 +371,8 @@ class Solver
             integrator->initialHalfStep( *particles );
 
             // Update ghost particles.
-            comm->gatherDisplacement();
+            if constexpr ( !is_contact<force_model_type>::value )
+                comm->gatherDisplacement();
 
             // Compute internal forces.
             updateForce();
@@ -400,11 +404,13 @@ class Solver
                            typename force_model_type::fracture_type>::value )
         {
             force->computeWeightedVolume( *particles, neigh_iter_tag{} );
-            comm->gatherWeightedVolume();
+            if constexpr ( !is_contact<force_model_type>::value )
+                comm->gatherWeightedVolume();
         }
         // Compute and communicate dilatation for LPS (does nothing for PMB).
         force->computeDilatation( *particles, neigh_iter_tag{} );
-        comm->gatherDilatation();
+        if constexpr ( !is_contact<force_model_type>::value )
+            comm->gatherDilatation();
 
         // Compute internal forces.
         computeForce( *force, *particles, neigh_iter_tag{} );
@@ -432,8 +438,11 @@ class Solver
     {
         // Output after construction and initial forces.
         std::ofstream out( output_file, std::ofstream::app );
+        double comm_time = 0.0;
+        if constexpr ( !is_contact<force_model_type>::value )
+            comm_time = comm->timeInit();
         _init_time += _init_timer.time() + _neighbor_timer.time() +
-                      particles->timeInit() + comm->timeInit() +
+                      particles->timeInit() + comm_time +
                       integrator->timeInit() + boundary_init_time;
         log( out, "Init-Time(s): ", _init_time );
         log( out, "Init-Neighbor-Time(s): ", _neighbor_timer.time(), "\n" );
@@ -452,7 +461,9 @@ class Solver
                  std::setprecision( 2 ), step * dt );
 
             double step_time = _step_timer.time();
-            double comm_time = comm->time();
+            double comm_time = 0.0;
+            if constexpr ( !is_contact<force_model_type>::value )
+                comm_time = comm->time();
             double integrate_time = integrator->time();
             double force_time = force->time();
             double neigh_time = force->neighTime();
@@ -512,7 +523,8 @@ class Solver
         // Remove particles based on user View.
         particles->remove( num_keep, keep );
         // Recreate comm lists since they're out of date.
-        comm = std::make_shared<comm_type>( *particles );
+        if constexpr ( !is_contact<force_model_type>::value )
+            comm = std::make_shared<comm_type>( *particles );
         if constexpr ( is_contact<force_model_type>::value ||
                        is_contact<contact_model_type>::value )
             contact_comm = std::make_shared<contact_comm_type>( *particles );
