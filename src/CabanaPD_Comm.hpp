@@ -47,6 +47,8 @@ struct HaloIds
     using coord_type = Kokkos::Array<double, num_space_dim>;
     Kokkos::Array<coord_type, topology_size> _min_coord;
     Kokkos::Array<coord_type, topology_size> _max_coord;
+    coord_type _min_ghost;
+    coord_type _max_ghost;
 
     Kokkos::Array<int, topology_size> _device_topology;
 
@@ -91,10 +93,21 @@ struct HaloIds
         const auto& local_mesh =
             Cabana::Grid::createLocalMesh<Kokkos::HostSpace>( local_grid );
 
-        Kokkos::Array<Cabana::Grid::IndexSpace<4>, topology_size> index_spaces;
+        // This can be used to check whether a particle is outside the default
+        // ghosted region.
+        auto ghost_space =
+            local_grid.indexSpace( Cabana::Grid::Ghost(), Cabana::Grid::Cell(),
+                                   Cabana::Grid::Local() );
+        auto min_ind = ghost_space.min();
+        auto max_ind = ghost_space.max();
+        local_mesh.coordinates( Cabana::Grid::Node(), min_ind.data(),
+                                _min_ghost.data() );
+        local_mesh.coordinates( Cabana::Grid::Node(), max_ind.data(),
+                                _max_ghost.data() );
 
         // Store all neighboring shared index space mesh bounds so we only have
         // to launch one kernel during the actual ghost search.
+        Kokkos::Array<Cabana::Grid::IndexSpace<4>, topology_size> index_spaces;
         int n = 0;
         for ( int k = -1; k < 2; ++k )
         {
@@ -141,8 +154,6 @@ struct HaloIds
         auto destinations = _destinations;
         auto ids = _ids;
         auto device_topology = _device_topology;
-        auto min_coord = _min_coord;
-        auto max_coord = _max_coord;
 
         // Look for ghosts within the halo width of the local mesh boundary,
         // potentially for each of the 26 neighbors cells.
@@ -158,32 +169,19 @@ struct HaloIds
                     // Check the if particle is both in the owned
                     // space and the ghosted space of this neighbor
                     // (ignore the current cell).
-                    bool within_halo = false;
-                    if ( positions( p, 0 ) > min_coord[n][0] &&
-                         positions( p, 0 ) < max_coord[n][0] &&
-                         positions( p, 1 ) > min_coord[n][1] &&
-                         positions( p, 1 ) < max_coord[n][1] &&
-                         positions( p, 2 ) > min_coord[n][2] &&
-                         positions( p, 2 ) < max_coord[n][2] )
-                        within_halo = true;
-                    if ( within_halo )
+                    double px[3] = { positions( p, 0 ), positions( p, 1 ),
+                                     positions( p, 2 ) };
+                    if ( ( *this )( n, px ) || user_functor( n, px ) )
                     {
-                        double px[3] = { positions( p, 0 ), positions( p, 1 ),
-                                         positions( p, 2 ) };
-                        // Let the user restrict to a subset of the boundary.
-                        bool create_ghost = user_functor( p, px );
-                        if ( create_ghost )
+                        const std::size_t sc = send_count()++;
+                        // If the size of the arrays is exceeded,
+                        // keep counting to resize and fill next.
+                        if ( sc < destinations.extent( 0 ) )
                         {
-                            const std::size_t sc = send_count()++;
-                            // If the size of the arrays is exceeded,
-                            // keep counting to resize and fill next.
-                            if ( sc < destinations.extent( 0 ) )
-                            {
-                                // Keep the destination MPI rank.
-                                destinations( sc ) = device_topology[n];
-                                // Keep the particle ID.
-                                ids( sc ) = p;
-                            }
+                            // Keep the destination MPI rank.
+                            destinations( sc ) = device_topology[n];
+                            // Keep the particle ID.
+                            ids( sc ) = p;
                         }
                     }
                 }
@@ -200,12 +198,22 @@ struct HaloIds
         rebuild( positions );
     }
 
+    KOKKOS_INLINE_FUNCTION
+    bool operator()( const int n, const double px[3] )
+    {
+        if ( px[0] > _min_coord[n][0] && px[0] < _max_coord[n][0] &&
+             px[1] > _min_coord[n][1] && px[1] < _max_coord[n][1] &&
+             px[2] > _min_coord[n][2] && px[2] < _max_coord[n][2] )
+            return true;
+        return false;
+    }
+
     template <class PositionSliceType>
     void build( const PositionSliceType& positions )
     {
         auto empty_functor = KOKKOS_LAMBDA( const int, const double[3] )
         {
-            return true;
+            return false;
         };
         build( positions, empty_functor );
     }
@@ -433,6 +441,8 @@ class Comm<ParticleType, Contact, TemperatureIndependent>
             particles.local_grid->globalGrid().comm(),
             particles.referenceOffset(), halo_ids._ids, halo_ids._destinations,
             topology );
+        std::cout << "halo " << halo->numLocal() << " " << halo->numGhost()
+                  << std::endl;
 
         // We use n_ghost here as the "local" halo count because these current
         // frame ghosts are built on top of the existing, static, reference
@@ -463,8 +473,20 @@ class Comm<ParticleType, Contact, TemperatureIndependent>
         // date current position.
         auto y = particles.sliceCurrentPosition();
         // Determine which particles need to be ghosted to neighbors for the
-        // current positions.
-        halo_ids.build( y );
+        // current positions. This includes both the default ghosted region, but
+        // also any particle outside this local rank.
+        auto outside_functor = KOKKOS_LAMBDA( const int, const double px[3] )
+        {
+            if ( px[0] < halo_ids._min_ghost[0] ||
+                 px[0] > halo_ids._max_ghost[0] ||
+                 px[1] < halo_ids._min_ghost[1] ||
+                 px[1] > halo_ids._max_ghost[1] ||
+                 px[2] < halo_ids._min_ghost[2] ||
+                 px[2] > halo_ids._max_ghost[2] )
+                return true;
+            return false;
+        };
+        halo_ids.build( y, outside_functor );
 
         auto topology = Cabana::Grid::getTopology( *particles.local_grid );
         // FIXME: missing a build() interface
@@ -472,6 +494,8 @@ class Comm<ParticleType, Contact, TemperatureIndependent>
             particles.local_grid->globalGrid().comm(),
             particles.referenceOffset(), halo_ids._ids, halo_ids._destinations,
             topology );
+        std::cout << "halo " << halo->numLocal() << " " << halo->numGhost()
+                  << std::endl;
         particles.resize( particles.localOffset(), particles.numGhost(), false,
                           halo->numGhost() );
 
