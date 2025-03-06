@@ -168,6 +168,10 @@ class Solver
         unsigned long long total_neighbors;
         force->getNeighborStatistics( max_neighbors, total_neighbors );
 
+        if constexpr ( is_temperature_dependent<
+                           typename force_model_type::thermal_type>::value )
+            force_model->update( particles->sliceTemperature() );
+
         // Create heat transfer if needed, using the same neighbor list as
         // the mechanics.
         if constexpr ( is_heat_transfer<

@@ -206,10 +206,9 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureDependent, TemperatureType>
     using base_temperature_type::thermalStretch;
 
     ForceModel( const double _delta, const double _K, const double _G0,
-                const TemperatureType _temp, const double _alpha,
-                const double _temp0 = 0.0 )
+                const double _alpha, const double _temp0 = 0.0 )
         : base_type( _delta, _K, _G0 )
-        , base_temperature_type( _temp, _alpha, _temp0 )
+        , base_temperature_type( _alpha, _temp0 )
     {
     }
 
@@ -223,17 +222,6 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureDependent, TemperatureType>
         return r * r >= bond_break_coeff * xi * xi;
     }
 };
-
-template <typename ParticleType>
-auto createForceModel( PMB, Fracture, ParticleType particles,
-                       const double delta, const double K, const double G0,
-                       const double alpha, const double temp0 )
-{
-    auto temp = particles.sliceTemperature();
-    using temp_type = decltype( temp );
-    return ForceModel<PMB, Elastic, Fracture, TemperatureDependent, temp_type>(
-        delta, K, G0, temp, alpha, temp0 );
-}
 
 template <typename TemperatureType>
 struct ForceModel<PMB, Elastic, NoFracture, DynamicTemperature, TemperatureType>

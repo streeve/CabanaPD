@@ -38,19 +38,10 @@ struct BaseTemperatureModel
     // Temperature field
     TemperatureType temperature;
 
-    BaseTemperatureModel(){};
-    BaseTemperatureModel( const TemperatureType _temp, const double _alpha,
-                          const double _temp0 )
+    BaseTemperatureModel( const double _alpha, const double _temp0 )
         : alpha( _alpha )
         , temp0( _temp0 )
         , temperature( _temp ){};
-
-    BaseTemperatureModel( const BaseTemperatureModel& model )
-    {
-        alpha = model.alpha;
-        temp0 = model.temp0;
-        temperature = model.temperature;
-    }
 
     void update( const TemperatureType _temp ) { temperature = _temp; }
 
