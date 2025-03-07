@@ -25,8 +25,8 @@ namespace CabanaPD
 /******************************************************************************
   Normal repulsion forces
 ******************************************************************************/
-template <class MemorySpace>
-class Force<MemorySpace, HertzianModel>
+template <class MemorySpace, class RadiusType>
+class Force<MemorySpace, HertzianModel<RadiusType>>
     : public Force<MemorySpace, BaseForceModel>
 {
   public:
@@ -35,10 +35,11 @@ class Force<MemorySpace, HertzianModel>
 
     template <class ParticleType>
     Force( const bool half_neigh, const ParticleType& particles,
-           const HertzianModel model )
-        : base_type( half_neigh, model.Rc, particles.sliceCurrentPosition(),
-                     particles.frozenOffset(), particles.localOffset(),
-                     particles.ghost_mesh_lo, particles.ghost_mesh_hi )
+           const HertzianModel<RadiusType> model )
+        : base_type( half_neigh, model.r_b, particles.sliceType(),
+                     particles.sliceCurrentPosition(), particles.frozenOffset(),
+                     particles.localOffset(), particles.ghost_mesh_lo,
+                     particles.ghost_mesh_hi )
         , _model( model )
     {
         for ( int d = 0; d < particles.dim; d++ )
@@ -61,10 +62,11 @@ class Force<MemorySpace, HertzianModel>
         const auto vol = particles.sliceVolume();
         const auto rho = particles.sliceDensity();
         const auto y = particles.sliceCurrentPosition();
+        const auto r = particles.sliceType();
         const auto vel = particles.sliceVelocity();
 
         _neigh_timer.start();
-        _neigh_list.build( y, n_frozen, n_local, model.Rc, 1.0, mesh_min,
+        _neigh_list.build( y, 0, n_local, model.r_b, r, 1.0, mesh_min,
                            mesh_max );
         _neigh_timer.stop();
 
@@ -79,7 +81,8 @@ class Force<MemorySpace, HertzianModel>
             getRelativeNormalVelocityComponents( vel, i, j, rx, ry, rz, r, vx,
                                                  vy, vz, vn );
 
-            const double coeff = model.forceCoeff( r, vn, vol( i ), rho( i ) );
+            const double coeff =
+                model.forceCoeff( i, r, vn, vol( i ), rho( i ) );
             fc( i, 0 ) += coeff * rx / r;
             fc( i, 1 ) += coeff * ry / r;
             fc( i, 2 ) += coeff * rz / r;
@@ -107,7 +110,7 @@ class Force<MemorySpace, HertzianModel>
     }
 
   protected:
-    HertzianModel _model;
+    HertzianModel<RadiusType> _model;
     using base_type::_half_neigh;
     using base_type::_neigh_list;
     using base_type::_timer;

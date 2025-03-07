@@ -108,7 +108,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     // no-fail.
     using int_type = Cabana::MemberTypes<int>;
     // v, rho, type.
-    using other_types = Cabana::MemberTypes<double[dim], double, int>;
+    using other_types = Cabana::MemberTypes<double[dim], double, double>;
 
     // FIXME: add vector length.
     // FIXME: enable variable aosoa.
@@ -362,7 +362,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
             vol( pid ) = pv;
 
             // FIXME: hardcoded.
-            type( pid ) = 0;
+            type( pid ) = Kokkos::pow( pv, 1.0 / 3.0 );
             nofail( pid ) = 0;
             rho( pid ) = 1.0;
 
@@ -423,7 +423,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
                     v( pid, d ) = 0.0;
                     f( pid, d ) = 0.0;
                 }
-                type( pid ) = 0;
+                type( pid ) = 5e-4;
                 nofail( pid ) = 0;
                 rho( pid ) = 1.0;
             } );
@@ -637,7 +637,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
             h5_config, "particles", MPI_COMM_WORLD, output_step, output_time,
             localOffset(), getPosition( use_reference ), sliceForce(),
-            sliceDisplacement(), sliceVelocity(),
+            sliceDisplacement(), sliceVelocity(), sliceType(),
             std::forward<OtherFields>( other )... );
 #else
 #ifdef Cabana_ENABLE_SILO
@@ -1138,6 +1138,24 @@ auto createParticles( const ExecSpace& exec_space,
     return std::make_shared<
         CabanaPD::Particles<MemorySpace, typename ModelType::base_model,
                             typename ModelType::thermal_type, EnergyOutput>>(
+        exec_space, low_corner, high_corner, num_cells, max_halo_width, random,
+        user, num_previous, create_frozen );
+}
+
+template <typename MemorySpace, typename ModelType, typename ExecSpace,
+          class UserFunctor, typename OutputType, std::size_t Dim>
+auto createParticles( const ExecSpace& exec_space,
+                      std::array<double, Dim> low_corner,
+                      std::array<double, Dim> high_corner,
+                      const std::array<int, Dim> num_cells,
+                      Cabana::InitRandom random, const int max_halo_width,
+                      OutputType, UserFunctor user,
+                      const std::size_t num_previous = 0,
+                      const bool create_frozen = false )
+{
+    return std::make_shared<
+        CabanaPD::Particles<MemorySpace, typename ModelType::base_model,
+                            typename ModelType::thermal_type, OutputType, Dim>>(
         exec_space, low_corner, high_corner, num_cells, max_halo_width, random,
         user, num_previous, create_frozen );
 }

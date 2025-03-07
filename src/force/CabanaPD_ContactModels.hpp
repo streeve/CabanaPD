@@ -67,6 +67,11 @@ struct NormalRepulsionModel : public ContactModel
         // Normal repulsion uses a 15 factor compared to the PMB force
         return 15.0 * c * sc * vol;
     }
+
+    template <typename RadiusType>
+    void update( const RadiusType& )
+    {
+    }
 };
 
 template <>

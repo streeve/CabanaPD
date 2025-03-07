@@ -170,6 +170,19 @@ class Force<MemorySpace, BaseForceModel>
     {
     }
 
+    // Constructor for variable radius contact.
+    template <class PositionType, class RadiusType>
+    Force( const bool half_neigh, const double delta, const RadiusType& radius,
+           const PositionType& positions, const std::size_t frozen_offset,
+           const std::size_t local_offset, const double mesh_min[3],
+           const double mesh_max[3], const double tol = 1e-14 )
+        : _half_neigh( half_neigh )
+        , _neigh_list( neighbor_list_type( positions, frozen_offset,
+                                           local_offset, delta + tol, radius,
+                                           1.0, mesh_min, mesh_max ) )
+    {
+    }
+
     // Constructor which stores existing neighbors.
     template <class NeighborListType>
     Force( const bool half_neigh, const NeighborListType& neighbors )
