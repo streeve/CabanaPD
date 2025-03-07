@@ -37,7 +37,7 @@ void fragmentingCylinderExample( const std::string filename )
     // ====================================================
     double rho0 = inputs["density"];
     double K = inputs["bulk_modulus"];
-    double G = inputs["shear_modulus"]; // Only for LPS.
+    // double G = inputs["shear_modulus"]; // Only for LPS.
     double sc = inputs["critical_stretch"];
     double delta = inputs["horizon"];
     delta += 1e-10;
@@ -61,8 +61,7 @@ void fragmentingCylinderExample( const std::string filename )
     // ====================================================
     using model_type = CabanaPD::ForceModel<CabanaPD::PMB>;
     model_type force_model( delta, K, G0 );
-    // using model_type =
-    //       CabanaPD::ForceModel<CabanaPD::LPS, CabanaPD::Fracture>;
+    // using model_type = CabanaPD::ForceModel<CabanaPD::LPS>;
     // model_type force_model( delta, K, G, G0 );
 
     // ====================================================
