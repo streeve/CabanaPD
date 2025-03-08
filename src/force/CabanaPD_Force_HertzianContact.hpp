@@ -101,6 +101,7 @@ class Force<MemorySpace, HertzianModel> : public BaseForceContact<MemorySpace>
     HertzianModel _model;
     using base_type::_half_neigh;
     using base_type::_neigh_list;
+    using base_type::_neigh_timer;
     using base_type::_timer;
 };
 
