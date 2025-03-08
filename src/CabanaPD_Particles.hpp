@@ -110,7 +110,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     // no-fail.
     using int_type = Cabana::MemberTypes<int>;
     // v, rho, type.
-    using other_types = Cabana::MemberTypes<double[dim], double>;
+    using other_types = Cabana::MemberTypes<double[dim], double, int>;
 
     // FIXME: add vector length.
     // FIXME: enable variable aosoa.
@@ -336,7 +336,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         auto x = sliceReferencePosition();
         auto v = sliceVelocity();
         auto f = sliceForce();
-        // auto type = sliceType();
+        auto type = sliceType();
         auto rho = sliceDensity();
         auto u = sliceDisplacement();
         auto vol = sliceVolume();
@@ -406,7 +406,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         auto p_vol = sliceVolume();
         auto v = sliceVelocity();
         auto f = sliceForce();
-        // auto type = sliceType();
+        auto type = sliceType();
         auto rho = sliceDensity();
         auto u = sliceDisplacement();
         auto u_neigh = sliceDisplacementNeighborBuild();
@@ -539,9 +539,8 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     {
         return Cabana::slice<1>( _aosoa_other, "density" );
     }
-    // auto sliceType() { return Cabana::slice<2>( _aosoa_other, "type" ); }
-    // auto sliceType() const { return Cabana::slice<2>( _aosoa_other, "type" );
-    // }
+    auto sliceType() { return Cabana::slice<2>( _aosoa_other, "type" ); }
+    auto sliceType() const { return Cabana::slice<2>( _aosoa_other, "type" ); }
 
     auto sliceNoFail()
     {
