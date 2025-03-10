@@ -496,7 +496,19 @@ class Solver
         if ( print )
         {
             std::ofstream out( output_file, std::ofstream::app );
-            double comm_time = comm->time();
+            // No comm if doing DEM only.
+            double comm_time = 0.0;
+            int mpi_size = 1;
+            if constexpr ( !is_contact<force_model_type>::value )
+            {
+                comm_time = comm->time();
+                mpi_size = comm->mpi_size;
+            }
+            if constexpr ( is_contact<force_model_type>::value ||
+                           is_contact<contact_model_type>::value )
+            {
+                comm_time += contact_comm->time();
+            }
             double integrate_time = integrator->time();
             double force_time = force->time();
             double energy_time = force->timeEnergy();
@@ -513,18 +525,18 @@ class Solver
             log( out, std::fixed, std::setprecision( 2 ),
                  "\n#Procs Particles | Total Force Comm Integrate Energy "
                  "Output Init Init_Neighbor |\n",
-                 comm->mpi_size, " ", particles->numGlobal(), " | \t",
-                 _total_time, " ", force_time, " ", comm_time, " ",
-                 integrate_time, " ", energy_time, " ", output_time, " ",
-                 _init_time, " ", neighbor_time, " | PERFORMANCE\n", std::fixed,
-                 comm->mpi_size, " ", particles->numGlobal(), " | \t", 1.0, " ",
+                 mpi_size, " ", particles->numGlobal(), " | \t", _total_time,
+                 " ", force_time, " ", comm_time, " ", integrate_time, " ",
+                 energy_time, " ", output_time, " ", _init_time, " ",
+                 neighbor_time, " | PERFORMANCE\n", std::fixed, mpi_size, " ",
+                 particles->numGlobal(), " | \t", 1.0, " ",
                  force_time / _total_time, " ", comm_time / _total_time, " ",
                  integrate_time / _total_time, " ", energy_time / _total_time,
                  " ", output_time / _total_time, " ", _init_time / _total_time,
                  " ", neighbor_time / _total_time, " | FRACTION\n\n",
                  "#Steps/s Particle-steps/s Particle-steps/proc/s\n",
                  std::scientific, steps_per_sec, " ", p_steps_per_sec, " ",
-                 p_steps_per_sec / comm->mpi_size );
+                 p_steps_per_sec / mpi_size );
             out.close();
         }
     }
