@@ -339,7 +339,7 @@ class Solver
             // Ghosts must be up to date for any contact, DEM or PD+contact.
             if constexpr ( is_contact<force_model_type>::value ||
                            is_contact<contact_model_type>::value )
-                contact_comm->gather( *particles );
+                contact_comm->gather( *particles, max_displacement );
 
             // Compute internal forces.
             updateForce( max_displacement );

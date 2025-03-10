@@ -466,42 +466,50 @@ class Comm<ParticleType, Contact, TemperatureIndependent>
 
     // This is a dynamic gather step where the steering vector needs to be
     // recomputed.
-    void gather( ParticleType& particles )
+    void gather( ParticleType& particles, const double max_displacement )
     {
         _timer.start();
-        // Get the current position. Note this is necessary to get the up to
-        // date current position.
-        auto y = particles.sliceCurrentPosition();
-        // Determine which particles need to be ghosted to neighbors for the
-        // current positions. This includes both the default ghosted region, but
-        // also any particle outside this local rank.
-        auto outside_functor = KOKKOS_LAMBDA( const int, const double px[3] )
+        // FIXME: this is not the right assumption - there is no halo skin.
+        // Only update comm plan if particles are moving past the halo region.
+        if ( max_displacement > halo_ids._min_halo )
         {
-            if ( px[0] < halo_ids._min_ghost[0] ||
-                 px[0] > halo_ids._max_ghost[0] ||
-                 px[1] < halo_ids._min_ghost[1] ||
-                 px[1] > halo_ids._max_ghost[1] ||
-                 px[2] < halo_ids._min_ghost[2] ||
-                 px[2] > halo_ids._max_ghost[2] )
-                return true;
-            return false;
-        };
-        halo_ids.build( y, outside_functor );
+            // Get the current position. Note this is necessary to get the up to
+            // date current position.
+            auto y = particles.sliceCurrentPosition();
+            // Determine which particles need to be ghosted to neighbors for the
+            // current positions. This includes both the default ghosted region,
+            // but also any particle outside this local rank.
+            auto outside_functor =
+                KOKKOS_LAMBDA( const int, const double px[3] )
+            {
+                if ( px[0] < halo_ids._min_ghost[0] ||
+                     px[0] > halo_ids._max_ghost[0] ||
+                     px[1] < halo_ids._min_ghost[1] ||
+                     px[1] > halo_ids._max_ghost[1] ||
+                     px[2] < halo_ids._min_ghost[2] ||
+                     px[2] > halo_ids._max_ghost[2] )
+                    return true;
+                return false;
+            };
+            halo_ids.build( y, outside_functor );
 
-        auto topology = Cabana::Grid::getTopology( *particles.local_grid );
-        // FIXME: missing a build() interface
-        halo = std::make_shared<halo_type>(
-            particles.local_grid->globalGrid().comm(),
-            particles.referenceOffset(), halo_ids._ids, halo_ids._destinations,
-            topology );
-        particles.resize( particles.localOffset(), particles.numGhost(), false,
-                          halo->numGhost() );
+            auto topology = Cabana::Grid::getTopology( *particles.local_grid );
+            // FIXME: missing a build() interface
+            halo = std::make_shared<halo_type>(
+                particles.local_grid->globalGrid().comm(),
+                particles.referenceOffset(), halo_ids._ids,
+                halo_ids._destinations, topology );
+            particles.resize( particles.localOffset(), particles.numGhost(),
+                              false, halo->numGhost() );
 
-        gather_u->reserve( *halo, particles._aosoa_u );
+            gather_u->reserve( *halo, particles._aosoa_u );
+            gather_x->reserve( *halo,
+                               particles.getReferencePosition().aosoa() );
+            gather_vol->reserve( *halo, particles._aosoa_vol );
+        }
+        // Gather every step.
         gather_u->apply();
-        gather_x->reserve( *halo, particles.getReferencePosition().aosoa() );
         gather_x->apply();
-        gather_vol->reserve( *halo, particles._aosoa_vol );
         gather_vol->apply();
         _timer.stop();
     }
