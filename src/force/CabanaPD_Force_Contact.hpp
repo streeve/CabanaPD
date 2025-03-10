@@ -75,8 +75,9 @@ class BaseForceContact : public Force<MemorySpace, BaseForceModel>
                                particles.localOffset(), radius + radius_extend,
                                1.0, mesh_min, mesh_max );
             // Reset neighbor update displacement.
-            const auto u_neigh = particles.sliceDisplacementNeighborBuild();
-            Cabana::deep_copy( u_neigh, 0.0 );
+            const auto u = particles.sliceDisplacement();
+            auto u_neigh = particles.sliceDisplacementNeighborBuild();
+            Cabana::deep_copy( u_neigh, u );
             _neigh_timer.stop();
         }
     }

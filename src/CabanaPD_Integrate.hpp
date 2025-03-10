@@ -109,11 +109,9 @@ class Integrator
 
             // FIXME: only used for contact: get displacement since last
             // neighbor update.
-            u_neigh( i, 0 ) += u( i, 0 );
-            u_neigh( i, 1 ) += u( i, 1 );
-            u_neigh( i, 2 ) += u( i, 2 );
-            auto u_mag = Kokkos::hypot( u_neigh( i, 0 ), u_neigh( i, 1 ),
-                                        u_neigh( i, 2 ) );
+            auto u_mag = Kokkos::hypot( u( i, 0 ) - u_neigh( i, 0 ),
+                                        u( i, 1 ) - u_neigh( i, 1 ),
+                                        u( i, 2 ) - u_neigh( i, 2 ) );
             if ( u_mag > max_u )
                 max_u = u_mag;
         };
