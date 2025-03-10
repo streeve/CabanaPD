@@ -12,6 +12,7 @@
     "cylinder_diameter"        : {"value": 0.25, "unit": "m"},
     "wall_thickness"           : {"value": 0.0045, "unit": "m"},
     "min_height"               : {"value": 0.01, "unit": "m"},
+    "max_height"               : {"value": 0.04, "unit": "m"},
     "final_time"               : {"value": 0.5, "unit": "s"},
     "timestep"                 : {"value": 2e-6, "unit": "s"},
     "timestep_safety_factor"   : {"value": 0.9},

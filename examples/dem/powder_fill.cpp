@@ -92,12 +92,14 @@ void powderSettlingExample( const std::string filename )
 
     // Create powder.
     double min_height = inputs["min_height"];
+    double max_height = inputs["max_height"];
     auto create_powder = KOKKOS_LAMBDA( const int, const double x[3] )
     {
         double rsq = x[0] * x[0] + x[1] * x[1];
 
         // Only create particles inside cylinder.
-        if ( x[2] > min_height &&
+        if ( x[2] > low_corner[2] + wall_thickness + min_height &&
+             x[2] < high_corner[2] - max_height &&
              rsq < ( cylinder_radius - wall_thickness ) *
                        ( cylinder_radius - wall_thickness ) )
             return true;
