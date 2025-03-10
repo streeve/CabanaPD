@@ -253,17 +253,39 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
 
     void createDomain( std::array<double, dim> low_corner,
                        std::array<double, dim> high_corner,
+                       const std::array<double, dim> input_dx )
+    {
+        _init_timer.start();
+        // Create global mesh of MPI partitions.
+        auto global_mesh = Cabana::Grid::createUniformGlobalMesh(
+            low_corner, high_corner, input_dx );
+        for ( int d = 0; d < 3; d++ )
+            dx[d] = input_dx[d];
+
+        initDomain( global_mesh );
+        _init_timer.stop();
+    }
+
+    void createDomain( std::array<double, dim> low_corner,
+                       std::array<double, dim> high_corner,
                        const std::array<int, dim> num_cells )
     {
         _init_timer.start();
-        // Create the MPI partitions.
-        Cabana::Grid::DimBlockPartitioner<dim> partitioner;
-
         // Create global mesh of MPI partitions.
         auto global_mesh = Cabana::Grid::createUniformGlobalMesh(
             low_corner, high_corner, num_cells );
         for ( int d = 0; d < 3; d++ )
             dx[d] = global_mesh->cellSize( d );
+
+        initDomain( global_mesh );
+        _init_timer.stop();
+    }
+
+    template <class GlobalMeshType>
+    void initDomain( GlobalMeshType& global_mesh )
+    {
+        // Create the MPI partitions.
+        Cabana::Grid::DimBlockPartitioner<dim> partitioner;
 
         std::array<bool, dim> is_periodic;
         for ( int d = 0; d < dim; d++ )
@@ -289,7 +311,6 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
                 local_mesh.highCorner( Cabana::Grid::Ghost(), d );
             local_mesh_ext[d] = local_mesh.extent( Cabana::Grid::Own(), d );
         }
-        _init_timer.stop();
     }
 
     template <class ExecSpace, class InitType>
