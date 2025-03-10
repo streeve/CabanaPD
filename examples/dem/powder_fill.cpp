@@ -103,6 +103,11 @@ void powderSettlingExample( const std::string filename )
 
         return false;
     };
+    // Update domain to create fewer powder particles.
+    std::array<double, 3> dx;
+    for ( int d = 0; d < 3; d++ )
+        dx[d] = particles->dx[d] * 2.0;
+    particles->createDomain( low_corner, high_corner, dx );
     particles->createParticles( exec_space(), Cabana::InitRandom{},
                                 create_powder, particles->numFrozen() );
 
@@ -126,11 +131,6 @@ void powderSettlingExample( const std::string filename )
     //                   Simulation init
     // ====================================================
     cabana_pd->init();
-
-    // Use a force magnitude threshold to remove particles that are too close.
-    // TODO: The force magnitude should be based on the maximum desired overlap
-    // according to the properties of the contact model
-    cabana_pd->remove( 1e6 );
 
     // ====================================================
     //                   Boundary condition
