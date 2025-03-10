@@ -64,7 +64,7 @@ class BaseForceContact : public Force<MemorySpace, BaseForceModel>
 
     // Only rebuild neighbor list as needed.
     template <class ParticleType>
-    void update( const ParticleType& particles, const double max_displacement,
+    void update( ParticleType& particles, const double max_displacement,
                  const bool require_update = false )
     {
         if ( max_displacement > radius_extend || require_update )
@@ -118,7 +118,7 @@ class Force<MemorySpace, NormalRepulsionModel>
     template <class ForceType, class PosType, class ParticleType,
               class ParallelType>
     void computeForceFull( ForceType& fc, const PosType& x, const PosType& u,
-                           const ParticleType& particles,
+                           ParticleType& particles,
                            const double max_displacement,
                            ParallelType& neigh_op_tag )
     {

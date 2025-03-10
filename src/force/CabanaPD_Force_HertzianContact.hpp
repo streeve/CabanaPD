@@ -43,7 +43,7 @@ class Force<MemorySpace, HertzianModel> : public BaseForceContact<MemorySpace>
     template <class ForceType, class PosType, class ParticleType,
               class ParallelType>
     void computeForceFull( ForceType& fc, const PosType& x, const PosType& u,
-                           const ParticleType& particles,
+                           ParticleType& particles,
                            const double max_displacement,
                            ParallelType& neigh_op_tag )
     {
