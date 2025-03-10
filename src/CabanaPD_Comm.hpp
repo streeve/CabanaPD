@@ -494,8 +494,6 @@ class Comm<ParticleType, Contact, TemperatureIndependent>
             particles.local_grid->globalGrid().comm(),
             particles.referenceOffset(), halo_ids._ids, halo_ids._destinations,
             topology );
-        std::cout << "halo " << halo->numLocal() << " " << halo->numGhost()
-                  << std::endl;
         particles.resize( particles.localOffset(), particles.numGhost(), false,
                           halo->numGhost() );
 
