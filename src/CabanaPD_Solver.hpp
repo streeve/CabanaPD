@@ -114,6 +114,7 @@ class Solver
         : particles( _particles )
         , inputs( _inputs )
         , _init_time( 0.0 )
+        , _total_time( 0.0 )
     {
         setup( force_model );
     }
@@ -354,7 +355,7 @@ class Solver
             // Integrate - velocity Verlet second half.
             integrator->finalHalfStep( *particles );
 
-            output( step );
+            output( step, max_displacement );
         }
 
         // Final output and timings.
@@ -391,7 +392,7 @@ class Solver
             // Integrate - velocity Verlet second half.
             integrator->finalHalfStep( *particles );
 
-            output( step );
+            output( step, max_displacement );
         }
 
         // Final output and timings.
@@ -420,7 +421,7 @@ class Solver
         computeForce( *force, *particles, max_displacement, neigh_iter_tag{} );
     }
 
-    void output( const int step )
+    void output( const int step, const double max_displacement )
     {
         // Print output.
         if ( step % output_frequency == 0 )
@@ -430,7 +431,7 @@ class Solver
             particles->output( step / output_frequency, step * dt,
                                output_reference );
             _step_timer.stop();
-            step_output( step, W );
+            step_output( step, W, max_displacement );
         }
         else
         {
@@ -456,13 +457,14 @@ class Solver
              "Energy-Time(s) Output-Time(s) Neigh-Time(s) Particle*steps/s" );
     }
 
-    void step_output( const int step, const double W )
+    void step_output( const int step, const double W,
+                      const double max_displacement )
     {
         if ( print )
         {
             std::ofstream out( output_file, std::ofstream::app );
             log( std::cout, step, "/", num_steps, " ", std::scientific,
-                 std::setprecision( 2 ), step * dt );
+                 std::setprecision( 2 ), step * dt, " ", max_displacement );
 
             double step_time = _step_timer.time();
             double comm_time = 0.0;
