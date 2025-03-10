@@ -83,6 +83,7 @@ class BaseForceContact : public Force<MemorySpace, BaseForceModel>
     }
 
     auto timeNeighbor() { return _neigh_timer.time(); };
+    auto callsNeighbor() { return _neigh_timer.numCalls(); };
 
   protected:
     double radius;

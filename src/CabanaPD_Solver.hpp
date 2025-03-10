@@ -485,8 +485,8 @@ class Solver
                  " ", std::scientific, std::setprecision( 2 ), step * dt, " ",
                  W, " ", std::fixed, _total_time, " ", force_time, " ",
                  comm_time, " ", integrate_time, " ", energy_time, " ",
-                 output_time, " ", neigh_time, " ", std::scientific,
-                 p_steps_per_sec );
+                 output_time, " ", neigh_time, " ", force->callsNeighbor(), " ",
+                 std::scientific, p_steps_per_sec );
             out.close();
         }
     }
