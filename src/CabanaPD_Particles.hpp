@@ -141,6 +141,8 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     double ghost_mesh_lo[dim];
     double ghost_mesh_hi[dim];
 
+    int mpi_size = 1;
+
     using local_grid_type =
         Cabana::Grid::LocalGrid<Cabana::Grid::UniformMesh<double, dim>>;
     std::shared_ptr<local_grid_type> local_grid;
@@ -496,6 +498,12 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     auto numContactGhost() const { return num_contact_ghost; }
     auto size() const { return total_size; }
     auto numGlobal() const { return num_global; }
+
+    auto mpiSize()
+    {
+        int mpi_size;
+        return MPI_Comm_size( local_grid->globalGrid().comm(), &mpi_size );
+    }
 
     auto sliceReferencePosition()
     {

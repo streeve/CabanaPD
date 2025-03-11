@@ -179,8 +179,11 @@ class Solver
         // neighbor list. Needed for DEM or PD+contact.
         if constexpr ( is_contact<force_model_type>::value ||
                        is_contact<contact_model_type>::value )
-            contact_comm = std::make_shared<contact_comm_type>( *particles );
-
+        {
+            if ( particles->mpiSize() > 1 )
+                contact_comm =
+                    std::make_shared<contact_comm_type>( *particles );
+        }
         print = print_rank();
         if ( print )
         {
@@ -339,7 +342,10 @@ class Solver
             // Ghosts must be up to date for any contact, DEM or PD+contact.
             if constexpr ( is_contact<force_model_type>::value ||
                            is_contact<contact_model_type>::value )
-                contact_comm->gather( *particles, max_displacement );
+            {
+                if ( particles->mpiSize() > 1 )
+                    contact_comm->gather( *particles, max_displacement );
+            }
 
             // Compute internal forces.
             updateForce( max_displacement );
@@ -507,7 +513,8 @@ class Solver
             if constexpr ( is_contact<force_model_type>::value ||
                            is_contact<contact_model_type>::value )
             {
-                comm_time += contact_comm->time();
+                if ( particles->mpiSize() > 1 )
+                    comm_time += contact_comm->time();
             }
             double integrate_time = integrator->time();
             double force_time = force->time();
@@ -551,7 +558,11 @@ class Solver
             comm = std::make_shared<comm_type>( *particles );
         if constexpr ( is_contact<force_model_type>::value ||
                        is_contact<contact_model_type>::value )
-            contact_comm = std::make_shared<contact_comm_type>( *particles );
+        {
+            if ( particles->mpiSize() > 1 )
+                contact_comm =
+                    std::make_shared<contact_comm_type>( *particles );
+        }
     }
 
     int num_steps;
