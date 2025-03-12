@@ -28,7 +28,7 @@ struct ContactModel
     // PD neighbor search radius.
     double delta;
     // Contact neighbor search radius.
-    double radius;
+    double background_radius;
     // Extend neighbor search radius to reuse lists.
     double radius_extend;
 
@@ -37,7 +37,7 @@ struct ContactModel
     ContactModel( const double _delta, const double _radius,
                   const double _radius_extend )
         : delta( _delta )
-        , radius( _radius )
+        , background_radius( _radius )
         , radius_extend( _radius_extend ){};
 };
 
@@ -49,8 +49,8 @@ struct NormalRepulsionModel : public ContactModel
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
 
+    using ContactModel::background_radius;
     using ContactModel::delta;
-    using ContactModel::radius;
     using ContactModel::radius_extend;
 
     double c;
@@ -70,9 +70,14 @@ struct NormalRepulsionModel : public ContactModel
     auto forceCoeff( const double r, const double vol ) const
     {
         // Contact "stretch"
-        const double sc = ( r - radius ) / delta;
+        const double sc = ( r - background_radius ) / delta;
         // Normal repulsion uses a 15 factor compared to the PMB force
         return 15.0 * c * sc * vol;
+    }
+
+    template <typename RadiusType>
+    void update( const RadiusType& )
+    {
     }
 };
 

@@ -128,6 +128,7 @@ class Solver
         setup( force_model );
 
         _neighbor_timer.start();
+        contact_model.update( particles->sliceType() );
         contact = std::make_shared<contact_type>( inputs["half_neigh"],
                                                   *particles, contact_model );
         _neighbor_timer.stop();

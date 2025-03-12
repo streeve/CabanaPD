@@ -25,8 +25,9 @@ namespace CabanaPD
 /******************************************************************************
   Normal repulsion forces
 ******************************************************************************/
-template <class MemorySpace>
-class Force<MemorySpace, HertzianModel> : public BaseForceContact<MemorySpace>
+template <class MemorySpace, class RadiusType>
+class Force<MemorySpace, HertzianModel<RadiusType>>
+    : public BaseForceContact<MemorySpace>
 {
   public:
     using base_type = BaseForceContact<MemorySpace>;
@@ -34,7 +35,7 @@ class Force<MemorySpace, HertzianModel> : public BaseForceContact<MemorySpace>
 
     template <class ParticleType>
     Force( const bool half_neigh, const ParticleType& particles,
-           const HertzianModel model )
+           const HertzianModel<RadiusType> model )
         : base_type( half_neigh, particles, model )
         , _model( model )
     {
@@ -54,6 +55,7 @@ class Force<MemorySpace, HertzianModel> : public BaseForceContact<MemorySpace>
         const auto vol = particles.sliceVolume();
         const auto rho = particles.sliceDensity();
         const auto vel = particles.sliceVelocity();
+        auto nn = particles.sliceNoFail();
 
         base_type::update( particles, max_displacement );
 
@@ -68,10 +70,14 @@ class Force<MemorySpace, HertzianModel> : public BaseForceContact<MemorySpace>
             getRelativeNormalVelocityComponents( vel, i, j, rx, ry, rz, r, vx,
                                                  vy, vz, vn );
 
-            const double coeff = model.forceCoeff( r, vn, vol( i ), rho( i ) );
+            const double coeff =
+                model.forceCoeff( i, j, r, vn, vol( i ), rho( i ) );
             fc( i, 0 ) += coeff * rx / r;
             fc( i, 1 ) += coeff * ry / r;
             fc( i, 2 ) += coeff * rz / r;
+
+            nn( i ) = Cabana::NeighborList<neighbor_list_type>::numNeighbor(
+                _neigh_list, i );
         };
 
         _timer.start();
@@ -98,7 +104,7 @@ class Force<MemorySpace, HertzianModel> : public BaseForceContact<MemorySpace>
     auto neighTime() { return _neigh_timer.time(); }
 
   protected:
-    HertzianModel _model;
+    HertzianModel<RadiusType> _model;
     using base_type::_half_neigh;
     using base_type::_neigh_list;
     using base_type::_neigh_timer;

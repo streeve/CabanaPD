@@ -20,6 +20,7 @@
 
 namespace CabanaPD
 {
+template <typename RadiusType>
 struct HertzianModel
 {
     // FIXME: This is for use as the primary force model.
@@ -27,48 +28,53 @@ struct HertzianModel
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
 
-    double nu;            // Poisson's ratio
-    double radius;        // Actual radius
-    double radius_extend; // Search radius extended (skin distance)
-    double Rs;            // Equivalent radius
-    double Es;            // Equivalent Young's modulus
-    double e;             // Coefficient of restitution
-    double beta;          // Damping coefficient
+    RadiusType radius;        // Actual radius
+    double background_radius; // Actual radius
+    double radius_extend;     // Search radius extended (skin distance)
+    double nu;                // Poisson's ratio
+    double Es;                // Equivalent Young's modulus
+    double e;                 // Coefficient of restitution
+    double beta;              // Damping coefficient
+
     double coeff_h_n;
     double coeff_h_d;
 
-    HertzianModel( const double _radius, const double _extend, const double _nu,
-                   const double _E, const double _e )
-        : nu( _nu )
-        , radius( _radius )
+    HertzianModel( const RadiusType& _radius, const double _background_radius,
+                   const double _extend, const double _nu, const double _E,
+                   const double _e )
+        : radius( _radius )
+        , background_radius( _background_radius )
         , radius_extend( _extend )
+        , nu( _nu )
+        , e( _e )
     {
-        Rs = 0.5 * radius;
         Es = _E / ( 2.0 * Kokkos::pow( 1.0 - nu, 2.0 ) );
-        e = _e;
         double ln_e = Kokkos::log( e );
         beta = -ln_e / Kokkos::sqrt( Kokkos::pow( ln_e, 2.0 ) +
                                      Kokkos::pow( pi, 2.0 ) );
 
         // Derived constants.
-        coeff_h_n = 4.0 / 3.0 * Es * Kokkos::sqrt( Rs );
+        coeff_h_n = 4.0 / 3.0 * Es;
         coeff_h_d = -2.0 * Kokkos::sqrt( 5.0 / 6.0 ) * beta;
     }
 
     KOKKOS_INLINE_FUNCTION
-    auto forceCoeff( const double r, const double vn, const double vol,
-                     const double rho ) const
+    auto forceCoeff( const int i, const int j, const double r, const double vn,
+                     const double vol, const double rho ) const
     {
         // Contact "overlap"
-        const double delta_n = ( r - 2.0 * radius );
+        const double delta_n = ( r - radius( i ) - radius( j ) );
+
+        // Equivalent radius
+        double Rs = 0.5 * radius( i );
 
         // Hertz normal force coefficient
         double coeff = 0.0;
         if ( delta_n < 0.0 )
         {
             coeff = Kokkos::min(
-                0.0,
-                -coeff_h_n * Kokkos::pow( Kokkos::abs( delta_n ), 3.0 / 2.0 ) );
+                0.0, -coeff_h_n * Kokkos::sqrt( Rs ) *
+                         Kokkos::pow( Kokkos::abs( delta_n ), 3.0 / 2.0 ) );
         }
         coeff /= vol;
 
@@ -80,10 +86,12 @@ struct HertzianModel
         coeff += coeff_h_d * Kokkos::sqrt( Sn * ms ) * vn / vol;
         return coeff;
     }
+
+    void update( const RadiusType& _radius ) { radius = _radius; }
 };
 
-template <>
-struct is_contact<HertzianModel> : public std::true_type
+template <typename RadiusType>
+struct is_contact<HertzianModel<RadiusType>> : public std::true_type
 {
 };
 

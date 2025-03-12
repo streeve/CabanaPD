@@ -48,11 +48,11 @@ class BaseForceContact : public Force<MemorySpace, BaseForceModel>
     template <class ParticleType, class ModelType>
     BaseForceContact( const bool half_neigh, const ParticleType& particles,
                       const ModelType model )
-        : base_type( half_neigh, model.radius + model.radius_extend,
+        : base_type( half_neigh, model.background_radius + model.radius_extend,
                      particles.sliceCurrentPosition(), particles.frozenOffset(),
                      particles.localOffset(), particles.ghost_mesh_lo,
                      particles.ghost_mesh_hi )
-        , radius( model.radius )
+        , background_radius( model.background_radius )
         , radius_extend( model.radius_extend )
     {
         for ( int d = 0; d < particles.dim; d++ )
@@ -71,9 +71,10 @@ class BaseForceContact : public Force<MemorySpace, BaseForceModel>
         {
             _neigh_timer.start();
             const auto y = particles.sliceCurrentPosition();
-            _neigh_list.build( y, particles.frozenOffset(),
-                               particles.localOffset(), radius + radius_extend,
-                               1.0, mesh_min, mesh_max );
+            const auto rp = particles.sliceType();
+            _neigh_list.build(
+                y, particles.frozenOffset(), particles.localOffset(),
+                background_radius + radius_extend, 1.0, mesh_min, mesh_max );
             // Reset neighbor update displacement.
             const auto u = particles.sliceDisplacement();
             auto u_neigh = particles.sliceDisplacementNeighborBuild();
@@ -86,7 +87,7 @@ class BaseForceContact : public Force<MemorySpace, BaseForceModel>
     auto callsNeighbor() { return _neigh_timer.numCalls(); };
 
   protected:
-    double radius;
+    double background_radius;
     double radius_extend;
     Timer _neigh_timer;
 

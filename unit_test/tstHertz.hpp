@@ -83,17 +83,10 @@ void testHertzianContact( const std::string filename )
         } );
 
     // ====================================================
-    //            Force model
-    // ====================================================
-    using model_type = CabanaPD::HertzianModel;
-    // No search radius extension.
-    model_type contact_model( radius, 0.0, nu, E, e );
-
-    // ====================================================
     //                 Particle generation
     // ====================================================
     int halo_width = 1;
-    auto particles = CabanaPD::createParticles<memory_space, model_type>(
+    auto particles = CabanaPD::createParticles<memory_space, CabanaPD::PMB>(
         exec_space{}, position, volume, low_corner, high_corner, num_cells,
         halo_width );
 
@@ -103,11 +96,13 @@ void testHertzianContact( const std::string filename )
     auto rho = particles->sliceDensity();
     auto v = particles->sliceVelocity();
     auto vo = particles->sliceVolume();
+    auto rp = particles->sliceType();
 
     auto init_functor = KOKKOS_LAMBDA( const int p )
     {
         // Density
         rho( p ) = rho0;
+        rp( p ) = radius;
         if ( p == 0 )
             v( p, 0 ) = -1.0;
         else
@@ -119,10 +114,17 @@ void testHertzianContact( const std::string filename )
     double ke_i = calculateKE( v, rho, vo );
 
     // ====================================================
+    //            Force model
+    // ====================================================
+    CabanaPD::HertzianModel contact_model( rp, radius, 0.0, nu, E, e );
+
+    // ====================================================
     //  Simulation run
     // ====================================================
     auto cabana_pd = CabanaPD::createSolver<memory_space>( inputs, particles,
                                                            contact_model );
+    contact_model.update( cabana_pd->particles->sliceType() );
+
     cabana_pd->init();
     cabana_pd->run();
 
