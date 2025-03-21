@@ -22,8 +22,8 @@ namespace CabanaPD
 {
 struct HertzianModel : public ContactModel
 {
-    // FIXME: This is for use as the primary force model.
-    using base_model = PMB;
+    using base_type = ContactModel;
+    using base_model = base_type::base_model;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
 
@@ -84,11 +84,6 @@ struct HertzianModel : public ContactModel
         coeff += coeff_h_d * Kokkos::sqrt( Sn * ms ) * vn / vol;
         return coeff;
     }
-};
-
-template <>
-struct is_contact<HertzianModel> : public std::true_type
-{
 };
 
 } // namespace CabanaPD

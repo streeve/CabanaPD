@@ -25,6 +25,9 @@ namespace CabanaPD
 ******************************************************************************/
 struct ContactModel
 {
+    // FIXME: This is for use as the primary force model.
+    using base_model = PMB;
+
     double delta;
     double Rc;
 
@@ -41,8 +44,8 @@ struct ContactModel
 
 struct NormalRepulsionModel : public ContactModel
 {
-    // FIXME: This is for use as the primary force model.
-    using base_model = PMB;
+    using base_type = ContactModel;
+    using base_model = base_type::base_model;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
 
@@ -71,11 +74,6 @@ struct NormalRepulsionModel : public ContactModel
         // Normal repulsion uses a 15 factor compared to the PMB force
         return 15.0 * c * sc * vol;
     }
-};
-
-template <>
-struct is_contact<NormalRepulsionModel> : public std::true_type
-{
 };
 
 } // namespace CabanaPD
