@@ -37,7 +37,7 @@ void fragmentingCylinderExample( const std::string filename )
     // ====================================================
     double rho0 = inputs["density"];
     double K = inputs["bulk_modulus"];
-    // double G = inputs["shear_modulus"]; // Only for LPS.
+    double G = inputs["shear_modulus"]; // Only for LPS.
     double sc = inputs["critical_stretch"];
     double delta = inputs["horizon"];
     delta += 1e-10;
@@ -57,18 +57,12 @@ void fragmentingCylinderExample( const std::string filename )
     int halo_width = m + 1; // Just to be safe.
 
     // ====================================================
-    //                    Force models
+    //                    Force model
     // ====================================================
     // using model_type = CabanaPD::ForceModel<CabanaPD::PMB>;
     // model_type force_model( delta, K, G0 );
-    using model_type = CabanaPD::ForceModel<CabanaPD::PMB>;
-    model_type force_model( delta, K, G0 );
-
-    double r_c = inputs["contact_horizon_factor"];
-    double dx = inputs["dx"][0];
-    r_c *= dx;
-    using contact_type = CabanaPD::NormalRepulsionModel;
-    contact_type contact_model( delta, r_c, r_c, K );
+    using model_type = CabanaPD::ForceModel<CabanaPD::LPS>;
+    model_type force_model( delta, K, G, G0 );
 
     // ====================================================
     //    Custom particle generation and initialization
@@ -91,7 +85,7 @@ void fragmentingCylinderExample( const std::string filename )
         return true;
     };
 
-    auto particles = CabanaPD::createParticles<memory_space, contact_type>(
+    auto particles = CabanaPD::createParticles<memory_space, model_type>(
         exec_space(), low_corner, high_corner, num_cells, Cabana::InitRandom{},
         halo_width, init_op );
 
@@ -99,6 +93,7 @@ void fragmentingCylinderExample( const std::string filename )
     auto x = particles->sliceReferencePosition();
     auto v = particles->sliceVelocity();
     auto f = particles->sliceForce();
+    auto dx = particles->dx;
 
     double vrmax = inputs["max_radial_velocity"];
     double vrmin = inputs["min_radial_velocity"];
@@ -122,11 +117,10 @@ void fragmentingCylinderExample( const std::string filename )
     particles->updateParticles( exec_space{}, init_functor );
 
     // ====================================================
-    //  Simulation run with contact physics
+    //  Simulation run without contact
     // ====================================================
-    auto cabana_pd = CabanaPD::createSolver<memory_space>(
-        inputs, particles, force_model, contact_model );
-
+    auto cabana_pd =
+        CabanaPD::createSolver<memory_space>( inputs, particles, force_model );
     cabana_pd->init();
     cabana_pd->run();
 }
