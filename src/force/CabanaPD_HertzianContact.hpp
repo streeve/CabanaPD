@@ -21,7 +21,7 @@
 namespace CabanaPD
 {
 template <typename RadiusType>
-struct HertzianModel
+struct HertzianModel : ContactModel
 {
     using base_type = ContactModel;
     // FIXME: This is for use as the primary force model.
@@ -43,9 +43,8 @@ struct HertzianModel
     HertzianModel( const RadiusType& _radius, const double _background_radius,
                    const double _extend, const double _nu, const double _E,
                    const double _e )
-        : base_type( _radius, _extend )
-        , background_radius( _background_radius )
-        , radius_extend( _extend )
+        : base_type( _background_radius, _extend )
+        , radius( _radius )
         , nu( _nu )
         , e( _e )
     {
