@@ -135,7 +135,7 @@ void powderSettlingExample( const std::string filename )
     //                Material parameters
     // ====================================================
     double rho0 = inputs["density"];
-    double vol0 = inputs["volume"];
+    // double vol0 = inputs["volume"];
     double radius = inputs["radius"];
     double radius_extend = inputs["radius_extend"];
     double nu = inputs["poisson_ratio"];
@@ -187,7 +187,7 @@ void powderSettlingExample( const std::string filename )
         double rsq = x[0] * x[0] + x[1] * x[1];
 
         // Only create particles inside cylinder.
-        if ( x[2] > low_corner[2] + wall_thickness + min_height &&
+        if ( x[2] > min_height &&
              // x[2] < high_corner[2] - max_height &&
              rsq < ( cylinder_radius - wall_thickness ) *
                        ( cylinder_radius - wall_thickness ) )
@@ -196,10 +196,12 @@ void powderSettlingExample( const std::string filename )
         return false;
     };
     // Update domain to create fewer powder particles.
+    /*
     std::array<double, 3> dx;
     for ( int d = 0; d < 3; d++ )
         dx[d] = particles->dx[d] * 2.0;
     particles->createDomain( low_corner, high_corner, dx );
+    */
     particles->createParticles( exec_space(), Cabana::InitRandom{},
                                 create_powder, particles->numFrozen() );
 
@@ -234,6 +236,11 @@ void powderSettlingExample( const std::string filename )
     //                   Simulation init
     // ====================================================
     cabana_pd->init();
+
+    // Use a force magnitude threshold to remove particles that are too close.
+    // TODO: The force magnitude should be based on the maximum desired overlap
+    // according to the properties of the contact model
+    cabana_pd->remove( 1e6 );
 
     // ====================================================
     //                   Boundary condition
