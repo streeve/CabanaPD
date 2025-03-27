@@ -70,9 +70,8 @@
 
 namespace CabanaPD
 {
-template <class MemorySpace, class MechanicsType, class... ModelParams>
-class Force<MemorySpace,
-            ForceModel<PMB, MechanicsType, NoFracture, ModelParams...>>
+template <class MemorySpace, class ModelType>
+class Force<MemorySpace, ModelType, Pair, NonLinear, NoFracture>
     : public BaseForce<MemorySpace>
 {
   public:
@@ -165,9 +164,8 @@ class Force<MemorySpace,
     }
 };
 
-template <class MemorySpace, class MechanicsType, class... ModelParams>
-class Force<MemorySpace,
-            ForceModel<PMB, MechanicsType, Fracture, ModelParams...>>
+template <class MemorySpace, class ModelType>
+class Force<MemorySpace, ModelType, Pair, NonLinear, Fracture>
     : public BaseForce<MemorySpace>
 {
   public:
@@ -305,9 +303,8 @@ class Force<MemorySpace,
     }
 };
 
-template <class MemorySpace, class... ModelParams>
-class Force<MemorySpace,
-            ForceModel<LinearPMB, Elastic, NoFracture, ModelParams...>>
+template <class MemorySpace, class ModelType>
+class Force<MemorySpace, ModelType, Pair, Linear, NoFracture>
     : public BaseForce<MemorySpace>
 {
   public:
