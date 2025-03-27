@@ -53,6 +53,12 @@ struct Pair
 struct State
 {
 };
+struct Linear
+{
+};
+struct NonLinear
+{
+};
 
 // Contact and DEM (contact without PD) tags.
 struct Contact

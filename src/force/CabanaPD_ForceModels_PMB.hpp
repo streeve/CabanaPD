@@ -26,6 +26,7 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>
 {
     using base_type = BaseForceModel;
     using base_model = PMB;
+    using linear_type = Linear;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
 
@@ -64,6 +65,7 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureIndependent>
 {
     using base_type = ForceModel<PMB, Elastic, NoFracture>;
     using base_model = typename base_type::base_model;
+    using linear_type = typename base_type::linear_type;
     using fracture_type = Fracture;
     using mechanics_type = Elastic;
     using thermal_type = base_type::thermal_type;
@@ -110,6 +112,7 @@ struct ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
     using base_type = ForceModel<PMB, Elastic>;
     using base_plasticity_type = BasePlasticity<MemorySpace>;
     using base_model = typename base_type::base_model;
+    using linear_type = typename base_type::linear_type;
     using fracture_type = Fracture;
     using mechanics_type = ElasticPerfectlyPlastic;
     using thermal_type = base_type::thermal_type;
@@ -190,6 +193,7 @@ struct ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
     using lps_base_type =
         ForceModel<LPS, Elastic, Fracture, TemperatureIndependent>;
     using base_model = typename base_type::base_model;
+    using linear_type = typename base_type::linear_type;
     using fracture_type = typename base_type::fracture_type;
     using mechanics_type = typename base_type::mechanics_type;
     using thermal_type = typename base_type::thermal_type;
@@ -242,6 +246,7 @@ struct ForceModel<LinearPMB, Elastic, NoFracture, TemperatureIndependent>
 {
     using base_type = ForceModel<PMB, Elastic, NoFracture>;
     using base_model = typename base_type::base_model;
+    using linear_type = Linear;
     using fracture_type = typename base_type::fracture_type;
     using mechanics_type = Elastic;
     using thermal_type = base_type::thermal_type;
@@ -259,6 +264,7 @@ struct ForceModel<LinearPMB, Elastic, Fracture, TemperatureIndependent>
 {
     using base_type = ForceModel<PMB>;
     using base_model = typename base_type::base_model;
+    using linear_type = Linear;
     using fracture_type = typename base_type::fracture_type;
     using mechanics_type = Elastic;
     using thermal_type = base_type::thermal_type;
@@ -284,6 +290,7 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureDependent,
         ForceModel<PMB, Elastic, NoFracture, TemperatureIndependent>;
     using base_temperature_type = BaseTemperatureModel<TemperatureType>;
     using base_model = PMB;
+    using linear_type = typename base_type::linear_type;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureDependent;
 
@@ -359,6 +366,7 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureDependent, TemperatureType>
         ForceModel<PMB, Elastic, Fracture, TemperatureIndependent>;
     using base_temperature_type = BaseTemperatureModel<TemperatureType>;
     using base_model = typename base_type::base_model;
+    using linear_type = typename base_type::linear_type;
     using fracture_type = typename base_type::fracture_type;
     using mechanics_type = Elastic;
     using thermal_type = TemperatureDependent;
@@ -419,6 +427,7 @@ struct ForceModel<PMB, Elastic, NoFracture, DynamicTemperature, TemperatureType>
                                  TemperatureType>;
     using base_temperature_type = BaseDynamicTemperatureModel;
     using base_model = PMB;
+    using linear_type = typename base_type::linear_type;
     using fracture_type = NoFracture;
     using thermal_type = DynamicTemperature;
 
@@ -471,6 +480,7 @@ struct ForceModel<PMB, Elastic, Fracture, DynamicTemperature, TemperatureType>
                                  TemperatureType>;
     using base_temperature_type = BaseDynamicTemperatureModel;
     using base_model = typename base_type::base_model;
+    using linear_type = typename base_type::linear_type;
     using fracture_type = typename base_type::fracture_type;
     using thermal_type = DynamicTemperature;
 
