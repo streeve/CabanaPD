@@ -71,14 +71,18 @@
 namespace CabanaPD
 {
 template <class MemorySpace, class ModelType>
-class Force<MemorySpace, ModelType, Pair, NonLinear, NoFracture>
-    : public BaseForce<MemorySpace>
+class Force<
+    MemorySpace, ModelType,
+    typename std::enable_if<(
+        std::is_same<typename ModelType::base_model::base_type, Pair>::value &&
+        std::is_same<typename ModelType::linear_type, NonLinear>::value &&
+        std::is_same<typename ModelType::fracture_type, NoFracture>::value )>::
+        type> : public BaseForce<MemorySpace>
 {
   public:
     // Using the default exec_space.
     using exec_space = typename MemorySpace::execution_space;
-    using model_type =
-        ForceModel<PMB, MechanicsType, NoFracture, ModelParams...>;
+    using model_type = ModelType;
     using base_type = BaseForce<MemorySpace>;
 
   protected:
@@ -165,13 +169,18 @@ class Force<MemorySpace, ModelType, Pair, NonLinear, NoFracture>
 };
 
 template <class MemorySpace, class ModelType>
-class Force<MemorySpace, ModelType, Pair, NonLinear, Fracture>
-    : public BaseForce<MemorySpace>
+class Force<
+    MemorySpace, ModelType,
+    typename std::enable_if<(
+        std::is_same<typename ModelType::base_model::base_type, Pair>::value &&
+        std::is_same<typename ModelType::linear_type, NonLinear>::value &&
+        std::is_same<typename ModelType::fracture_type, Fracture>::value )>::
+        type> : public BaseForce<MemorySpace>
 {
   public:
     // Using the default exec_space.
     using exec_space = typename MemorySpace::execution_space;
-    using model_type = ForceModel<PMB, MechanicsType, Fracture, ModelParams...>;
+    using model_type = ModelType;
     using base_type = BaseForce<MemorySpace>;
 
   protected:
@@ -304,14 +313,18 @@ class Force<MemorySpace, ModelType, Pair, NonLinear, Fracture>
 };
 
 template <class MemorySpace, class ModelType>
-class Force<MemorySpace, ModelType, Pair, Linear, NoFracture>
-    : public BaseForce<MemorySpace>
+class Force<
+    MemorySpace, ModelType,
+    typename std::enable_if<(
+        std::is_same<typename ModelType::base_model::base_type, Pair>::value &&
+        std::is_same<typename ModelType::linear_type, Linear>::value &&
+        std::is_same<typename ModelType::fracture_type, NoFracture>::value )>::
+        type> : public BaseForce<MemorySpace>
 {
   public:
     // Using the default exec_space.
     using exec_space = typename MemorySpace::execution_space;
-    using model_type =
-        ForceModel<LinearPMB, Elastic, NoFracture, TemperatureIndependent>;
+    using model_type = ModelType;
     using base_type = BaseForce<MemorySpace>;
 
   protected:
