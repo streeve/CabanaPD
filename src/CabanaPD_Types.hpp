@@ -14,6 +14,8 @@
 
 #include <type_traits>
 
+#include <Cabana_Grid.hpp>
+
 namespace CabanaPD
 {
 // Fracture tags.

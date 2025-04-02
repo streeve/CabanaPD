@@ -243,6 +243,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     void create( const ExecSpace& exec_space, InitType init_type,
                  UserFunctor user_create, const std::size_t num_previous,
                  const bool create_frozen = false,
+                 [[maybe_unused]] const int seed = 123456,
                  typename std::enable_if<is_particle_init<InitType>::value,
                                          int>::type* = 0 )
     {
@@ -297,9 +298,16 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
             return create;
         };
         // Fence inside create.
-        local_offset = Cabana::Grid::createParticles(
-            init_type, exec_space, create_functor, _plist_x, particles_per_cell,
-            *local_grid, num_previous, false );
+        // Need to pass seed for random case only.
+        if constexpr ( std::is_same<InitType, Cabana::InitRandom>::value )
+            local_offset = Cabana::Grid::createParticles(
+                init_type, exec_space, create_functor, _plist_x,
+                particles_per_cell, *local_grid, num_previous, false, seed );
+        else
+            local_offset = Cabana::Grid::createParticles(
+                init_type, exec_space, create_functor, _plist_x,
+                particles_per_cell, *local_grid, num_previous, false );
+
         resize( local_offset, 0, create_frozen );
 
         updateGlobal();
@@ -427,19 +435,27 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     }
 
     template <class ExecSpace, class FunctorType>
-    void update( const ExecSpace, const FunctorType init_functor,
-                 const bool update_frozen = false )
+    void update( const ExecSpace, const int start,
+                 const FunctorType init_functor )
     {
         _init_timer.start();
-        std::size_t start = frozen_offset;
-        if ( update_frozen )
-            start = 0;
         Kokkos::RangePolicy<ExecSpace> policy( start, local_offset );
         Kokkos::parallel_for(
             "CabanaPD::Particles::update_particles", policy,
             KOKKOS_LAMBDA( const int pid ) { init_functor( pid ); } );
         Kokkos::fence();
         _init_timer.stop();
+    }
+
+    template <class ExecSpace, class FunctorType>
+    void update( const ExecSpace exec_space, const FunctorType init_functor,
+                 const bool update_frozen = false )
+    {
+        std::size_t start = frozen_offset;
+        if ( update_frozen )
+            start = 0;
+
+        update( exec_space, start, init_functor );
     }
 
     // Particles are always in order frozen, local, ghost.

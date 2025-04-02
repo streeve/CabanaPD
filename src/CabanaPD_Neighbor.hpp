@@ -126,7 +126,15 @@ class Neighbor<MemorySpace, NoFracture>
             // Reset neighbor update displacement.
             const auto u = particles.sliceDisplacement();
             auto u_neigh = particles.sliceDisplacementNeighborBuild();
-            Cabana::deep_copy( u_neigh, u );
+            // This is not a deep_copy because they are likely different sizes.
+            Kokkos::RangePolicy<typename ParticleType::execution_space> policy(
+                0, u_neigh.size() );
+            Kokkos::parallel_for(
+                "CabanaPD::Contact::update", policy,
+                KOKKOS_LAMBDA( const int p ) {
+                    for ( int d = 0; d < 3; d++ )
+                        u_neigh( p, d ) = u( p, d );
+                } );
             _timer.stop();
         }
     }
