@@ -173,8 +173,11 @@ void vnotchedBeamTestExample( const std::string filename )
     auto x = particles->sliceReferencePosition();
     auto v = particles->sliceVelocity();
 
-    // Grips' velocity magnitude
+    // Right grip velocity
     double v0 = inputs["grip_velocity"];
+    double v0_right = -v0;
+    // Left grip velocity
+    double v0_left = 0.0;
 
     // Create region for each grip.
     double l_grip_max = inputs["grip_max_length"];
@@ -189,27 +192,27 @@ void vnotchedBeamTestExample( const std::string filename )
         // Right grip: y-velocity
         if ( high_corner[0] - x( pid, 0 ) < l_grip_min )
         {
-            v( pid, 1 ) = -v0;
+            v( pid, 1 ) = v0_right;
         }
         else if ( high_corner[0] - x( pid, 0 ) < l_grip_max &&
                   x( pid, 1 ) - low_corner[1] >
                       m_slop *
                           ( ( high_corner[0] - x( pid, 0 ) ) - l_grip_min ) )
         {
-            v( pid, 1 ) = -v0;
+            v( pid, 1 ) = v0_right;
         };
 
         // Left grip: y-velocity
         if ( x( pid, 0 ) - low_corner[0] < l_grip_min )
         {
-            v( pid, 1 ) = v0;
+            v( pid, 1 ) = v0_left;
         }
         else if ( x( pid, 0 ) - low_corner[0] < l_grip_max &&
                   high_corner[1] - x( pid, 1 ) >
                       m_slop *
                           ( ( x( pid, 0 ) - low_corner[0] ) - l_grip_min ) )
         {
-            v( pid, 1 ) = v0;
+            v( pid, 1 ) = v0_left;
         };
     };
     particles->updateParticles( exec_space{}, init_functor );
@@ -233,25 +236,35 @@ void vnotchedBeamTestExample( const std::string filename )
     x = particles->sliceReferencePosition();
     auto bc_region = KOKKOS_LAMBDA( const int pid )
     {
-        // Right grip: y-velocity
+        double flag_bc = 0;
+
+        // Right grip
         if ( high_corner[0] - x( pid, 0 ) < l_grip_min )
-            return true;
+            flag_bc = 1;
         else if ( high_corner[0] - x( pid, 0 ) < l_grip_max &&
                   x( pid, 1 ) - low_corner[1] >
                       m_slop *
                           ( ( high_corner[0] - x( pid, 0 ) ) - l_grip_min ) )
-            return true;
+            flag_bc = 1;
 
-        // Left grip: y-velocity
+        // Left grip
         if ( x( pid, 0 ) - low_corner[0] < l_grip_min )
-            return true;
+            flag_bc = 1;
         else if ( x( pid, 0 ) - low_corner[0] < l_grip_max &&
                   high_corner[1] - x( pid, 1 ) >
                       m_slop *
                           ( ( x( pid, 0 ) - low_corner[0] ) - l_grip_min ) )
-            return true;
+            flag_bc = 1;
 
-        return false;
+        // Determine if to impose bc
+        if ( flag_bc == 1 )
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        };
     };
     CabanaPD::RegionBoundary custom_region( bc_region );
     auto bc =
