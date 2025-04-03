@@ -42,10 +42,10 @@ struct RegionBoundary
     }
 
     template <class PositionType>
-    KOKKOS_INLINE_FUNCTION bool inside( const PositionType& x,
+    KOKKOS_INLINE_FUNCTION bool inside( const PositionType&,
                                         const int pid ) const
     {
-        return user( x, pid );
+        return _user_functor( pid );
     }
 };
 

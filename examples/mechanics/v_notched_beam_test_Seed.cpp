@@ -180,8 +180,6 @@ void vnotchedBeamTestExample( const std::string filename )
     double l_grip_max = inputs["grip_max_length"];
     double l_grip_min = inputs["grip_min_length"];
     double m_slop = d1 / ( l_grip_max - l_grip_min );
-    double y_bdry_left;
-    double y_bdry_right;
 
     auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
@@ -232,18 +230,33 @@ void vnotchedBeamTestExample( const std::string filename )
     //                Boundary conditions
     // ====================================================
     // Create BC last to ensure ghost particles are included.
-    // Left grip
-    CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> left_grip(
-        low_corner[0], low_corner[0] + l_grip_max, low_corner[1],
-        high_corner[1], low_corner[2], high_corner[2] );
-    // Right grip
-    CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> right_grip(
-        high_corner[0] - l_grip_max, high_corner[0], low_corner[1],
-        high_corner[1], low_corner[2], high_corner[2] );
+    x = particles->sliceReferencePosition();
+    auto bc_region = KOKKOS_LAMBDA( const int pid )
+    {
+        // Right grip: y-velocity
+        if ( high_corner[0] - x( pid, 0 ) < l_grip_min )
+            return true;
+        else if ( high_corner[0] - x( pid, 0 ) < l_grip_max &&
+                  x( pid, 1 ) - low_corner[1] >
+                      m_slop *
+                          ( ( high_corner[0] - x( pid, 0 ) ) - l_grip_min ) )
+            return true;
 
+        // Left grip: y-velocity
+        if ( x( pid, 0 ) - low_corner[0] < l_grip_min )
+            return true;
+        else if ( x( pid, 0 ) - low_corner[0] < l_grip_max &&
+                  high_corner[1] - x( pid, 1 ) >
+                      m_slop *
+                          ( ( x( pid, 0 ) - low_corner[0] ) - l_grip_min ) )
+            return true;
+
+        return false;
+    };
+    CabanaPD::RegionBoundary custom_region( bc_region );
     auto bc =
         createBoundaryCondition( CabanaPD::ForceValueBCTag{}, 0.0, exec_space{},
-                                 *particles, left_grip, right_grip );
+                                 *particles, custom_region );
 
     // ====================================================
     //                   Simulation run
