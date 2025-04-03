@@ -19,7 +19,7 @@
 #include <CabanaPD.hpp>
 
 // Simulate ASTM D5379/D5379M V-notched beam test.
-void tensileTestExample( const std::string filename )
+void vnotchedBeamTestExample( const std::string filename )
 {
     // ====================================================
     //               Choose Kokkos spaces
@@ -40,7 +40,6 @@ void tensileTestExample( const std::string filename )
     double nu = 0.25; // Use bond-based model
     double K = E / ( 3 * ( 1 - 2 * nu ) );
     double G0 = inputs["fracture_energy"];
-    // double sigma_y = inputs["yield_stress"];
     double delta = inputs["horizon"];
     delta += 1e-10;
 
@@ -102,7 +101,7 @@ void tensileTestExample( const std::string filename )
         double y_line_top = y_center + 0.5 * W + d3;
         // x-distance from center to circle's intersections with specimen
         double xdist_min = r * std::sin( alpha );
-        // x-distance from center to specimen openings on top of specimen
+        // x-distance from center to openings on top of specimen
         double xdist_max = xdist_min + d4 * std::tan( alpha );
 
         if ( x[1] > y_line_top )
@@ -165,11 +164,6 @@ void tensileTestExample( const std::string filename )
         };
     };
 
-    // auto particles =
-    //     CabanaPD::createParticles<memory_space, model_type, thermal_type>(
-    //         exec_space(), low_corner, high_corner, num_cells, halo_width,
-    //         Cabana::InitRandom{}, init_op );
-
     auto particles =
         CabanaPD::createParticles<memory_space, model_type, thermal_type>(
             exec_space(), low_corner, high_corner, num_cells, halo_width,
@@ -185,41 +179,6 @@ void tensileTestExample( const std::string filename )
     // Create region for each grip.
     double l_grip_max = inputs["grip_max_length"];
     double l_grip_min = inputs["grip_min_length"];
-
-    /*
-    CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> left_grip(
-        low_corner[0], low_corner[0] + l_grip_max, low_corner[1],
-        high_corner[1], low_corner[2], high_corner[2] );
-    CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> right_grip(
-        high_corner[0] - l_grip_max, high_corner[0], low_corner[1],
-        high_corner[1], low_corner[2], high_corner[2] );
-            */
-
-    /*
-    auto init_functor = KOKKOS_LAMBDA( const int pid )
-    {
-        // Density
-        rho( pid ) = rho0;
-
-        // Grips' x-velocity
-        if ( left_grip.inside( x, pid ) )
-            v( pid, 0 ) = 0.0;
-        else if ( right_grip.inside( x, pid ) )
-
-            double m_slop = d1 / ( l_grip_max - l_grip_min );
-            if ( high_corner[0] - x[0] < l_grip_min )
-            {
-                v( pid, 1 ) = - v0;
-            }
-            else if ( high_corner[0] - x[0] < l_grip_max )
-            {
-                double y_bdry = m_slop * ( ( high_corner[0] -  x[0] ) -
-    l_grip_min ); if ( x[1] - low_corner[1] > y_bdry ) v( pid, 1 ) = - v0;
-            };
-    };
-    particles->updateParticles( exec_space{}, init_functor );
-        */
-
     double m_slop = d1 / ( l_grip_max - l_grip_min );
     double y_bdry_left;
     double y_bdry_right;
@@ -254,47 +213,6 @@ void tensileTestExample( const std::string filename )
         {
             v( pid, 1 ) = v0;
         };
-        /*
-        double l_grip_max = 0.032;
-        double l_grip_min = 0.022;
-
-        double low_x = -0.0380;
-        double high_x = 0.0380;
-
-        double low_y = -0.0095;
-
-        // Grips' x-velocity
-        double m_slop = d1 / ( l_grip_max - l_grip_min );
-
-        // Right grip: y-velocity
-        // double y_bdry_right = m_slop * ( ( high_corner[0] -  x( pid, 0 ) ) -
-        l_grip_min ); double y_bdry_right = m_slop * ( ( high_x -  x( pid, 0 ) )
-        - l_grip_min );
-
-        //if ( high_corner[0] - x( pid, 0 ) < l_grip_min )
-        if ( high_x - x( pid, 0 ) < l_grip_min )
-        {
-            v( pid, 1 ) = - v0;
-        //} else if ( high_corner[0] - x( pid, 0 ) < l_grip_max  && x( pid, 1 )
-        - low_corner[1] > y_bdry_right ) } else if ( high_x - x( pid, 0 ) <
-        l_grip_max  && x( pid, 1 ) - low_y > y_bdry_right ) v( pid, 1 ) = - v0;
-        };
-
-        // Left grip: y-velocity
-        // double y_bdry_left = m_slop * ( ( x( pid, 0 ) - low_corner[0] ) -
-        l_grip_min ); double y_bdry_left = m_slop * ( ( x( pid, 0 ) - low_x ) -
-        l_grip_min );
-        // if ( x( pid, 0 ) - low_corner[0] < l_grip_min )
-        if ( x( pid, 0 ) - low_x < l_grip_min )
-        {
-            v( pid, 1 ) = v0;
-        // } else if ( x( pid, 0 ) - low_corner[0] < l_grip_max && x( pid, 1 ) -
-        low_corner[1] < y_bdry_left ) } else if ( x( pid, 0 ) - low_x <
-        l_grip_max && x( pid, 1 ) - low_y < y_bdry_left )
-        {
-                v( pid, 1 ) = v0;
-        };
-        */
     };
     particles->updateParticles( exec_space{}, init_functor );
 
@@ -340,7 +258,7 @@ int main( int argc, char* argv[] )
     MPI_Init( &argc, &argv );
     Kokkos::initialize( argc, argv );
 
-    tensileTestExample( argv[1] );
+    vnotchedBeamTestExample( argv[1] );
 
     Kokkos::finalize();
     MPI_Finalize();
