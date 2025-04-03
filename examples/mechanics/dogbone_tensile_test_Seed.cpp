@@ -19,7 +19,7 @@
 #include <CabanaPD.hpp>
 
 // Simulate ASTM D638 type I dogbone tensile test.
-void tensileTestExample( const std::string filename )
+void dogboneTensileTestExample( const std::string filename )
 {
     // ====================================================
     //               Choose Kokkos spaces
@@ -40,7 +40,6 @@ void tensileTestExample( const std::string filename )
     double nu = 0.25; // Use bond-based model
     double K = E / ( 3 * ( 1 - 2 * nu ) );
     double G0 = inputs["fracture_energy"];
-    // double sigma_y = inputs["yield_stress"];
     double delta = inputs["horizon"];
     delta += 1e-10;
 
@@ -59,7 +58,6 @@ void tensileTestExample( const std::string filename )
     // ====================================================
     using model_type = CabanaPD::PMB;
     using thermal_type = CabanaPD::TemperatureIndependent;
-    // using mechanics_type = CabanaPD::ElasticPerfectlyPlastic;
     using mechanics_type = CabanaPD::Elastic;
 
     // ====================================================
@@ -70,13 +68,13 @@ void tensileTestExample( const std::string filename )
     double W = inputs["width_narrow_section"];
     double R = inputs["fillet_radius"];
 
+    // x- and y-coordinates of center of domain
+    double midx = 0.5 * ( low_corner[0] + high_corner[0] );
+    double midy = 0.5 * ( low_corner[1] + high_corner[1] );
+
     // Do not create particles outside dogbone tensile test specimen region.
     auto init_op = KOKKOS_LAMBDA( const int, const double x[3] )
     {
-        // x- and y-coordinates of center of domain
-        double midx = 0.5 * ( low_corner[0] + high_corner[0] );
-        double midy = 0.5 * ( low_corner[1] + high_corner[1] );
-
         // Filler radius squared
         double Rsq = R * R;
 
@@ -143,7 +141,7 @@ void tensileTestExample( const std::string filename )
     auto particles =
         CabanaPD::createParticles<memory_space, model_type, thermal_type>(
             exec_space(), low_corner, high_corner, num_cells, halo_width,
-            Cabana::InitRandom{}, init_op );
+            init_op );
 
     auto rho = particles->sliceDensity();
     auto x = particles->sliceReferencePosition();
@@ -155,11 +153,11 @@ void tensileTestExample( const std::string filename )
     // Create region for each grip.
     double L0 = inputs["system_size"][0];
     CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> left_grip(
-        low_corner[0], low_corner[0] + 0.5 * ( L0 - D ), low_corner[1],
-        high_corner[1], low_corner[2], high_corner[2] );
+        low_corner[0], midx - 0.5 * D, low_corner[1], high_corner[1],
+        low_corner[2], high_corner[2] );
     CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> right_grip(
-        high_corner[0] - 0.5 * ( L0 - D ), high_corner[0], low_corner[1],
-        high_corner[1], low_corner[2], high_corner[2] );
+        midx + 0.5 * D, high_corner[0], low_corner[1], high_corner[1],
+        low_corner[2], high_corner[2] );
 
     auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
@@ -168,7 +166,6 @@ void tensileTestExample( const std::string filename )
 
         // Grips' x-velocity
         if ( left_grip.inside( x, pid ) )
-            // v( pid, 0 ) = -v0;
             v( pid, 0 ) = 0.0;
         else if ( right_grip.inside( x, pid ) )
             v( pid, 0 ) = v0;
@@ -178,9 +175,6 @@ void tensileTestExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    // auto force_model = CabanaPD::createForceModel(
-    //    model_type{}, mechanics_type{}, *particles, delta, K, G0, sigma_y );
-
     auto force_model = CabanaPD::createForceModel(
         model_type{}, mechanics_type{}, *particles, delta, K, G0 );
 
@@ -211,7 +205,7 @@ int main( int argc, char* argv[] )
     MPI_Init( &argc, &argv );
     Kokkos::initialize( argc, argv );
 
-    tensileTestExample( argv[1] );
+    dogboneTensileTestExample( argv[1] );
 
     Kokkos::finalize();
     MPI_Finalize();

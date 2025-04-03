@@ -1,5 +1,5 @@
 {
-    "num_cells"              : {"value": [251, 29, 5]},
+    "num_cells"              : {"value": [545, 63, 11]},
     "system_size"            : {"value": [0.165, 0.019, 0.0032], "unit": "m"},
     "gage_length"            : {"value": 0.050, "unit": "m"},
     "width_narrow_section"   : {"value": 0.013, "unit": "m"},
@@ -8,11 +8,11 @@
     "density"                : {"value": 1200, "unit": "kg/m^3"},
     "elastic_modulus"        : {"value": 3.25e+9, "unit": "Pa"},
     "fracture_energy"        : {"value": 109, "unit": "J/m^2"},
-    "horizon"                : {"value": 0.002, "unit": "m"},   
+    "horizon"                : {"value": 0.001, "unit": "m"},      
     "grip_velocity"          : {"value": 8.3333e-05, "unit": "m/s"},
     "final_time"             : {"value": 1e-1, "unit": "s"},
-    "timestep"               : {"value": 3.0e-7, "unit": "s"},
+    "timestep"               : {"value": 1.45e-7, "unit": "s"},
     "timestep_safety_factor" : {"value": 0.85},
-    "output_frequency"       : {"value": 1000},
+    "output_frequency"       : {"value": 100},
     "output_reference"       : {"value": false}
 }
