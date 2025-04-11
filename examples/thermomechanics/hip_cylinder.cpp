@@ -36,15 +36,17 @@ void HIPCylinderExample( const std::string filename )
     //                Material parameters
     // ====================================================
     double rho0 = inputs["density"];
-    double K = inputs["bulk_modulus"];
-    // double G = inputs["shear_modulus"]; // Only for LPS.
-    double sc = inputs["critical_stretch"];
+    double E = inputs["elastic_modulus"];
+    double nu = 0.25; // Use bond-based model
+    double K = E / ( 3 * ( 1 - 2 * nu ) );
+    double G0 = inputs["fracture_energy"];
+    double sigma_y = inputs["yield_stress"];
     double delta = inputs["horizon"];
     delta += 1e-10;
-    // For PMB or LPS with influence_type == 1
-    double G0 = 9 * K * delta * ( sc * sc ) / 5;
-    // For LPS with influence_type == 0 (default)
-    // double G0 = 15 * K * delta * ( sc * sc ) / 8;
+
+    // Problem parameters
+    double sigma0 = inputs["traction"];
+    double temp0 = inputs["reference_temperature"];
 
     // ====================================================
     //                  Discretization
@@ -57,10 +59,10 @@ void HIPCylinderExample( const std::string filename )
     int halo_width = m + 1; // Just to be safe.
 
     // ====================================================
-    //                    Force model
+    //                Force model type
     // ====================================================
     using model_type = CabanaPD::PMB;
-    CabanaPD::ForceModel force_model( model_type{}, delta, K, G0 );
+    using mechanics_type = CabanaPD::ElasticPerfectlyPlastic;
 
     // ====================================================
     //    Custom particle generation and initialization
@@ -83,96 +85,120 @@ void HIPCylinderExample( const std::string filename )
         return true;
     };
 
-    // ====================================================
-    //  Simulation run with contact physics
-    // ====================================================
-    if ( inputs["use_contact"] )
+    CabanaPD::Particles particles(
+        memory_space{}, model_type{}, low_corner, high_corner, num_cells,
+        halo_width, Cabana::InitUniform{}, init_op, exec_space{} );
+
+    auto rho = particles.sliceDensity();
+    auto x = particles.sliceReferencePosition();
+    double W = inputs["wall_thickness"];
+
+    auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
-        using contact_type = CabanaPD::NormalRepulsionModel;
-        CabanaPD::Particles particles(
-            memory_space{}, contact_type{}, low_corner, high_corner, num_cells,
-            halo_width, Cabana::InitRandom{}, init_op, exec_space{} );
-
-        auto rho = particles.sliceDensity();
-        auto x = particles.sliceReferencePosition();
-        auto v = particles.sliceVelocity();
-        auto f = particles.sliceForce();
-        auto dx = particles.dx;
-
-        double vrmax = inputs["max_radial_velocity"];
-        double vrmin = inputs["min_radial_velocity"];
-        double vzmax = inputs["max_vertical_velocity"];
-        double zmin = z_center - 0.5 * H;
-
-        auto init_functor = KOKKOS_LAMBDA( const int pid )
-        {
-            // Density
+        double rsq = ( x( pid, 0 ) - x_center ) * ( x( pid, 0 ) - x_center ) +
+                     ( x( pid, 1 ) - y_center ) * ( x( pid, 1 ) - y_center );
+        if ( rsq > ( Rin + W ) * ( Rin + W ) &&
+             rsq > ( Rout - W ) * ( Rout - W ) &&
+             x( pid, 2 ) > low_corner[2] + W )
+        { // Powder density
+            rho( pid ) = 0.7 * rho0;
+        }
+        else
+        { // Container density
             rho( pid ) = rho0;
-
-            // Velocity
-            double zfactor = ( ( x( pid, 2 ) - zmin ) / ( 0.5 * H ) ) - 1;
-            double vr = vrmax - vrmin * zfactor * zfactor;
-            v( pid, 0 ) =
-                vr * Kokkos::cos( Kokkos::atan2( x( pid, 1 ), x( pid, 0 ) ) );
-            v( pid, 1 ) =
-                vr * Kokkos::sin( Kokkos::atan2( x( pid, 1 ), x( pid, 0 ) ) );
-            v( pid, 2 ) = vzmax * zfactor;
         };
-        particles.updateParticles( exec_space{}, init_functor );
+    };
+    particles.updateParticles( exec_space{}, init_functor );
 
-        // Use contact radius and extension relative to particle spacing.
-        double r_c = inputs["contact_horizon_factor"];
-        double r_extend = inputs["contact_horizon_extend_factor"];
-        // NOTE: dx/2 is when particles first touch.
-        r_c *= dx[0] / 2.0;
-        r_extend *= dx[0];
-
-        contact_type contact_model( delta, r_c, r_extend, K );
-
-        CabanaPD::Solver solver( inputs, particles, force_model,
-                                 contact_model );
-        solver.init();
-        solver.run();
-    }
     // ====================================================
-    //  Simulation run without contact
+    //                Boundary conditions planes
     // ====================================================
-    else
+    CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> plane(
+        low_corner[0], high_corner[0], low_corner[1], high_corner[1],
+        low_corner[2], high_corner[2] );
+
+    // ====================================================
+    //                    Force model
+    // ====================================================
+    CabanaPD::ForceModel force_model( model_type{}, delta, K, G0 );
+    // CabanaPD::ForceModel force_model( model_type{}, mechanics_type{}, rho,
+    // delta, K, G0, sigma_y, rho0 );
+
+    // ====================================================
+    //                   Create solver
+    // ====================================================
+    CabanaPD::Solver solver( inputs, particles, force_model );
+
+    // ====================================================
+    //                Boundary conditions
+    // ====================================================
+
+    // Create BC last to ensure ghost particles are included.
+    double dx = particles.dx[0];
+    // double dy = particles.dx[1];
+    double dz = particles.dx[2];
+    // double sigma0 = inputs["traction"];
+    double b0 = sigma0 / dx;
+    auto f = particles.sliceForce();
+    x = particles.sliceReferencePosition();
+    // Create an isostatic pressure BC.
+    auto bc_op = KOKKOS_LAMBDA( const int pid, const double )
     {
-        CabanaPD::Particles particles(
-            memory_space{}, model_type{}, low_corner, high_corner, num_cells,
-            halo_width, Cabana::InitRandom{}, init_op, exec_space{} );
+        double rsq = ( x( pid, 0 ) - x_center ) * ( x( pid, 0 ) - x_center ) +
+                     ( x( pid, 1 ) - y_center ) * ( x( pid, 1 ) - y_center );
+        double theta =
+            Kokkos::atan2( x( pid, 1 ) - y_center, x( pid, 0 ) - x_center );
 
-        auto rho = particles.sliceDensity();
-        auto x = particles.sliceReferencePosition();
-        auto v = particles.sliceVelocity();
-        auto f = particles.sliceForce();
-
-        double vrmax = inputs["max_radial_velocity"];
-        double vrmin = inputs["min_radial_velocity"];
-        double vzmax = inputs["max_vertical_velocity"];
-        double zmin = z_center - 0.5 * H;
-
-        auto init_functor = KOKKOS_LAMBDA( const int pid )
+        // BC on outer boundary
+        if ( rsq > ( Rout - dx ) * ( Rout - dx ) )
         {
-            // Density
-            rho( pid ) = rho0;
-
-            // Velocity
-            double zfactor = ( ( x( pid, 2 ) - zmin ) / ( 0.5 * H ) ) - 1;
-            double vr = vrmax - vrmin * zfactor * zfactor;
-            v( pid, 0 ) =
-                vr * Kokkos::cos( Kokkos::atan2( x( pid, 1 ), x( pid, 0 ) ) );
-            v( pid, 1 ) =
-                vr * Kokkos::sin( Kokkos::atan2( x( pid, 1 ), x( pid, 0 ) ) );
-            v( pid, 2 ) = vzmax * zfactor;
+            f( pid, 0 ) += -b0 * Kokkos::cos( theta );
+            f( pid, 1 ) += -b0 * Kokkos::sin( theta );
+        }
+        // BC on inner boundary
+        else if ( rsq < ( Rin + dx ) * ( Rin + dx ) )
+        {
+            f( pid, 0 ) += b0 * Kokkos::cos( theta );
+            f( pid, 1 ) += b0 * Kokkos::sin( theta );
         };
-        particles.updateParticles( exec_space{}, init_functor );
 
-        CabanaPD::Solver solver( inputs, particles, force_model );
-        solver.init();
-        solver.run();
-    }
+        // BC on top boundary
+        if ( x( pid, 2 ) > z_center + 0.5 * H - dz )
+        {
+            f( pid, 2 ) += -b0;
+        }
+        // BC on bottom boundary
+        else if ( x( pid, 2 ) < z_center - 0.5 * H + dz )
+        {
+            f( pid, 2 ) += b0;
+        };
+    };
+    auto bc =
+        createBoundaryCondition( bc_op, exec_space{}, particles, true, plane );
+
+    // ====================================================
+    //                   Imposed field
+    // ====================================================
+    /*
+    x = particles.sliceReferencePosition();
+    auto temp = particles.sliceTemperature();
+    const double low_corner_y = low_corner[1];
+    // This is purposely delayed until after solver init so that ghosted
+    // particles are correctly taken into account for lambda capture here.
+    auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
+    {
+        temp( pid ) = temp0 + 5000.0 * ( x( pid, 1 ) - low_corner_y ) * t;
+    };
+    CabanaPD::BodyTerm body_term( temp_func, particles.size(), false );
+    */
+
+    // ====================================================
+    //                   Simulation run
+    // ====================================================
+    solver.init( bc );
+    solver.run( bc );
+    // solver.init( body_term );
+    // solver.run( body_term );
 }
 
 // Initialize MPI+Kokkos.
