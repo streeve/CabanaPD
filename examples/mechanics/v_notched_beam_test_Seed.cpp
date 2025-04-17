@@ -233,7 +233,7 @@ void vnotchedBeamTestExample( const std::string filename )
     //                Boundary conditions
     // ====================================================
     // Create BC last to ensure ghost particles are included.
-    x = particles->sliceReferencePosition();
+    x = cabana_pd->particles->sliceReferencePosition();
     auto bc_region = KOKKOS_LAMBDA( const int pid )
     {
         double flag_bc = 0;
@@ -269,7 +269,7 @@ void vnotchedBeamTestExample( const std::string filename )
     CabanaPD::RegionBoundary custom_region( bc_region );
     auto bc =
         createBoundaryCondition( CabanaPD::ForceValueBCTag{}, 0.0, exec_space{},
-                                 *particles, custom_region );
+                                 *cabana_pd->particles, custom_region );
 
     // ====================================================
     //                   Simulation run
