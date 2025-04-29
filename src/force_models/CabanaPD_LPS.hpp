@@ -217,23 +217,31 @@ struct ForceModel<LinearLPS, Elastic, Fracture>
 
 template <typename ModelType>
 ForceModel( ModelType, Elastic, NoFracture, const double delta, const double K,
-            const double G, const int influence = 0 )
-    -> ForceModel<ModelType, Elastic, NoFracture>;
+            const double G, const int influence = 0,
+            typename std::enable_if_t<
+                ( std::is_same<typename ModelType::base_model, LPS>::value ),
+                int>* = 0 ) -> ForceModel<ModelType, Elastic, NoFracture>;
 
 template <typename ModelType>
 ForceModel( ModelType, NoFracture, const double delta, const double K,
-            const double G, const int influence = 0 )
-    -> ForceModel<ModelType, Elastic, NoFracture>;
+            const double G, const int influence = 0,
+            typename std::enable_if_t<
+                ( std::is_same<typename ModelType::base_model, LPS>::value ),
+                int>* = 0 ) -> ForceModel<ModelType, Elastic, NoFracture>;
 
 template <typename ModelType>
 ForceModel( ModelType, Elastic, const double delta, const double K,
-            const double G, const int influence = 0 )
-    -> ForceModel<ModelType, Elastic>;
+            const double G, const int influence = 0,
+            typename std::enable_if_t<
+                ( std::is_same<typename ModelType::base_model, LPS>::value ),
+                int>* = 0 ) -> ForceModel<ModelType, Elastic>;
 
 template <typename ModelType>
 ForceModel( ModelType, const double _delta, const double _K, const double _G,
-            const double _G0, const int _influence = 0 )
-    -> ForceModel<ModelType>;
+            const double _G0, const int _influence = 0,
+            typename std::enable_if_t<
+                ( std::is_same<typename ModelType::base_model, LPS>::value ),
+                int>* = 0 ) -> ForceModel<ModelType>;
 
 } // namespace CabanaPD
 
