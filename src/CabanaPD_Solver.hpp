@@ -175,6 +175,10 @@ class Solver
         unsigned max_neighbors;
         unsigned long long total_neighbors;
         force->getNeighborStatistics( max_neighbors, total_neighbors );
+        if ( total_neighbors == 0 )
+            throw std::runtime_error(
+                "The horizon is too small relative to dx; there are zero "
+                "neighbors per particle." );
 
         // Create heat transfer if needed, using the same neighbor list as
         // the mechanics.
