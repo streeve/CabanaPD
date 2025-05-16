@@ -310,6 +310,8 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
 
         // Create the MPI partitions.
         Cabana::Grid::DimBlockPartitioner<dim> partitioner;
+        if ( partition != 0 )
+            partitioner = Cabana::Grid::DimBlockPartitioner<dim>( partition );
 
         // Create global mesh of MPI partitions.
         auto global_mesh = Cabana::Grid::createUniformGlobalMesh(
