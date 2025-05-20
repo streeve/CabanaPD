@@ -76,6 +76,17 @@ struct BaseFractureModel
         bond_break_coeff = ( 1.0 + s0 ) * ( 1.0 + s0 );
     }
 
+    // Average from existing models.
+    template <typename ModelType1, typename ModelType2>
+    BaseFractureModel( const ModelType1& model1, const ModelType2& model2 )
+    {
+        G0 = ( model1.G0 + model2.G0 ) / 2.0;
+        s0 = Kokkos::sqrt( ( model1.s0 * model1.s0 * model1.K +
+                             model2.s0 * model2.s0 * model2.K ) /
+                           ( model1.K + model2.K ) );
+        bond_break_coeff = ( 1.0 + s0 ) * ( 1.0 + s0 );
+    }
+
     KOKKOS_INLINE_FUNCTION
     bool operator()( CriticalStretchTag, const int, const int, const double r,
                      const double xi ) const
