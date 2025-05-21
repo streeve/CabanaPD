@@ -73,19 +73,19 @@ void fiberReinforcedCompositeExample( const std::string filename )
     //                    Force model
     // ====================================================
     // Matrix material
-    using model_matrix = CabanaPD::ForceModel<CabanaPD::PMB>;
-    model_matrix force_model_matrix( delta, K_m, G0_m );
+    using model_type = CabanaPD::PMB;
+    CabanaPD::ForceModel force_model_matrix( model_type{}, delta, K_m, G0_m );
 
     // Fiber material
-    using model_fiber = CabanaPD::ForceModel<CabanaPD::PMB>;
-    model_fiber force_model_fiber( delta, K_f, G0_f );
+    CabanaPD::ForceModel force_model_fiber( model_type{}, delta, K_f, G0_f );
 
     // ====================================================
     //                 Particle generation
     // ====================================================
     // Does not set displacements, velocities, etc.
-    auto particles = CabanaPD::createParticles<memory_space, model_fiber>(
-        exec_space(), low_corner, high_corner, num_cells, halo_width );
+    CabanaPD::Particles particles( memory_space{}, model_type{}, low_corner,
+                                   high_corner, num_cells, halo_width,
+                                   exec_space{} );
 
     // ====================================================
     //            Custom particle initialization
@@ -93,9 +93,9 @@ void fiberReinforcedCompositeExample( const std::string filename )
 
     std::array<double, 3> system_size = inputs["system_size"];
 
-    auto rho = particles->sliceDensity();
-    auto x = particles->sliceReferencePosition();
-    auto type = particles->sliceType();
+    auto rho = particles.sliceDensity();
+    auto x = particles.sliceReferencePosition();
+    auto type = particles.sliceType();
 
     // Fiber-reinforced composite geometry parameters
     double Vf = inputs["fiber_volume_fraction"];
@@ -202,22 +202,21 @@ void fiberReinforcedCompositeExample( const std::string filename )
             rho( pid ) = rho0_m;
         }
     };
-    particles->updateParticles( exec_space{}, init_functor );
+    particles.updateParticles( exec_space{}, init_functor );
 
     // ====================================================
     //                   Create solver
     // ====================================================
     auto models = CabanaPD::createMultiForceModel(
-        *particles, CabanaPD::AverageTag{}, force_model_matrix,
+        particles, CabanaPD::AverageTag{}, force_model_matrix,
         force_model_fiber );
-    auto cabana_pd =
-        CabanaPD::createSolver<memory_space>( inputs, particles, models );
+    CabanaPD::Solver solver( inputs, particles, models );
 
     // ====================================================
     //                   Simulation run
     // ====================================================
-    cabana_pd->init();
-    cabana_pd->run();
+    solver.init();
+    solver.run();
 }
 
 // Initialize MPI+Kokkos.
