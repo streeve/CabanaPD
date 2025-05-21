@@ -271,6 +271,7 @@ struct BaseTemperatureModel<TemperatureDependent, TemperatureType>
     BaseTemperatureModel( const BaseTemperatureModel& model1,
                           const BaseTemperatureModel& model2 )
     {
+        // FIXME: correct averaging
         alpha = ( model1.alpha + model2.alpha ) / 2.0;
         temp0 = ( model1.temp0 + model2.temp0 ) / 2.0;
     }
