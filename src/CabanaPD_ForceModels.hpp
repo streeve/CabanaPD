@@ -182,6 +182,15 @@ struct ForceModels
             delta = m.delta;
     }
 
+    auto cutoff() const { return delta; }
+
+    void updateBonds( const int num_local, const int max_neighbors )
+    {
+        model1.updateBonds( num_local, max_neighbors );
+        model2.updateBonds( num_local, max_neighbors );
+        model12.updateBonds( num_local, max_neighbors );
+    }
+
     KOKKOS_INLINE_FUNCTION int getIndex( const int i, const int j ) const
     {
         const int type_i = type( i );
