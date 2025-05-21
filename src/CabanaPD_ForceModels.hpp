@@ -38,6 +38,13 @@ struct BaseForceModel
     BaseForceModel( const double _delta )
         : delta( _delta ){};
 
+    // FIXME: use the first model cutoff for now.
+    template <typename ModelType1, typename ModelType2>
+    BaseForceModel( const ModelType1& model1, const ModelType2& )
+    {
+        delta = model1.delta;
+    }
+
     auto cutoff() const { return delta; }
 
     // Only needed for models which store bond properties.

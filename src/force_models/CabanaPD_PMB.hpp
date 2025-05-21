@@ -57,7 +57,7 @@ struct BaseForceModelPMB<Elastic> : public BaseForceModel
     // Average from existing models.
     template <typename ModelType1, typename ModelType2>
     BaseForceModelPMB( const ModelType1& model1, const ModelType2& model2 )
-        : base_type( model1.delta )
+        : base_type( model1, model2 )
     {
         K = ( model1.K + model2.K ) / 2.0;
         c = ( model1.c + model2.c ) / 2.0;
