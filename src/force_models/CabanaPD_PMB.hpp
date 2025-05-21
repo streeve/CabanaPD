@@ -105,6 +105,13 @@ struct BaseForceModelPMB<ElasticPerfectlyPlastic, MemorySpace>
     {
     }
 
+    // Average from existing models.
+    template <typename ModelType1, typename ModelType2>
+    BaseForceModelPMB( const ModelType1& model1, const ModelType2& model2 )
+        : base_type( model1, model2 )
+    {
+    }
+
     KOKKOS_INLINE_FUNCTION
     auto operator()( ForceCoeffTag, const int i, const int n, const double s,
                      const double vol ) const
@@ -198,6 +205,14 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureIndependent>
         , base_fracture_type( G0, s0 )
     {
     }
+
+    // Average from existing models.
+    template <typename ModelType1, typename ModelType2>
+    ForceModel( const ModelType1& model1, const ModelType2& model2 )
+        : base_type( model1, model2 )
+        , base_fracture_type( model1, model2 )
+    {
+    }
 };
 
 template <typename MemorySpace>
@@ -225,6 +240,14 @@ struct ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
                               ( 5.0 * G0 / sigma_y / delta + sigma_y / K ) /
                                   6.0 )
         , base_temperature_type()
+    {
+    }
+
+    // Average from existing models.
+    template <typename ModelType1, typename ModelType2>
+    ForceModel( const ModelType1& model1, const ModelType2& model2 )
+        : base_type( model1, model2 )
+        , base_fracture_type( model1, model2 )
     {
     }
 };
