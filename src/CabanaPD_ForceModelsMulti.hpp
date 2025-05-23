@@ -9,11 +9,8 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#ifndef FORCE_MODELS_H
-#define FORCE_MODELS_H
-
-#include <CabanaPD_Constants.hpp>
-#include <CabanaPD_Types.hpp>
+#ifndef FORCE_MODELS_MULTI_H
+#define FORCE_MODELS_MULTI_H
 
 namespace CabanaPD
 {
@@ -65,6 +62,17 @@ struct ForceModels
     }
 
     auto cutoff() const { return delta; }
+
+    auto bulkModulus() const { return model1.K; }
+    auto bulkModulus( const int i ) const
+    {
+        if ( i == 0 )
+            return model1.K;
+        else if ( i == 1 )
+            return model2.K;
+        else if ( i == 2 )
+            return model12.K;
+    }
 
     void updateBonds( const int num_local, const int max_neighbors )
     {

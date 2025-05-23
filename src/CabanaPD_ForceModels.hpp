@@ -34,18 +34,23 @@ struct BaseForceModel
 {
     using material_type = SingleMaterial;
     double delta;
+    double K;
 
-    BaseForceModel( const double _delta )
-        : delta( _delta ){};
+    BaseForceModel( const double _delta, const double _K )
+        : delta( _delta )
+        , K( _K ){};
 
     // FIXME: use the first model cutoff for now.
     template <typename ModelType1, typename ModelType2>
-    BaseForceModel( const ModelType1& model1, const ModelType2& )
+    BaseForceModel( const ModelType1& model1, const ModelType2& model2 )
     {
         delta = model1.delta;
+        K = ( model1.K + model2.K ) / 2.0;
     }
 
     auto cutoff() const { return delta; }
+
+    auto bulkModulus() const { return K; }
 
     // Only needed for models which store bond properties.
     void updateBonds( const int, const int ) {}
