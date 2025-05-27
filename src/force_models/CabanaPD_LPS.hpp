@@ -70,6 +70,8 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         s_coeff_i = 15.0 * model1.G;
         theta_coeff_j = 3.0 * model2.K - 5.0 * model2.G;
         s_coeff_j = 15.0 * model2.G;
+
+        influence_type = model1.influence_type;
     }
 
     void init()
