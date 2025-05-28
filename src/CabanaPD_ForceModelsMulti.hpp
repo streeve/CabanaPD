@@ -36,6 +36,10 @@ struct ForceModels
     using thermal_type = typename first_model::thermal_type;
     using fracture_type = typename first_model::fracture_type;
 
+    static_assert( std::is_same<typename ModelType1::thermal_type,
+                                TemperatureIndependent>::value,
+                   "Thermomechanics does not yet support multiple materials!" );
+
     ForceModels( MaterialType t, const ModelType1 m1, ModelType2 m2,
                  ModelType12 m12 )
         : delta( 0.0 )
