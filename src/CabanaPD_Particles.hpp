@@ -277,6 +277,19 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         createDomain( low_corner, high_corner, num_cells, max_halo_width );
         createParticles( exec_space, x, vol, 0, create_frozen );
     }
+    template <class ModelType, class ExecSpace, class PositionType,
+              class VolumeType>
+    Particles( MemorySpace, ModelType, BaseOutput, const PositionType& x,
+               const VolumeType& vol, std::array<double, dim> low_corner,
+               std::array<double, dim> high_corner,
+               const std::array<int, dim> num_cells, const int max_halo_width,
+               const ExecSpace exec_space, const bool create_frozen = false )
+        : _plist_x( "positions" )
+        , _plist_f( "forces" )
+    {
+        createDomain( low_corner, high_corner, num_cells, max_halo_width );
+        createParticles( exec_space, x, vol, 0, create_frozen );
+    }
 
     template <class ModelType, class ExecSpace>
     Particles( MemorySpace, ModelType, TemperatureIndependent, BaseOutput,
