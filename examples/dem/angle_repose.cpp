@@ -70,7 +70,7 @@ void angleOfReposeExample( const std::string filename )
     {
         // Only create particles inside cylinder.
         double rsq = x[0] * x[0] + x[1] * x[1];
-        if ( x[2] > min_height && rsq > particle_radius * particle_radius &&
+        if ( x[2] > min_height && // rsq > particle_radius * particle_radius &&
              rsq < cylinder_radius * cylinder_radius )
             return true;
         return false;
@@ -78,8 +78,8 @@ void angleOfReposeExample( const std::string filename )
     CabanaPD::Particles particles(
         memory_space{}, model_type{}, CabanaPD::BaseOutput{}, low_corner,
         high_corner, num_cells, halo_width, Cabana::InitRandom{},
-        create_container, exec_space{}, true );
-
+        create_container, exec_space{}, false );
+    /*
     auto create = KOKKOS_LAMBDA( const int, const double x[3] )
     {
         // Only create particles inside cylinder.
@@ -91,7 +91,7 @@ void angleOfReposeExample( const std::string filename )
     };
     particles.createParticles( exec_space{}, Cabana::InitRandom{}, create,
                                particles.localOffset() );
-
+*/
     // Set density/volumes.
     auto rho = particles.sliceDensity();
     auto vol = particles.sliceVolume();
@@ -120,15 +120,32 @@ void angleOfReposeExample( const std::string filename )
         f( p, 2 ) -= 9.8 * rho( p );
 
         // Interact with a horizontal wall.
-        if ( y( p, 2 ) - radius - radius_extend < 0.0 )
+        double rz = y( p, 2 );
+        if ( rz - radius < 0.0 || rz > high_corner[2] - radius )
         {
             double vz = v( p, 2 );
-            double rz = y( p, 2 );
-            double vn = vz * rz;
+            double vn = rz * vz;
             vn /= rz;
 
             f( p, 2 ) +=
                 -contact_model.forceCoeff( rz + radius, vn, vol0, rho0 );
+        }
+        // Interact with cylinder until near the bottom.
+        double cr = cylinder_radius * cylinder_radius;
+        double xy = y( p, 0 ) * y( p, 0 ) + y( p, 1 ) * y( p, 1 );
+        if ( xy > cr - radius * radius && rz > min_height )
+        {
+            double vx = v( p, 0 );
+            double vy = v( p, 1 );
+            double rx = y( p, 0 ) - cylinder_radius;
+            double ry = y( p, 1 ) - cylinder_radius;
+            double vn = vx * rx + vy * ry;
+            double r = Kokkos::sqrt( rx * rx + ry * ry );
+            vn /= r;
+
+            auto coeff = -contact_model.forceCoeff( r, vn, vol0, rho0 );
+            f( p, 0 ) += rx / r * coeff;
+            f( p, 1 ) += ry / r * coeff;
         }
     };
     CabanaPD::BodyTerm body( body_func, solver.particles.size(), true );
