@@ -68,18 +68,20 @@ void angleOfReposeExample( const std::string filename )
     double particle_radius = cylinder_radius - wall_thickness;
     auto create_container = KOKKOS_LAMBDA( const int, const double x[3] )
     {
-        // Only create particles inside cylinder.
+        // Only create particles for container.
         double rsq = x[0] * x[0] + x[1] * x[1];
-        if ( x[2] > min_height && // rsq > particle_radius * particle_radius &&
-             rsq < cylinder_radius * cylinder_radius )
+        if ( ( x[2] > min_height && rsq > particle_radius * particle_radius &&
+               rsq < cylinder_radius * cylinder_radius ) )
+            return true;
+        if ( ( rsq < particle_radius * particle_radius &&
+               x[2] > high_corner[2] - wall_thickness ) )
             return true;
         return false;
     };
     CabanaPD::Particles particles(
         memory_space{}, model_type{}, CabanaPD::BaseOutput{}, low_corner,
         high_corner, num_cells, halo_width, Cabana::InitRandom{},
-        create_container, exec_space{}, false );
-    /*
+        create_container, exec_space{}, true );
     auto create = KOKKOS_LAMBDA( const int, const double x[3] )
     {
         // Only create particles inside cylinder.
@@ -91,7 +93,7 @@ void angleOfReposeExample( const std::string filename )
     };
     particles.createParticles( exec_space{}, Cabana::InitRandom{}, create,
                                particles.localOffset() );
-*/
+
     // Set density/volumes.
     auto rho = particles.sliceDensity();
     auto vol = particles.sliceVolume();
@@ -131,6 +133,7 @@ void angleOfReposeExample( const std::string filename )
                 -contact_model.forceCoeff( rz + radius, vn, vol0, rho0 );
         }
         // Interact with cylinder until near the bottom.
+        /*
         double cr = cylinder_radius * cylinder_radius;
         double xy = y( p, 0 ) * y( p, 0 ) + y( p, 1 ) * y( p, 1 );
         if ( xy > cr - radius * radius && rz > min_height )
@@ -146,7 +149,7 @@ void angleOfReposeExample( const std::string filename )
             auto coeff = -contact_model.forceCoeff( r, vn, vol0, rho0 );
             f( p, 0 ) += rx / r * coeff;
             f( p, 1 ) += ry / r * coeff;
-        }
+        }*/
     };
     CabanaPD::BodyTerm body( body_func, solver.particles.size(), true );
 
