@@ -109,6 +109,7 @@ class Force<MemorySpace, ModelType, PMB, NoFracture>
 
         auto model = _model;
         const auto vol = particles.sliceVolume();
+        const auto type = particles.sliceType();
 
         auto force_full = KOKKOS_LAMBDA( const int i, const int j )
         {
@@ -119,6 +120,10 @@ class Force<MemorySpace, ModelType, PMB, NoFracture>
             double xi, r, s;
             double rx, ry, rz;
             getDistance( x, u, i, j, xi, r, s, rx, ry, rz );
+
+            // FIXME: hardcoded for hybrid powder.
+            if ( type( i ) != type( j ) )
+                return;
 
             s = model( ThermalStretchTag{}, i, j, s );
 
