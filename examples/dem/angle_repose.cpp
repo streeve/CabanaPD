@@ -95,8 +95,10 @@ void angleOfReposeExample( const std::string filename )
     particles.createParticles( exec_space{}, Cabana::InitRandom{}, create,
                                particles.localOffset() );
 
+    double fraction_fused_powder = inputs["fraction_fused_powder"];
     auto current_particles = particles.localOffset();
-    int hybrid_particles = static_cast<double>( current_particles ) * 0.7;
+    int hybrid_particles = static_cast<int>(
+        static_cast<double>( current_particles ) * fraction_fused_powder );
     Kokkos::View<double* [3], memory_space> x_v( "custom_position",
                                                  hybrid_particles );
     Kokkos::View<double*, memory_space> vol_v( "custom_volume",
@@ -121,15 +123,17 @@ void angleOfReposeExample( const std::string filename )
         vol_v( i ) = vol( rand );
         type_v( i ) = rand;
     };
-    Kokkos::RangePolicy<exec_space> policy(
-        current_particles, current_particles + hybrid_particles );
+    Kokkos::RangePolicy<exec_space> policy( 0, hybrid_particles );
     Kokkos::parallel_for( "create_random", policy, hybrid_powder );
     particles.createParticles( exec_space{}, x_v, vol_v, current_particles );
+    std::cout << "Original: " << current_particles << "\n";
+    std::cout << "With fused: " << particles.localOffset() << "\n";
 
     // Set density/volumes.
     auto rho = particles.sliceDensity();
     vol = particles.sliceVolume();
     auto type = particles.sliceType();
+    x = particles.sliceReferencePosition();
     auto init_functor = KOKKOS_LAMBDA( const std::size_t pid )
     {
         rho( pid ) = rho0;
@@ -141,7 +145,8 @@ void angleOfReposeExample( const std::string filename )
     };
     particles.updateParticles( exec_space{}, init_functor );
 
-    double K = E / ( 3 * ( 1 - 2 * nu ) );
+    // Artificially reduced to keep system stable.
+    double K = E / ( 3 * ( 1 - 2 * nu ) ) / 1e5;
     CabanaPD::ForceModel force_model( CabanaPD::PMB{}, CabanaPD::NoFracture{},
                                       delta, K );
 
