@@ -50,6 +50,7 @@ void angleOfReposeExample( const std::string filename )
     std::array<double, 3> high_corner = inputs["high_corner"];
     std::array<int, 3> num_cells = inputs["num_cells"];
     int halo_width = 1;
+    double delta = inputs["horizon"];
 
     // ====================================================
     //                    Force model
@@ -94,20 +95,60 @@ void angleOfReposeExample( const std::string filename )
     particles.createParticles( exec_space{}, Cabana::InitRandom{}, create,
                                particles.localOffset() );
 
+    auto current_particles = particles.localOffset();
+    int hybrid_particles = static_cast<double>( current_particles ) * 0.7;
+    Kokkos::View<double* [3], memory_space> x_v( "custom_position",
+                                                 hybrid_particles );
+    Kokkos::View<double*, memory_space> vol_v( "custom_volume",
+                                               hybrid_particles );
+    Kokkos::View<double*, memory_space> type_v( "custom_id", hybrid_particles );
+    auto x = particles.sliceReferencePosition();
+    auto vol = particles.sliceVolume();
+
+    Kokkos::Random_XorShift64_Pool<exec_space> pool( 12345 );
+    using random_type = Kokkos::Random_XorShift64<exec_space>;
+    auto hybrid_powder = KOKKOS_LAMBDA( const int i )
+    {
+        // Create random fused powder.
+        auto gen = pool.get_state();
+        auto rand = Kokkos::rand<random_type, int>::draw(
+            gen, particles.frozenOffset(), particles.localOffset() );
+        pool.free_state( gen );
+
+        for ( std::size_t d = 0; d < 3; d++ )
+            x_v( i, d ) = x( rand, d );
+        x_v( i, 2 ) += delta * 0.9;
+        vol_v( i ) = vol( rand );
+        type_v( i ) = rand;
+    };
+    Kokkos::RangePolicy<exec_space> policy(
+        current_particles, current_particles + hybrid_particles );
+    Kokkos::parallel_for( "create_random", policy, hybrid_powder );
+    particles.createParticles( exec_space{}, x_v, vol_v, current_particles );
+
     // Set density/volumes.
     auto rho = particles.sliceDensity();
-    auto vol = particles.sliceVolume();
-    auto init_functor = KOKKOS_LAMBDA( const int pid )
+    vol = particles.sliceVolume();
+    auto type = particles.sliceType();
+    auto init_functor = KOKKOS_LAMBDA( const std::size_t pid )
     {
         rho( pid ) = rho0;
         vol( pid ) = vol0;
+        if ( pid > current_particles )
+            type( pid ) = type_v( pid - current_particles );
+        else
+            type( pid ) = pid;
     };
     particles.updateParticles( exec_space{}, init_functor );
+
+    double K = E / ( 3 * ( 1 - 2 * nu ) );
+    CabanaPD::ForceModel force_model( CabanaPD::PMB{}, CabanaPD::NoFracture{},
+                                      delta, K );
 
     // ====================================================
     //                   Create solver
     // ====================================================
-    CabanaPD::Solver solver( inputs, particles, contact_model );
+    CabanaPD::Solver solver( inputs, particles, force_model, contact_model );
     solver.init();
 
     // ====================================================

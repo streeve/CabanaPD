@@ -161,11 +161,12 @@ class BaseForce
     // Primary constructor: use positions and construct neighbors.
     template <class ParticleType>
     BaseForce( const bool half_neigh, const double delta,
-               const ParticleType& particles, const double tol = 1e-14 )
+               const ParticleType& particles, const double ratio = 10.0,
+               const double tol = 1e-14 )
         : _half_neigh( half_neigh )
         , _neigh_list( neighbor_list_type(
               particles.sliceReferencePosition(), particles.frozenOffset(),
-              particles.localOffset(), delta + tol, 1.0,
+              particles.localOffset(), delta + tol, ratio,
               particles.ghost_mesh_lo, particles.ghost_mesh_hi ) )
     {
     }

@@ -53,6 +53,7 @@ class Force<MemorySpace, ModelType, HertzianModel, NoFracture>
         const auto vol = particles.sliceVolume();
         const auto rho = particles.sliceDensity();
         const auto vel = particles.sliceVelocity();
+        const auto type = particles.sliceType();
 
         base_type::update( particles, particles.getMaxDisplacement() );
 
@@ -61,6 +62,10 @@ class Force<MemorySpace, ModelType, HertzianModel, NoFracture>
             double xi, r, s;
             double rx, ry, rz;
             getDistance( x, u, i, j, xi, r, s, rx, ry, rz );
+
+            // FIXME: hardcoded for hybrid powder.
+            if ( type( i ) == type( j ) )
+                return;
 
             // Hertz normal force damping component
             double vx, vy, vz, vn;
