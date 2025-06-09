@@ -80,7 +80,6 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // ====================================================
     //                 Particle generation
     // ====================================================
-    // Does not set displacements, velocities, etc.
     CabanaPD::Particles particles( memory_space{}, model_type{}, low_corner,
                                    high_corner, num_cells, halo_width,
                                    exec_space{} );
@@ -211,10 +210,36 @@ void fiberReinforcedCompositeExample( const std::string filename )
     CabanaPD::Solver solver( inputs, particles, models );
 
     // ====================================================
+    //                Boundary conditions
+    // ====================================================
+    // Create BC last to ensure ghost particles are included.
+    double sigma0 = inputs["traction"];
+    double dy = particles.dx[1];
+    double b0 = sigma0 / dy;
+    auto f = solver.particles.sliceForce();
+    x = solver.particles.sliceReferencePosition();
+    CabanaPD::Region<CabanaPD::RectangularPrism> plane1(
+        low_corner[0], high_corner[0], low_corner[1] - dy, low_corner[1] + dy,
+        low_corner[2], high_corner[2] );
+    CabanaPD::Region<CabanaPD::RectangularPrism> plane2(
+        low_corner[0], high_corner[0], high_corner[1] - dy, high_corner[1] + dy,
+        low_corner[2], high_corner[2] );
+
+    // Create a symmetric force BC in the y-direction.
+    auto bc_op = KOKKOS_LAMBDA( const int pid, const double )
+    {
+        auto ypos = x( pid, 1 );
+        auto sign = std::abs( ypos ) / ypos;
+        f( pid, 1 ) += b0 * sign;
+    };
+    auto bc = createBoundaryCondition( bc_op, exec_space{}, solver.particles,
+                                       true, plane1, plane2 );
+
+    // ====================================================
     //                   Simulation run
     // ====================================================
-    solver.init();
-    solver.run();
+    solver.init( bc );
+    solver.run( bc );
 }
 
 // Initialize MPI+Kokkos.
