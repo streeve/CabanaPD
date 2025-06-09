@@ -34,10 +34,6 @@ class Inputs
         // Add additional derived inputs to json. System size.
         setupSize();
 
-        // Number of steps.
-        double tf = inputs["final_time"]["value"];
-        double dt = inputs["timestep"]["value"];
-
         // m
         // FIXME: this will be slightly different in y/z
         double dx = inputs["dx"]["value"][0];
@@ -60,8 +56,14 @@ class Inputs
                                           "elastic_modulus." );
         }
 
-        int num_steps = tf / dt;
-        inputs["num_steps"]["value"] = num_steps;
+        // Number of steps.
+        double tf = inputs["final_time"]["value"];
+        if ( inputs.contains( "timestep" ) )
+        {
+            double dt = inputs["timestep"]["value"];
+            int num_steps = tf / dt;
+            inputs["num_steps"]["value"] = num_steps;
+        }
 
         // Output files.
         if ( !inputs.contains( "output_file" ) )

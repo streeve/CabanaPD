@@ -124,6 +124,7 @@ class Solver
             force_model_type force_model )
         : particles( _particles )
         , inputs( _inputs )
+        , time( 0.0 )
         , _init_time( 0.0 )
     {
         setup( force_model );
@@ -133,6 +134,7 @@ class Solver
             force_model_type force_model, contact_model_type contact_model )
         : particles( _particles )
         , inputs( _inputs )
+        , time( 0.0 )
         , _init_time( 0.0 )
     {
         setup( force_model );
@@ -149,7 +151,7 @@ class Solver
         if constexpr ( !is_contact<force_model_type>::value )
             inputs.computeCriticalTimeStep( force_model );
 
-        num_steps = inputs["num_steps"];
+        final_time = inputs["final_time"];
         output_frequency = inputs["output_frequency"];
         output_reference = inputs["output_reference"];
 
@@ -393,7 +395,7 @@ class Solver
         init_output();
 
         // Main timestep loop.
-        for ( int step = 1; step <= num_steps; step++ )
+        while ( time < final_time )
         {
             runStep( step );
             // FIXME: not included in timing
@@ -411,7 +413,7 @@ class Solver
         init_output( boundary_condition.timeInit() );
 
         // Main timestep loop.
-        for ( int step = 1; step <= num_steps; step++ )
+        while ( time < final_time )
         {
             runStep( step, boundary_condition );
             // FIXME: not included in timing
@@ -576,10 +578,9 @@ class Solver
         region.print( particles.comm() );
     }
 
-    int num_steps;
+    int time;
     int output_frequency;
     bool output_reference;
-    double dt;
     int thermal_subcycle_steps;
     // Sometimes necessary to update particles after solver creation.
     ParticleType particles;

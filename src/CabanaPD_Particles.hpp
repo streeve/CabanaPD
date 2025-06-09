@@ -1094,6 +1094,9 @@ class Particles<MemorySpace, Contact, ThermalType, BaseOutput, Dimension>
     void setMaxDisplacement( double new_max ) { _max_displacement = new_max; }
     double getMaxDisplacement() const { return _max_displacement; }
 
+    void setTimestep( const double tmin ) { _timestep = tmin; }
+    auto getTimestep() const { return _timestep; }
+
     friend class Comm<self_type, Pair, TemperatureIndependent>;
     friend class Comm<self_type, State, TemperatureIndependent>;
     friend class Comm<self_type, Pair, TemperatureDependent>;
@@ -1108,6 +1111,8 @@ class Particles<MemorySpace, Contact, ThermalType, BaseOutput, Dimension>
 
     // Used for delaying neighbor construction.
     double _max_displacement;
+    // Timestep (fixed for PD, varies for DEM)
+    double _timestep;
 
     aosoa_u_neigh_type _aosoa_u_neigh;
 };
