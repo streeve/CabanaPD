@@ -43,8 +43,7 @@ class Force<MemorySpace, ModelType, HertzianModel, NoFracture>
     template <class ForceType, class PosType, class ParticleType,
               class ParallelType>
     void computeForceFull( ForceType& fc, const PosType& x, const PosType& u,
-                           const ParticleType& particles,
-                           ParallelType& neigh_op_tag )
+                           ParticleType& particles, ParallelType& neigh_op_tag )
     {
         const int n_frozen = particles.frozenOffset();
         const int n_local = particles.localOffset();
@@ -56,7 +55,9 @@ class Force<MemorySpace, ModelType, HertzianModel, NoFracture>
 
         base_type::update( particles, particles.getMaxDisplacement() );
 
-        auto contact_full = KOKKOS_LAMBDA( const int i, const int j )
+        double vn_min;
+        auto contact_full =
+            KOKKOS_LAMBDA( const int i, const int j, double& tmin )
         {
             double xi, r, s;
             double rx, ry, rz;
@@ -66,6 +67,10 @@ class Force<MemorySpace, ModelType, HertzianModel, NoFracture>
             double vx, vy, vz, vn;
             getRelativeNormalVelocityComponents( vel, i, j, rx, ry, rz, r, vx,
                                                  vy, vz, vn );
+
+            auto tcol = collisionTimestep( vol( i ), vn );
+            if ( tcol < tmin )
+                tmin = tcol;
 
             const double coeff = model.forceCoeff( r, vn, vol( i ), rho( i ) );
             fc( i, 0 ) += coeff * rx / r;
@@ -78,9 +83,10 @@ class Force<MemorySpace, ModelType, HertzianModel, NoFracture>
         // FIXME: using default space for now.
         using exec_space = typename MemorySpace::execution_space;
         Kokkos::RangePolicy<exec_space> policy( n_frozen, n_local );
-        Cabana::neighbor_parallel_for(
+        Cabana::neighbor_parallel_reduce(
             policy, contact_full, _neigh_list, Cabana::FirstNeighborsTag(),
-            neigh_op_tag, "CabanaPD::Contact::compute_full" );
+            neigh_op_tag, vn_min, "CabanaPD::Contact::compute_full" );
+        particles.setTimestep( vn_min );
 
         _timer.stop();
     }
@@ -94,12 +100,22 @@ class Force<MemorySpace, ModelType, HertzianModel, NoFracture>
         return 0.0;
     }
 
+    KOKKOS_INLINE_FUNCTION
+    auto collisionTimestep( const double volume, const double vn_min ) const
+    {
+        return Kokkos::pow( volume, two_fifth ) *
+               Kokkos::pow( vn_min, -one_fifth );
+    }
+
   protected:
     ModelType _model;
     using base_type::_half_neigh;
     using base_type::_neigh_list;
     using base_type::_neigh_timer;
     using base_type::_timer;
+
+    const double one_fifth = 1.0 / 5.0;
+    const double two_fifth = 2.0 * one_fifth;
 };
 
 } // namespace CabanaPD
