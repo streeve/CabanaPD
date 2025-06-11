@@ -272,6 +272,24 @@ class Inputs
         }
     }
 
+    template <class ForceModel>
+    void validate( ForceModel model )
+    {
+        if constexpr ( is_contact<ForceModel>::value )
+        {
+            if ( inputs.contains( "dt" ) )
+                log( std::cout,
+                     "WARNING: fixed timestep is not used for DEM-only." );
+        }
+        else
+        {
+            if ( !inputs.contains( "dt" ) )
+                throw std::runtime_error( "Must input \"dt\"." );
+
+            computeCriticalTimeStep( model );
+        }
+    }
+
     // Parse JSON file.
     inline nlohmann::json parse( const std::string& filename )
     {

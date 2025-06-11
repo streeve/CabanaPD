@@ -147,17 +147,22 @@ class Solver
 
     void setup( force_model_type force_model )
     {
-        // This timestep is not valid for DEM-only.
-        if constexpr ( !is_contact<force_model_type>::value )
-            inputs.computeCriticalTimeStep( force_model );
+        inputs.validate( force_model );
 
         final_time = inputs["final_time"];
         output_frequency = inputs["output_frequency"];
         output_reference = inputs["output_reference"];
 
         // Create integrator.
-        dt = inputs["timestep"];
-        integrator = std::make_shared<integrator_type>( dt );
+        if constexpr ( is_contact<contact_model_type>::value )
+        {
+            double dt = inputs["timestep"];
+            integrator = std::make_shared<integrator_type>( dt );
+        }
+        else
+        {
+            integrator = std::make_shared<integrator_type>();
+        }
 
         // Add ghosts from other MPI ranks.
         comm = std::make_shared<comm_type>( particles );
@@ -578,7 +583,7 @@ class Solver
         region.print( particles.comm() );
     }
 
-    int time;
+    double final_time;
     int output_frequency;
     bool output_reference;
     int thermal_subcycle_steps;

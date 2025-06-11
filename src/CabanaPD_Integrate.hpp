@@ -147,7 +147,6 @@ template <>
 class VelocityVerlet<Contact> : public VelocityVerlet<NoContact>
 {
     using base_type = VelocityVerlet<NoContact>;
-    using base_type::base_type;
 
   public:
     template <class ExecutionSpace, class ParticlesType>
@@ -161,8 +160,8 @@ class VelocityVerlet<Contact> : public VelocityVerlet<NoContact>
         auto rho = p.sliceDensity();
         auto u_neigh = p.sliceDisplacementNeighborBuild();
 
-        auto dt = _dt;
-        auto half_dt = _half_dt;
+        auto dt = p.getTimestep();
+        auto half_dt = dt / 2.0;
         auto init_func = KOKKOS_LAMBDA( const int i, double& max_u )
         {
             const double half_dt_m = half_dt / rho( i );
@@ -191,8 +190,6 @@ class VelocityVerlet<Contact> : public VelocityVerlet<NoContact>
     }
 
   protected:
-    using base_type::_dt;
-    using base_type::_half_dt;
     using base_type::_timer;
 };
 
