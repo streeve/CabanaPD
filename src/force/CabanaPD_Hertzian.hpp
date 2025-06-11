@@ -100,10 +100,14 @@ class Force<MemorySpace, ModelType, HertzianModel, NoFracture>
         return 0.0;
     }
 
+    // From: Parteli et al. Attractive particle interaction forces and packing
+    // density of fine glass powders. Scientific Reports 2014
+    // Need to check: Schafer, Dippel, Wolf. Force Schemes in Simulations of
+    // Granular Materials.  J. Phys. I France 1996
     KOKKOS_INLINE_FUNCTION
     auto collisionTimestep( const double volume, const double vn_min ) const
     {
-        return Kokkos::pow( volume, two_fifth ) *
+        return 3.21 * Kokkos::pow( volume, two_fifth ) *
                Kokkos::pow( vn_min, -one_fifth );
     }
 
