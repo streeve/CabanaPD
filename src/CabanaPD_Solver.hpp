@@ -124,7 +124,6 @@ class Solver
             force_model_type force_model )
         : particles( _particles )
         , inputs( _inputs )
-        , time( 0.0 )
         , _init_time( 0.0 )
     {
         setup( force_model );
@@ -134,7 +133,6 @@ class Solver
             force_model_type force_model, contact_model_type contact_model )
         : particles( _particles )
         , inputs( _inputs )
-        , time( 0.0 )
         , _init_time( 0.0 )
     {
         setup( force_model );
@@ -153,11 +151,12 @@ class Solver
         output_frequency = inputs["output_frequency"];
         output_reference = inputs["output_reference"];
 
-        // Create integrator.
-        if constexpr ( is_contact<contact_model_type>::value )
+        // Create integrator: DEM-only uses dynamic timestep.
+        if constexpr ( !is_contact<force_model_type>::value )
         {
             double dt = inputs["timestep"];
             integrator = std::make_shared<integrator_type>( dt );
+            particles.setTimestep( dt );
         }
         else
         {
@@ -322,7 +321,8 @@ class Solver
     void updateNeighbors() { force->update( particles, 0.0, true ); }
 
     template <typename BoundaryType>
-    void runStep( const int step, BoundaryType boundary_condition )
+    void step( const double time, const int count,
+               BoundaryType boundary_condition )
     {
         _step_timer.start();
         // Integrate - velocity Verlet first half.
@@ -334,7 +334,9 @@ class Solver
         if constexpr ( is_heat_transfer<
                            typename force_model_type::thermal_type>::value )
         {
-            if ( step % thermal_subcycle_steps == 0 )
+            // In this case, fixed steps are being used.
+            auto dt = particles.getTimestep();
+            if ( count % thermal_subcycle_steps == 0 )
                 computeHeatTransfer( *heat_transfer, particles,
                                      neigh_iter_tag{},
                                      thermal_subcycle_steps * dt );
@@ -342,7 +344,7 @@ class Solver
 
         // Add non-force boundary condition.
         if ( !boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space(), particles, step * dt );
+            boundary_condition.apply( exec_space(), particles, time );
 
         if constexpr ( is_temperature_dependent<
                            typename force_model_type::thermal_type>::value )
@@ -356,17 +358,17 @@ class Solver
 
         // Add force boundary condition.
         if ( boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space(), particles, step * dt );
+            boundary_condition.apply( exec_space(), particles, time );
 
         // Integrate - velocity Verlet second half.
         integrator->finalHalfStep( exec_space{}, particles );
 
         // Separate output time.
         _step_timer.stop();
-        output( step );
+        output( time, count );
     }
 
-    void runStep( const int step )
+    void step( const double time, const int count )
     {
         _step_timer.start();
 
@@ -391,7 +393,7 @@ class Solver
 
         // Separate output time.
         _step_timer.stop();
-        output( step );
+        output( time, count );
     }
 
     template <typename... OutputType>
@@ -400,16 +402,21 @@ class Solver
         init_output();
 
         // Main timestep loop.
+        double time = 0.0;
+        int count = 0;
         while ( time < final_time )
         {
-            runStep( step );
+            step( time, count );
             // FIXME: not included in timing
-            if ( step % output_frequency == 0 )
+            if ( outputStep( count ) )
                 updateRegion( region_output... );
+
+            time += particles.getTimestep();
+            count++;
         }
 
         // Final output and timings.
-        final_output( region_output... );
+        final_output( count, region_output... );
     }
 
     template <typename BoundaryType, typename... OutputType>
@@ -418,16 +425,21 @@ class Solver
         init_output( boundary_condition.timeInit() );
 
         // Main timestep loop.
+        double time = 0.0;
+        int count = 0;
         while ( time < final_time )
         {
-            runStep( step, boundary_condition );
+            step( time, count, boundary_condition );
             // FIXME: not included in timing
-            if ( step % output_frequency == 0 )
+            if ( outputStep( count ) )
                 updateRegion( region_output... );
+
+            time += particles.getTimestep();
+            count++;
         }
 
         // Final output and timings.
-        final_output( region_output... );
+        final_output( count, region_output... );
     }
 
     // Iterate over all regions.
@@ -462,21 +474,21 @@ class Solver
         computeForce( *force, particles, neigh_iter_tag{} );
     }
 
-    void output( const int step )
+    void output( const double time, const int count )
     {
         // Print output.
-        if ( step % output_frequency == 0 )
+        if ( outputStep( count ) )
         {
             _step_timer.start();
             auto W = computeEnergy( *force, particles, neigh_iter_tag() );
             computeStress( *force, particles, neigh_iter_tag() );
 
-            particles.output( step / output_frequency, step * dt,
+            particles.output( count / output_frequency, time,
                               output_reference );
 
             // Timer has to be stopped before printing output.
             _step_timer.stop();
-            step_output( step, W );
+            step_output( time, W );
         }
     }
 
@@ -494,13 +506,13 @@ class Solver
                   "Energy-Time(s) Output-Time(s) Particle*steps/s" );
     }
 
-    void step_output( const int step, const double W )
+    void step_output( const double time, const double W )
     {
         if ( print )
         {
             std::ofstream out( output_file, std::ofstream::app );
-            log( std::cout, step, "/", num_steps, " ", std::scientific,
-                 std::setprecision( 2 ), step * dt );
+            log( std::cout, std::scientific, std::setprecision( 2 ), time, "/",
+                 final_time );
 
             double step_time = _step_timer.time();
             double comm_time = comm->time();
@@ -516,17 +528,16 @@ class Solver
                 output_frequency / step_time;
 
             _step_timer.reset();
-            log( out, std::fixed, std::setprecision( 6 ), step, "/", num_steps,
-                 " ", std::scientific, std::setprecision( 2 ), step * dt, " ",
-                 W, " ", std::fixed, _total_time, " ", force_time, " ",
-                 comm_time, " ", integrate_time, " ", energy_time, " ",
-                 neigh_time, " ", output_time, " ", std::scientific,
-                 p_steps_per_sec );
+            log( out, std::fixed, std::scientific, std::setprecision( 2 ), time,
+                 "/", final_time, " ", W, " ", std::fixed, _total_time, " ",
+                 force_time, " ", comm_time, " ", integrate_time, " ",
+                 energy_time, " ", neigh_time, " ", output_time, " ",
+                 std::scientific, p_steps_per_sec );
             out.close();
         }
     }
 
-    void final_output()
+    void final_output( const int count )
     {
         if ( print )
         {
@@ -541,8 +552,7 @@ class Solver
                           energy_time + output_time + particles.time();
 
             // Rates over the whole simulation.
-            double steps_per_sec =
-                static_cast<double>( num_steps ) / _total_time;
+            double steps_per_sec = static_cast<double>( count ) / _total_time;
             double p_steps_per_sec =
                 static_cast<double>( particles.numGlobal() ) * steps_per_sec;
             log( out, std::fixed, std::setprecision( 2 ),
@@ -565,9 +575,9 @@ class Solver
     }
 
     template <typename... RegionType>
-    void final_output( RegionType... region )
+    void final_output( const int count, RegionType... region )
     {
-        final_output();
+        final_output( count );
         printRegion( region... );
     }
 
@@ -602,6 +612,8 @@ class Solver
         force->prenotch( exec_space{}, particles, prenotch );
         _init_time += prenotch.time();
     }
+
+    bool outputStep( const int step ) { return step % output_frequency == 0; }
 
     // Core modules.
     Inputs inputs;

@@ -149,6 +149,11 @@ class VelocityVerlet<Contact> : public VelocityVerlet<NoContact>
     using base_type = VelocityVerlet<NoContact>;
 
   public:
+    VelocityVerlet()
+        : base_type( 0.0 )
+    {
+    }
+
     template <class ExecutionSpace, class ParticlesType>
     void initialHalfStep( ExecutionSpace, ParticlesType& p )
     {
