@@ -152,7 +152,9 @@ class Solver
         output_reference = inputs["output_reference"];
 
         // Create integrator: DEM-only uses dynamic timestep.
-        if constexpr ( !is_contact<force_model_type>::value )
+        if constexpr ( !is_contact<typename either_contact<
+                           force_model_type,
+                           contact_model_type>::base_type>::value )
         {
             double dt = inputs["timestep"];
             integrator = std::make_shared<integrator_type>( dt );

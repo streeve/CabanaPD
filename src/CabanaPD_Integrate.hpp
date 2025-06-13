@@ -150,7 +150,7 @@ class VelocityVerlet<Contact> : public VelocityVerlet<NoContact>
 
   public:
     VelocityVerlet()
-        : base_type( 0.0 )
+        : base_type( DBL_MAX )
     {
     }
 
@@ -165,7 +165,7 @@ class VelocityVerlet<Contact> : public VelocityVerlet<NoContact>
         auto rho = p.sliceDensity();
         auto u_neigh = p.sliceDisplacementNeighborBuild();
 
-        auto dt = p.getTimestep();
+        auto dt = std::min( p.getTimestep(), base_type::_dt );
         auto half_dt = dt / 2.0;
         auto init_func = KOKKOS_LAMBDA( const int i, double& max_u )
         {
