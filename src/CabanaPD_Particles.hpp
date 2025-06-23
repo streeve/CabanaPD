@@ -1111,7 +1111,9 @@ class Particles<MemorySpace, Contact, ThermalType, BaseOutput, Dimension>
     void resize( Args&&... args )
     {
         base_type::resize( std::forward<Args>( args )... );
-        _aosoa_u_neigh.resize( base_type::localOffset() );
+        // This needs to match the base displacement field for a deep_copy, even
+        // thought it's not communicated directly.
+        _aosoa_u_neigh.resize( base_type::size() );
     }
 
     void setMaxDisplacement( double new_max ) { _max_displacement = new_max; }
