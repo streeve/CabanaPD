@@ -172,9 +172,13 @@ void dogboneTensileTestExample( const std::string filename )
     double v0 = inputs["grip_velocity"];
 
     // Create region for both grips.
-    CabanaPD::Region<CabanaPD::RectangularPrism> right_grip(
+    // CabanaPD::Region<CabanaPD::RectangularPrism> right_grip(
+    //    midx + 0.5 * D, high_corner[0], low_corner[1], high_corner[1],
+    //    low_corner[2], high_corner[2] );
+
+    CabanaPD::Region<CabanaPD::InvertedRightTrapezoidalPrism> right_grip(
         midx + 0.5 * D, high_corner[0], low_corner[1], high_corner[1],
-        low_corner[2], high_corner[2] );
+        low_corner[2], high_corner[2], 0.0125 );
 
     //      CabanaPD::Region<CabanaPD::RectangularPrism> left_grip(
     //       low_corner[0], midx - 0.5 * D, low_corner[1], high_corner[1],
@@ -193,14 +197,14 @@ void dogboneTensileTestExample( const std::string filename )
         {
             // u( pid, 0 ) = v0 * t;
             u( pid, 0 ) = 0.0;
-            u( pid, 1 ) = 0.0;
+            u( pid, 1 ) = -0.002;
             u( pid, 2 ) = 0.0;
         }
         else if ( left_grip.inside( x, pid ) )
         {
             u( pid, 0 ) = 0.0;
             // u( pid, 1 ) = 0.0;
-            u( pid, 1 ) = 0.0002;
+            u( pid, 1 ) = 0.002;
             u( pid, 2 ) = 0.0;
         }
     };
