@@ -21,6 +21,9 @@
 namespace CabanaPD
 {
 
+struct RightTrapezoidalPrism
+{
+};
 struct RectangularPrism
 {
 };
@@ -50,6 +53,137 @@ struct Region
         return user( x, pid );
     }
 };
+
+// Define a subset of the system with a right trapezoidal prism.
+template <>
+struct Region<RightTrapezoidalPrism>
+{
+    double low_x;
+    double high_x;
+    double low_y;
+    double high_y;
+    double low_z;
+    double high_z;
+    double Lx_top;
+
+    Region( const double _low_x, const double _high_x, const double _low_y,
+            const double _high_y, const double _low_z, const double _high_z,
+            const double _Lx_top )
+        : low_x( _low_x )
+        , high_x( _high_x )
+        , low_y( _low_y )
+        , high_y( _high_y )
+        , low_z( _low_z )
+        , high_z( _high_z )
+        , Lx_top( _Lx_top )
+    {
+        assert( low_x < high_x );
+        assert( low_y < high_y );
+        assert( low_z < high_z );
+        assert( Lx_top >= 0.0 );
+        assert( Lx_top < high_x - low_x );
+    }
+
+    template <class ArrayType>
+    Region( const ArrayType _low, const ArrayType _high, const double _Lx_top )
+        : low_x( _low[0] )
+        , high_x( _high[0] )
+        , low_y( _low[1] )
+        , high_y( _high[1] )
+        , low_z( _low[2] )
+        , high_z( _high[2] )
+        , Lx_top( _Lx_top )
+    {
+        assert( low_x < high_x );
+        assert( low_y < high_y );
+        assert( low_z < high_z );
+        assert( Lx_top >= 0.0 );
+        assert( Lx_top < high_x - low_x );
+    }
+
+    template <class PositionType>
+    KOKKOS_INLINE_FUNCTION bool inside( const PositionType& x,
+                                        const int pid ) const
+    {
+        return ( x( pid, 0 ) >= low_x && x( pid, 0 ) <= Lx_top &&
+                 x( pid, 1 ) >= low_y && x( pid, 1 ) <= high_y &&
+                 x( pid, 2 ) >= low_z && x( pid, 2 ) <= high_z );
+    }
+};
+
+/*
+// Define a subset of the system with a right trapezoidal prism.
+template <>
+struct Region<RightTrapezoidalPrism>
+{
+    double low_x;
+    double high_x;
+    double low_y;
+    double high_y;
+    double low_z;
+    double high_z;
+    double Lx_top;
+
+    Region( const double _low_x, const double _high_x, const double _low_y,
+            const double _high_y, const double _low_z, const double _high_z,
+const double _Lx_top ) : low_x( _low_x ) , high_x( _high_x ) , low_y( _low_y )
+        , high_y( _high_y )
+        , low_z( _low_z )
+        , high_z( _high_z )
+        , Lx_top( _Lx_top )
+    {
+        assert( low_x < high_x );
+        assert( low_y < high_y );
+        assert( low_z < high_z );
+        assert( Lx_top >= 0.0 );
+        assert( Lx_top < high_x - low_x );
+    }
+
+    template <class ArrayType>
+    Region( const ArrayType _low, const ArrayType _high, const double _Lx_top )
+        : low_x( _low[0] )
+        , high_x( _high[0] )
+        , low_y( _low[1] )
+        , high_y( _high[1] )
+        , low_z( _low[2] )
+        , high_z( _high[2] )
+        , Lx_top( _Lx_top )
+    {
+        assert( low_x < high_x );
+        assert( low_y < high_y );
+        assert( low_z < high_z );
+        assert( Lx_top >= 0.0 );
+        assert( Lx_top < high_x - low_x );
+    }
+
+    template <class PositionType>
+    KOKKOS_INLINE_FUNCTION bool inside( const PositionType& x,
+                                        const int pid ) const
+    {
+        // Check if the point is within the rectangular prism bounds.
+        //bool in_bounds = ( x( pid, 0 ) >= low_x && x( pid, 0 ) <= high_x &&
+        //         x( pid, 1 ) >= low_y && x( pid, 1 ) <= high_y &&
+        //         x( pid, 2 ) >= low_z && x( pid, 2 ) <= high_z );
+
+        // Check if the point is within the trapezoidal face projected on the
+x-y plane double m_slope = ( high_y - low_y ) / ( ( high_x - low_x ) - Lx_top );
+        //bool inside_trapezoid = ( ( x( pid, 0 ) < Lx_top || high_y - x( pid, 1
+) > m_slope * ( ( x( pid, 0 ) - low_x ) - Lx_top ) )  &&
+        //         x( pid, 1 ) >= low_y && x( pid, 1 ) <= high_y &&
+        //         x( pid, 2 ) >= low_z && x( pid, 2 ) <= high_z );
+
+        //return ( ( x( pid, 0 ) >= low_x && x( pid, 0 ) <= Lx_top || high_y -
+x( pid, 1 ) > m_slope * ( ( x( pid, 0 ) - low_x ) - Lx_top ) ) &&
+        //         x( pid, 1 ) >= low_y && x( pid, 1 ) <= high_y &&
+        //         x( pid, 2 ) >= low_z && x( pid, 2 ) <= high_z );
+
+        return ( x( pid, 0 ) >= low_x && x( pid, 0 ) <= Lx_top &&
+                 x( pid, 1 ) >= low_y && x( pid, 1 ) <= high_y &&
+                 x( pid, 2 ) >= low_z && x( pid, 2 ) <= high_z );
+
+    }
+};
+*/
 
 // Define a subset of the system with a rectangular prism.
 template <>
