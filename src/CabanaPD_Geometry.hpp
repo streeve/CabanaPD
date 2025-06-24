@@ -182,8 +182,8 @@ struct ParticleSteeringVector
     index_view_type _view;
     index_view_type _count;
     std::size_t particle_count;
-    // FIXME: expose this as needed.
-    const double initial_guess = 0.5;
+    // FIXME: reduce this for improved performance.
+    const double initial_guess = 1.0;
 
     Timer _timer;
 
