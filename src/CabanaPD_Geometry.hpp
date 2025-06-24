@@ -115,11 +115,12 @@ struct Region<InvertedRightTrapezoidalPrism>
         double m_slope =
             ( high_y - low_y ) / ( ( high_x - low_x ) - Lx_bottom );
 
-        return ( ( x( pid, 0 ) >= high_x - Lx_bottom && x( pid, 0 ) <= high_x ||
-                   x( pid, 1 ) - low_y >
-                       m_slope * ( ( high_x - x( pid, 0 ) ) - Lx_bottom ) ) &&
-                 x( pid, 1 ) >= low_y && x( pid, 1 ) <= high_y &&
-                 x( pid, 2 ) >= low_z && x( pid, 2 ) <= high_z );
+        return (
+            ( ( x( pid, 0 ) >= high_x - Lx_bottom && x( pid, 0 ) <= high_x ) ||
+              x( pid, 1 ) - low_y >
+                  m_slope * ( ( high_x - x( pid, 0 ) ) - Lx_bottom ) ) &&
+            x( pid, 1 ) >= low_y && x( pid, 1 ) <= high_y &&
+            x( pid, 2 ) >= low_z && x( pid, 2 ) <= high_z );
     }
 };
 
@@ -180,7 +181,7 @@ struct Region<RightTrapezoidalPrism>
         // Slope of non-parallel side
         double m_slope = ( high_y - low_y ) / ( ( high_x - low_x ) - Lx_top );
 
-        return ( ( x( pid, 0 ) >= low_x && x( pid, 0 ) <= low_x + Lx_top ||
+        return ( ( ( x( pid, 0 ) >= low_x && x( pid, 0 ) <= low_x + Lx_top ) ||
                    high_y - x( pid, 1 ) >
                        m_slope * ( ( x( pid, 0 ) - low_x ) - Lx_top ) ) &&
                  x( pid, 1 ) >= low_y && x( pid, 1 ) <= high_y &&
