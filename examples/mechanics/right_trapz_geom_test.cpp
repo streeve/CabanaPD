@@ -182,7 +182,7 @@ void dogboneTensileTestExample( const std::string filename )
 
     CabanaPD::Region<CabanaPD::RightTrapezoidalPrism> left_grip(
         low_corner[0], midx - 0.5 * D, low_corner[1], high_corner[1],
-        low_corner[2], high_corner[2], 0.025 );
+        low_corner[2], high_corner[2], 0.0125 );
 
     // Create BC last to ensure ghost particles are included.
     auto x = solver.particles.sliceReferencePosition();
