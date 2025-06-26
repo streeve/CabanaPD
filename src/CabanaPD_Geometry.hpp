@@ -21,6 +21,10 @@
 namespace CabanaPD
 {
 
+/******************************************************************************
+  Region tags.
+******************************************************************************/
+
 struct RectangularPrism
 {
 };
@@ -30,6 +34,10 @@ struct Cylinder
 struct Line
 {
 };
+
+/******************************************************************************
+  Particle-based regions.
+******************************************************************************/
 
 // User-specifed custom boundary. Must use the signature:
 //    bool operator()(PositionType&, const int)
@@ -173,7 +181,9 @@ struct Region<Line>
     }
 };
 
-// FIXME: fails for some cases if initial guess is not sufficient.
+/******************************************************************************
+  Steering vector to create regions or other subsets of particles.
+******************************************************************************/
 template <class MemorySpace>
 struct ParticleSteeringVector
 {
