@@ -15,6 +15,7 @@
 #include <Kokkos_Core.hpp>
 
 #include <CabanaPD_ForceModels.hpp>
+#include <CabanaPD_Output.hpp>
 #include <CabanaPD_Types.hpp>
 
 namespace CabanaPD
@@ -73,6 +74,10 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         s_coeff_j = 15.0 * model2.G;
 
         influence_type = model1.influence_type;
+        if ( model2.influence_type != model1.influence_type )
+            log( std::cout, "Using influence type 1 (" +
+                                std::to_string( influence_type ) +
+                                ") for cross-term." );
     }
 
     void init()
