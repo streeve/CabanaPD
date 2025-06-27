@@ -88,8 +88,6 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         s_coeff_j = s_coeff_i;
     }
 
-    auto shearModulus() { return G; }
-
     KOKKOS_INLINE_FUNCTION auto operator()( InfluenceFunctionTag,
                                             double xi ) const
     {
