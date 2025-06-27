@@ -40,13 +40,13 @@ struct ForceModels
                                 TemperatureIndependent>::value,
                    "Thermomechanics does not yet support multiple materials!" );
 
-    ForceModels( MaterialType t, const ModelType1 m1, ModelType2 m2,
-                 ModelType12 m12 )
+    ForceModels( MaterialType _type, const ModelType1 _model1,
+                 ModelType2 _model2, ModelType12 _model12 )
         : delta( 0.0 )
-        , type( t )
-        , model1( m1 )
-        , model2( m2 )
-        , model12( m12 )
+        , type( _type )
+        , model1( _model1 )
+        , model2( _model2 )
+        , model12( _model12 )
     {
         setHorizon();
     }
@@ -110,13 +110,13 @@ struct ForceModels
     KOKKOS_INLINE_FUNCTION auto operator()( Tag tag, const int i, const int j,
                                             Args... args ) const
     {
-        auto t = getIndex( i, j );
+        auto type = getIndex( i, j );
         // Call individual model.
-        if ( t == 0 )
+        if ( type == 0 )
             return model1( tag, i, j, std::forward<Args>( args )... );
-        else if ( t == 1 )
+        else if ( type == 1 )
             return model2( tag, i, j, std::forward<Args>( args )... );
-        else if ( t == 2 )
+        else if ( type == 2 )
             return model12( tag, i, j, std::forward<Args>( args )... );
         else
             Kokkos::abort( "Invalid model index." );
