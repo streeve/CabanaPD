@@ -85,6 +85,8 @@ struct Region<RectangularPrism>
         , low_z( _low[2] )
         , high_z( _high[2] )
     {
+        assert( _low.size() == 3 );
+        assert( _high.size() == 3 );
         assert( low_x < high_x );
         assert( low_y < high_y );
         assert( low_z < high_z );
@@ -148,6 +150,8 @@ struct Region<Line>
     template <typename ArrayType>
     Region( const double profile_dim, const ArrayType dx )
     {
+        assert( dx.size() == 2 );
+
         _dims = getOtherDims( profile_dim );
         _half_dx[0] = dx[_dims[0]] / 2.0;
         _half_dx[1] = dx[_dims[1]] / 2.0;
