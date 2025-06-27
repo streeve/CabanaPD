@@ -113,11 +113,12 @@ CabanaPD currently includes the following:
     - PD State-based (many-body): linear peridynamic solid (LPS)
     - DEM contact: normal repulsion, Hertzian 
     - Hybrid DEM-PD
+    - Multi-material systems can be constructed for any model of the **same type** above
  - Mechanical response:
    - Elastic only (no failure)
    - Brittle fracture
    - Elastic-perfectly plastic (bond-based only)
- - Thermomechanics (bond-based only)
+ - Thermomechanics (bond-based only, single material only)
    - Optional heat transfer
  - Time integration
    - Velocity Verlet
