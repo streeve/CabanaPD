@@ -214,6 +214,14 @@ struct ForceModel<LPS, Elastic, Fracture, TemperatureIndependent>
         init();
     }
 
+    // Constructor to average from existing models.
+    template <typename ModelType1, typename ModelType2>
+    ForceModel( const ModelType1& model1, const ModelType2& model2 )
+        : base_type( model1, model2 )
+        , base_fracture_type( model1, model2 )
+    {
+    }
+
     void init()
     {
         if ( influence_type == 1 )

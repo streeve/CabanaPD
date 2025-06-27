@@ -957,11 +957,11 @@ TEST( TEST_CATEGORY, test_force_lps_multi )
     double delta = dx * m;
     double K = 1.0;
     double G = 0.5;
+    double G0 = 1000.0;
     CabanaPD::LPS model_type;
     CabanaPD::ForceModel model1( model_type, CabanaPD::Elastic{},
                                  CabanaPD::NoFracture{}, delta, K, G, 1 );
-    CabanaPD::ForceModel model2( model_type, CabanaPD::Elastic{},
-                                 CabanaPD::NoFracture{}, delta, K, G, 1 );
+    CabanaPD::ForceModel model2( model_type, delta, K, G, G0, 1 );
 
     auto particles = createParticles( model_type, LinearTag{}, dx, 0.1 );
     auto models = CabanaPD::createMultiForceModel(
