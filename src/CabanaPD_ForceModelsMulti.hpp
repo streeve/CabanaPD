@@ -12,6 +12,8 @@
 #ifndef FORCE_MODELS_MULTI_H
 #define FORCE_MODELS_MULTI_H
 
+#include <CabanaPD_Output.hpp>
+
 namespace CabanaPD
 {
 
@@ -62,7 +64,13 @@ struct ForceModels
     auto maxDelta( Model m )
     {
         if ( m.delta > delta )
+        {
             delta = m.delta;
+            // Enforce equal cutoff for now.
+            if ( m.delta != delta )
+                log_err( std::cout, "Horizon for each model must match for "
+                                    "multi-material systems." );
+        }
     }
 
     auto cutoff() const { return delta; }
