@@ -51,7 +51,7 @@ struct BaseForceModelPMB<Elastic> : public BaseForceModel
 
     void init() { c = 18.0 * K / ( pi * delta * delta * delta * delta ); }
 
-    // Average from existing models.
+    // Constructor to average from existing models.
     template <typename ModelType1, typename ModelType2>
     BaseForceModelPMB( const ModelType1& model1, const ModelType2& model2 )
         : base_type( model1, model2 )
@@ -101,7 +101,7 @@ struct BaseForceModelPMB<ElasticPerfectlyPlastic, MemorySpace>
     {
     }
 
-    // Average from existing models.
+    // Constructor to average from existing models.
     template <typename ModelType1, typename ModelType2>
     BaseForceModelPMB( const ModelType1& model1, const ModelType2& model2 )
         : base_type( model1, model2 )
@@ -202,7 +202,7 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureIndependent>
     {
     }
 
-    // Average from existing models.
+    // Constructor to average from existing models.
     template <typename ModelType1, typename ModelType2>
     ForceModel( const ModelType1& model1, const ModelType2& model2 )
         : base_type( model1, model2 )
@@ -239,7 +239,7 @@ struct ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
     {
     }
 
-    // Average from existing models.
+    // Constructor to average from existing models.
     template <typename ModelType1, typename ModelType2>
     ForceModel( const ModelType1& model1, const ModelType2& model2 )
         : base_type( model1, model2 )
@@ -351,8 +351,9 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureDependent, TemperatureType>
     {
     }
 
-    // Average from existing models.
-    ForceModel( const ForceModel& model1, const ForceModel& model2 )
+    // Constructor to average from existing models.
+    template <typename ModelType1, typename ModelType2>
+    ForceModel( const ModelType1& model1, const ModelType2& model2 )
         : base_type( model1, model2 )
         , base_temperature_type( model1, model2 )
     {

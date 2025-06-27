@@ -61,6 +61,7 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         init();
     }
 
+    // Constructor to average from existing models.
     template <typename ModelType1, typename ModelType2>
     BaseForceModelLPS( const ModelType1& model1, const ModelType2& model2 )
         : base_type( model1, model2 )
