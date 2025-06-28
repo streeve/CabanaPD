@@ -54,8 +54,9 @@ void powderSettlingExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    using model_type = CabanaPD::HertzianModel;
-    model_type contact_model( radius, radius_extend, nu, E, e );
+    using model_type = CabanaPD::Hertzian;
+    CabanaPD::ContactModel contact_model( model_type{}, radius, radius_extend,
+                                          nu, E, e );
 
     // ====================================================
     //            Custom particle initialization

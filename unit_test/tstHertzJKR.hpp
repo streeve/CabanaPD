@@ -87,9 +87,10 @@ void testHertzianJKRContact( const std::string filename )
     // ====================================================
     //            Force model
     // ====================================================
-    using model_type = CabanaPD::HertzianJKRModel;
+    using model_type = CabanaPD::HertzianJKR;
     // No search radius extension.
-    model_type contact_model( radius, radius_extend, nu, E, e, gamma );
+    CabanaPD::ContactModel contact_model( model_type{}, radius, radius_extend,
+                                          nu, E, e, gamma );
 
     // ====================================================
     //                 Particle generation

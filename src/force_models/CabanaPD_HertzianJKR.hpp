@@ -20,12 +20,13 @@
 
 namespace CabanaPD
 {
-struct HertzianJKRModel : public ContactModel
+template <>
+struct ContactModel<HertzianJKR> : public BaseContactModel
 {
-    using base_type = ContactModel;
+    using base_type = BaseContactModel;
     using base_model = base_type::base_model;
     // This is to dispatch to the correct Force class.
-    using model_type = HertzianModel;
+    using model_type = Hertzian;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
 
@@ -44,10 +45,10 @@ struct HertzianJKRModel : public ContactModel
     double delta_tear; // Maximum separation distance to break contact
     double fc;         // Maximum cohesion (pull-off) force
 
-    HertzianJKRModel() {}
-    HertzianJKRModel( const double _radius, const double _extend,
-                      const double _nu, const double _E, const double _e,
-                      const double _gamma )
+    ContactModel() {}
+    ContactModel( HertzianJKR, const double _radius, const double _extend,
+                  const double _nu, const double _E, const double _e,
+                  const double _gamma )
         : base_type( _radius, _extend )
         , nu( _nu )
         , E( _E )
@@ -154,6 +155,11 @@ struct HertzianJKRModel : public ContactModel
         return coeff;
     }
 };
+
+template <typename ModelType>
+ContactModel( ModelType, const double _radius, const double _extend,
+              const double _nu, const double _E, const double _e,
+              const double _gamma ) -> ContactModel<ModelType>;
 
 } // namespace CabanaPD
 

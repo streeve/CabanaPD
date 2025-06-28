@@ -104,7 +104,7 @@ class BaseForceContact : public BaseForce<MemorySpace>
   Normal repulsion forces
 ******************************************************************************/
 template <class MemorySpace, class ModelType>
-class Force<MemorySpace, ModelType, NormalRepulsionModel, NoFracture>
+class Force<MemorySpace, ModelType, NormalRepulsion, NoFracture>
     : public BaseForceContact<MemorySpace>
 {
   public:
@@ -191,7 +191,7 @@ class Force<MemorySpace, ModelType, NormalRepulsionModel, NoFracture>
   Hertzian contact forces
 ******************************************************************************/
 template <class MemorySpace, class ModelType>
-class Force<MemorySpace, ModelType, HertzianModel, NoFracture>
+class Force<MemorySpace, ModelType, Hertzian, NoFracture>
     : public BaseForceContact<MemorySpace>
 {
   public:

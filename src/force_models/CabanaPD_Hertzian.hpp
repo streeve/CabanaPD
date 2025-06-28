@@ -17,14 +17,16 @@
 #include <CabanaPD_Force.hpp>
 #include <CabanaPD_Input.hpp>
 #include <CabanaPD_Output.hpp>
+#include <CabanaPD_Types.hpp>
 
 namespace CabanaPD
 {
-struct HertzianModel : public ContactModel
+template <>
+struct ContactModel<Hertzian> : public BaseContactModel
 {
-    using base_type = ContactModel;
+    using base_type = BaseContactModel;
     using base_model = base_type::base_model;
-    using model_type = HertzianModel;
+    using model_type = Hertzian;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
 
@@ -37,9 +39,9 @@ struct HertzianModel : public ContactModel
     double coeff_h_n;
     double coeff_h_d;
 
-    HertzianModel() {}
-    HertzianModel( const double _radius, const double _extend, const double _nu,
-                   const double _E, const double _e )
+    ContactModel() {}
+    ContactModel( Hertzian, const double _radius, const double _extend,
+                  const double _nu, const double _E, const double _e )
         : base_type( _radius, _extend )
         , nu( _nu )
     {
@@ -81,6 +83,11 @@ struct HertzianModel : public ContactModel
         return coeff;
     }
 };
+
+template <typename ModelType>
+ContactModel( ModelType, const double _radius, const double _extend,
+              const double _nu, const double _E, const double _e )
+    -> ContactModel<ModelType>;
 
 } // namespace CabanaPD
 

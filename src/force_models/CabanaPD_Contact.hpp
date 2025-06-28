@@ -17,13 +17,14 @@
 #include <CabanaPD_Force.hpp>
 #include <CabanaPD_Input.hpp>
 #include <CabanaPD_Output.hpp>
+#include <CabanaPD_Types.hpp>
 
 namespace CabanaPD
 {
 /******************************************************************************
   Contact model
 ******************************************************************************/
-struct ContactModel
+struct BaseContactModel
 {
     using base_model = Contact;
 
@@ -32,35 +33,42 @@ struct ContactModel
     // Extend neighbor search radius to reuse lists.
     double radius_extend;
 
-    ContactModel() {}
+    BaseContactModel() {}
 
     // PD horizon
     // Contact radius
-    ContactModel( const double _radius, const double _radius_extend )
+    BaseContactModel( const double _radius, const double _radius_extend )
         : radius( _radius )
-        , radius_extend( _radius_extend ){};
+        , radius_extend( _radius_extend )
+    {
+    }
 };
 
+// Forward declaration.
+template <typename ModelType>
+struct ContactModel;
+
 /* Normal repulsion */
-struct NormalRepulsionModel : public ContactModel
+template <>
+struct ContactModel<NormalRepulsion> : public BaseContactModel
 {
-    using base_type = ContactModel;
+    using base_type = BaseContactModel;
     using base_model = base_type::base_model;
-    using model_type = NormalRepulsionModel;
+    using model_type = NormalRepulsion;
     using fracture_type = NoFracture;
     using thermal_type = TemperatureIndependent;
 
     double delta;
-    using ContactModel::radius;
-    using ContactModel::radius_extend;
+    using base_type::radius;
+    using base_type::radius_extend;
 
     double c;
     double K;
 
-    NormalRepulsionModel() {}
-    NormalRepulsionModel( const double _delta, const double radius,
-                          const double radius_extend, const double _K )
-        : ContactModel( radius, radius_extend )
+    ContactModel() {}
+    ContactModel( NormalRepulsion, const double _delta, const double radius,
+                  const double radius_extend, const double _K )
+        : base_type( radius, radius_extend )
         , delta( _delta )
         , K( _K )
     {
@@ -78,6 +86,11 @@ struct NormalRepulsionModel : public ContactModel
         return 15.0 * c * sc * vol;
     }
 };
+
+template <typename ModelType>
+ContactModel( ModelType, const double _delta, const double radius,
+              const double radius_extend, const double _K )
+    -> ContactModel<ModelType>;
 
 } // namespace CabanaPD
 

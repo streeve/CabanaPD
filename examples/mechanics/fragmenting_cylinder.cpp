@@ -88,7 +88,7 @@ void fragmentingCylinderExample( const std::string filename )
     // ====================================================
     if ( inputs["use_contact"] )
     {
-        using contact_type = CabanaPD::NormalRepulsionModel;
+        using contact_type = CabanaPD::NormalRepulsion;
         CabanaPD::Particles particles(
             memory_space{}, contact_type{}, low_corner, high_corner, num_cells,
             halo_width, Cabana::InitRandom{}, init_op, exec_space{} );
@@ -127,7 +127,8 @@ void fragmentingCylinderExample( const std::string filename )
         r_c *= dx[0] / 2.0;
         r_extend *= dx[0];
 
-        contact_type contact_model( delta, r_c, r_extend, K );
+        CabanaPD::ContactModel contact_model( contact_type{}, delta, r_c,
+                                              r_extend, K );
 
         CabanaPD::Solver solver( inputs, particles, force_model,
                                  contact_model );

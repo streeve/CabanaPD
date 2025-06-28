@@ -134,6 +134,21 @@ struct NoContact
     using thermal_type = TemperatureIndependent;
     using fracture_type = NoFracture;
 };
+struct NormalRepulsion
+{
+    using base_type = Pair;
+    using base_model = Contact;
+};
+struct Hertzian
+{
+    using base_type = Pair;
+    using base_model = Contact;
+};
+struct HertzianJKR
+{
+    using base_type = Pair;
+    using base_model = Contact;
+};
 template <class, class SFINAE = void>
 struct is_contact : public std::false_type
 {
