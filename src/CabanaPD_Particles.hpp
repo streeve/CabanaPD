@@ -800,34 +800,13 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput, Dimension>
                                 BaseOutput, Dimension>;
     using base_type = Particles<MemorySpace, PMB, TemperatureIndependent,
                                 BaseOutput, Dimension>;
-    using output_type = typename base_type::output_type;
-    using thermal_type = TemperatureIndependent;
-    using memory_space = typename base_type::memory_space;
-    using base_type::dim;
+    using typename base_type::memory_space;
 
     // These are split since weighted volume only needs to be communicated once
     // and dilatation only needs to be communicated for LPS.
     using scalar_type = typename base_type::scalar_type;
     using aosoa_theta_type = Cabana::AoSoA<scalar_type, memory_space, 1>;
     using aosoa_m_type = Cabana::AoSoA<scalar_type, memory_space, 1>;
-
-    // Per type.
-    using base_type::n_types;
-
-    // Simulation total domain.
-    using base_type::global_mesh_ext;
-
-    // Simulation sub domain (single MPI rank).
-    using base_type::ghost_mesh_hi;
-    using base_type::ghost_mesh_lo;
-    using base_type::local_mesh_ext;
-    using base_type::local_mesh_hi;
-    using base_type::local_mesh_lo;
-
-    using base_type::dx;
-    using base_type::local_grid;
-
-    using base_type::halo_width;
 
     // Constructor which initializes particles on regular grid.
     template <typename ModelType, typename... Args>
@@ -919,33 +898,13 @@ class Particles<MemorySpace, ModelType, TemperatureDependent, BaseOutput,
                                 BaseOutput, Dimension>;
     using base_type = Particles<MemorySpace, ModelType, TemperatureIndependent,
                                 BaseOutput, Dimension>;
+    using typename base_type::memory_space;
     using thermal_type = TemperatureDependent;
-    using output_type = typename base_type::output_type;
-    using memory_space = typename base_type::memory_space;
-    using base_type::dim;
 
     // These are split since weighted volume only needs to be communicated once
     // and dilatation only needs to be communicated for LPS.
     using temp_types = Cabana::MemberTypes<double, double>;
     using aosoa_temp_type = Cabana::AoSoA<temp_types, memory_space, 1>;
-
-    // Per type.
-    using base_type::n_types;
-
-    // Simulation total domain.
-    using base_type::global_mesh_ext;
-
-    // Simulation sub domain (single MPI rank).
-    using base_type::ghost_mesh_hi;
-    using base_type::ghost_mesh_lo;
-    using base_type::local_mesh_ext;
-    using base_type::local_mesh_hi;
-    using base_type::local_mesh_lo;
-
-    using base_type::dx;
-    using base_type::local_grid;
-
-    using base_type::halo_width;
 
     template <typename... Args>
     Particles( MemorySpace space, ModelType model, TemperatureDependent,
@@ -1034,28 +993,10 @@ class Particles<MemorySpace, Contact, ThermalType, BaseOutput, Dimension>
         Particles<MemorySpace, Contact, ThermalType, BaseOutput, Dimension>;
     using base_type =
         Particles<MemorySpace, PMB, ThermalType, BaseOutput, Dimension>;
-    using thermal_type = typename base_type::thermal_type;
-    using output_type = typename base_type::output_type;
-    using memory_space = typename base_type::memory_space;
-    using base_type::dim;
+    using typename base_type::memory_space;
 
     using aosoa_u_neigh_type =
         Cabana::AoSoA<typename base_type::vector_type, memory_space, 1>;
-
-    // Simulation total domain.
-    using base_type::global_mesh_ext;
-
-    // Simulation sub domain (single MPI rank).
-    using base_type::ghost_mesh_hi;
-    using base_type::ghost_mesh_lo;
-    using base_type::local_mesh_ext;
-    using base_type::local_mesh_hi;
-    using base_type::local_mesh_lo;
-
-    using base_type::dx;
-    using base_type::local_grid;
-
-    using base_type::halo_width;
 
     // Base constructor.
     template <typename... Args>
@@ -1122,32 +1063,12 @@ class Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>
         Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>;
     using base_type =
         Particles<MemorySpace, ModelType, ThermalType, BaseOutput, Dimension>;
-    using thermal_type = typename base_type::thermal_type;
+    using typename base_type::memory_space;
     using output_type = EnergyOutput;
-    using memory_space = typename base_type::memory_space;
-    using base_type::dim;
 
     // energy, damage
     using output_types = Cabana::MemberTypes<double, double>;
     using aosoa_output_type = Cabana::AoSoA<output_types, memory_space, 1>;
-
-    // Per type.
-    using base_type::n_types;
-
-    // Simulation total domain.
-    using base_type::global_mesh_ext;
-
-    // Simulation sub domain (single MPI rank).
-    using base_type::ghost_mesh_hi;
-    using base_type::ghost_mesh_lo;
-    using base_type::local_mesh_ext;
-    using base_type::local_mesh_hi;
-    using base_type::local_mesh_lo;
-
-    using base_type::dx;
-    using base_type::local_grid;
-
-    using base_type::halo_width;
 
     // Constructor forwarding.
     template <typename... Args>
@@ -1246,31 +1167,12 @@ class Particles<MemorySpace, ModelType, ThermalType, EnergyStressOutput,
                                 EnergyStressOutput, Dimension>;
     using base_type =
         Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>;
-    using thermal_type = typename base_type::thermal_type;
-    using output_type = EnergyStressOutput;
-    using memory_space = typename base_type::memory_space;
     using base_type::dim;
+    using typename base_type::memory_space;
+    using output_type = EnergyStressOutput;
 
     using output_types = Cabana::MemberTypes<double[dim][dim]>;
     using aosoa_stress_type = Cabana::AoSoA<output_types, memory_space, 1>;
-
-    // Per type.
-    using base_type::n_types;
-
-    // Simulation total domain.
-    using base_type::global_mesh_ext;
-
-    // Simulation sub domain (single MPI rank).
-    using base_type::ghost_mesh_hi;
-    using base_type::ghost_mesh_lo;
-    using base_type::local_mesh_ext;
-    using base_type::local_mesh_hi;
-    using base_type::local_mesh_lo;
-
-    using base_type::dx;
-    using base_type::local_grid;
-
-    using base_type::halo_width;
 
     // Constructor forwarding.
     template <typename... Args>
