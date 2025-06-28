@@ -31,6 +31,14 @@ template <>
 struct is_fracture<Fracture> : public std::true_type
 {
 };
+// Do not allow some bonds to fail.
+struct NoFail
+{
+};
+// Opposite of no-fail.
+struct AllFail
+{
+};
 
 // Mechanics tags.
 struct Elastic

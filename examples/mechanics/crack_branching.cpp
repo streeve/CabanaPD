@@ -72,8 +72,9 @@ void crackBranchingExample( const std::string filename )
     //                 Particle generation
     // ====================================================
     // Note that individual inputs can be passed instead (see other examples).
-    CabanaPD::Particles particles( memory_space{}, model_type{}, inputs,
-                                   exec_space{} );
+    // Enable the option to disable failure for some particles.
+    CabanaPD::Particles particles( memory_space{}, model_type{},
+                                   CabanaPD::NoFail{}, inputs, exec_space{} );
 
     // ====================================================
     //                Boundary conditions planes
