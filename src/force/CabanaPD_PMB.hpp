@@ -319,7 +319,7 @@ class Force<MemorySpace, ModelType, PMB, Fracture>
                 else if ( mu( i, n ) > 0 )
                 {
                     const double coeff =
-                        model( ForceCoeffTag{}, i, n, s, vol( j ) );
+                        model( ForceCoeffTag{}, i, j, s, vol( j ), n );
 
                     double muij = mu( i, n );
                     fx_i = muij * coeff * rx / r;
@@ -373,7 +373,7 @@ class Force<MemorySpace, ModelType, PMB, Fracture>
                 s = model( ThermalStretchTag{}, i, j, s );
 
                 double w =
-                    mu( i, n ) * model( EnergyTag{}, i, j, s, xi, vol( j ) );
+                    mu( i, n ) * model( EnergyTag{}, i, j, s, xi, vol( j ), n );
                 W( i ) += w;
 
                 phi_i += mu( i, n ) * vol( j );
