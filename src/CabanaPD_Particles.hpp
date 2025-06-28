@@ -1105,9 +1105,9 @@ class Particles<MemorySpace, Contact, ThermalType, BaseOutput, Dimension>
     double getMaxDisplacement() const { return _max_displacement; }
 
     friend class Comm<self_type, Pair, SingleMaterial, TemperatureIndependent>;
-    friend class Comm<self_type, State, SingleMaterial, TemperatureIndependent>;
     friend class Comm<self_type, Pair, SingleMaterial, TemperatureDependent>;
-    friend class Comm<self_type, State, SingleMaterial, TemperatureDependent>;
+    friend class Comm<self_type, Pair, MultiMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, Pair, MultiMaterial, TemperatureDependent>;
 
   protected:
     void init()
@@ -1331,9 +1331,13 @@ class Particles<MemorySpace, ModelType, ThermalType, EnergyStressOutput,
     }
 
     friend class Comm<self_type, Pair, SingleMaterial, TemperatureIndependent>;
-    friend class Comm<self_type, State, SingleMaterial, TemperatureIndependent>;
     friend class Comm<self_type, Pair, SingleMaterial, TemperatureDependent>;
+    friend class Comm<self_type, Pair, MultiMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, Pair, MultiMaterial, TemperatureDependent>;
+    friend class Comm<self_type, State, SingleMaterial, TemperatureIndependent>;
     friend class Comm<self_type, State, SingleMaterial, TemperatureDependent>;
+    friend class Comm<self_type, State, MultiMaterial, TemperatureIndependent>;
+    friend class Comm<self_type, State, MultiMaterial, TemperatureDependent>;
 
   protected:
     void init()
