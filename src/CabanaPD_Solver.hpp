@@ -326,6 +326,7 @@ class Solver
     template <typename BoundaryType>
     void runStep( const int step, BoundaryType boundary_condition )
     {
+        _step_timer.start();
         // Integrate - velocity Verlet first half.
         integrator->initialHalfStep( exec_space{}, particles );
 
@@ -362,11 +363,15 @@ class Solver
         // Integrate - velocity Verlet second half.
         integrator->finalHalfStep( exec_space{}, particles );
 
+        // Separate output time.
+        _step_timer.stop();
         output( step );
     }
 
     void runStep( const int step )
     {
+        _step_timer.start();
+
         // Integrate - velocity Verlet first half.
         integrator->initialHalfStep( exec_space{}, particles );
 
@@ -386,6 +391,8 @@ class Solver
         // Integrate - velocity Verlet second half.
         integrator->finalHalfStep( exec_space{}, particles );
 
+        // Separate output time.
+        _step_timer.stop();
         output( step );
     }
 
@@ -397,7 +404,6 @@ class Solver
         // Main timestep loop.
         for ( int step = 1; step <= num_steps; step++ )
         {
-            _step_timer.start();
             runStep( step );
             // FIXME: not included in timing
             if ( step % output_frequency == 0 )
@@ -416,7 +422,6 @@ class Solver
         // Main timestep loop.
         for ( int step = 1; step <= num_steps; step++ )
         {
-            _step_timer.start();
             runStep( step, boundary_condition );
             // FIXME: not included in timing
             if ( step % output_frequency == 0 )
@@ -464,17 +469,16 @@ class Solver
         // Print output.
         if ( step % output_frequency == 0 )
         {
+            _step_timer.start();
             auto W = computeEnergy( *force, particles, neigh_iter_tag() );
             computeStress( *force, particles, neigh_iter_tag() );
 
             particles.output( step / output_frequency, step * dt,
                               output_reference );
+
+            // Timer has to be stopped before printing output.
             _step_timer.stop();
             step_output( step, W );
-        }
-        else
-        {
-            _step_timer.stop();
         }
     }
 
@@ -510,7 +514,8 @@ class Solver
             _total_time += step_time;
             // Instantaneous rate.
             double p_steps_per_sec =
-                static_cast<double>( particles.numGlobal() ) / step_time;
+                static_cast<double>( particles.numGlobal() ) *
+                output_frequency / step_time;
 
             _step_timer.reset();
             log( out, std::fixed, std::setprecision( 6 ), step, "/", num_steps,

@@ -427,7 +427,7 @@ class Force<MemorySpace, ModelType, PMB, Fracture>
                 s = model( ThermalStretchTag{}, i, j, s );
 
                 const double coeff =
-                    0.5 * model( ForceCoeffTag{}, i, n, s, vol( j ) );
+                    0.5 * model( ForceCoeffTag{}, i, j, s, vol( j ), n );
                 const double muij = mu( i, n );
                 const double fx_i = muij * coeff * rx / r;
                 const double fy_i = muij * coeff * ry / r;

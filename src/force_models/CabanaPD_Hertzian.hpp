@@ -44,7 +44,7 @@ struct HertzianModel : public ContactModel
         , nu( _nu )
     {
         Rs = 0.5 * radius;
-        Es = _E / ( 2.0 * Kokkos::pow( 1.0 - nu, 2.0 ) );
+        Es = _E / ( 2.0 * ( 1.0 - Kokkos::pow( nu, 2.0 ) ) );
         e = _e;
         double ln_e = Kokkos::log( e );
         beta = -ln_e / Kokkos::sqrt( Kokkos::pow( ln_e, 2.0 ) +
@@ -77,7 +77,7 @@ struct HertzianModel : public ContactModel
         if ( delta_n < 0.0 )
             Sn = 2.0 * Es * Kokkos::sqrt( Rs * Kokkos::abs( delta_n ) );
         double ms = ( rho * vol ) / 2.0;
-        coeff += coeff_h_d * Kokkos::sqrt( Sn * ms ) * vn / vol;
+        coeff -= coeff_h_d * Kokkos::sqrt( Sn * ms ) * vn / vol;
         return coeff;
     }
 };
