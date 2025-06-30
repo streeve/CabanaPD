@@ -75,9 +75,9 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
 
         influence_type = model1.influence_type;
         if ( model2.influence_type != model1.influence_type )
-            log( std::cout, "Using influence type 1 (" +
-                                std::to_string( influence_type ) +
-                                ") for cross-term." );
+            log_err( std::cout,
+                     "Influence function type for each model must match for "
+                     "multi-material systems" );
     }
 
     void init()
