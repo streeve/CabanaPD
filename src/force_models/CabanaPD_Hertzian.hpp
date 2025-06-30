@@ -39,7 +39,6 @@ struct ContactModel<Hertzian> : public BaseContactModel
     double coeff_h_n;
     double coeff_h_d;
 
-    ContactModel() {}
     ContactModel( Hertzian, const double _radius, const double _extend,
                   const double _nu, const double _E, const double _e )
         : base_type( _radius, _extend )

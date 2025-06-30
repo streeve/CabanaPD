@@ -45,7 +45,6 @@ struct ContactModel<HertzianJKR> : public BaseContactModel
     double delta_tear; // Maximum separation distance to break contact
     double fc;         // Maximum cohesion (pull-off) force
 
-    ContactModel() {}
     ContactModel( HertzianJKR, const double _radius, const double _extend,
                   const double _nu, const double _E, const double _e,
                   const double _gamma )

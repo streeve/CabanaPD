@@ -43,9 +43,11 @@ struct ElasticPerfectlyPlastic
 // Model category tags.
 struct Pair
 {
+    using base_type = Pair;
 };
 struct State
 {
+    using base_type = State;
 };
 
 // Thermal tags.

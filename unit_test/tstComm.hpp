@@ -77,7 +77,7 @@ void testHalo()
 
     // A gather is performed on construction.
     using particles_type =
-        CabanaPD::Particles<memory_space, CabanaPD::PMB,
+        CabanaPD::Particles<memory_space, CabanaPD::Pair,
                             CabanaPD::TemperatureIndependent>;
     CabanaPD::Comm<particles_type, CabanaPD::Pair,
                    CabanaPD::TemperatureIndependent>

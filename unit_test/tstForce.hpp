@@ -803,7 +803,7 @@ void testForce( ModelType model, const double dx, const double m,
                 const double boundary_width, const TestType test_tag,
                 const double s0 )
 {
-    using model_tag = typename ModelType::base_model;
+    using model_tag = typename ModelType::base_model::base_type;
     auto particles = createParticles( model_tag{}, test_tag, dx, s0 );
 
     // This needs to exactly match the mesh spacing to compare with the single
