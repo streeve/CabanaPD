@@ -40,7 +40,8 @@ void fiberReinforcedCompositeExample( const std::string filename )
     double E_m = inputs["elastic_modulus"][0];
     double nu_m = 1.0 / 3.0;
     double K_m = E_m / ( 3.0 * ( 1.0 - 2.0 * nu_m ) );
-    double G0_m = inputs["fracture_energy_matrix"];
+    double G0_m = inputs["fracture_energy"][0];
+    // double G0_m = inputs["fracture_energy_matrix"];
     // double G_m = E_m / ( 2.0 * ( 1.0 + nu_m ) ); // Only for LPS.
 
     // Read horizon first because it is needed to compute the fiber fracture
@@ -53,8 +54,10 @@ void fiberReinforcedCompositeExample( const std::string filename )
     double E_f = inputs["elastic_modulus"][1];
     double nu_f = 1.0 / 3.0;
     double K_f = E_f / ( 3.0 * ( 1.0 - 2.0 * nu_f ) );
-    double sc_f = inputs["critical_stretch_fiber"];
-    double G0_f = 9 * K_f * delta * ( sc_f * sc_f ) / 5;
+    double G0_f = inputs["fracture_energy"][1];
+    // double G0_f = inputs["fracture_energy_fiber"];
+    // double sc_f = inputs["critical_stretch_fiber"];
+    // double G0_f = 9 * K_f * delta * ( sc_f * sc_f ) / 5;
     // double G_f = E_f / ( 2.0 * ( 1.0 + nu_f ) ); // Only for LPS.
 
     // ====================================================
@@ -73,9 +76,12 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // Matrix material
     using model_type = CabanaPD::PMB;
     CabanaPD::ForceModel force_model_matrix( model_type{}, delta, K_m, G0_m );
+    // CabanaPD::ForceModel force_model_matrix( model_type{}, delta, K_f, G0_f
+    // );
 
     // Fiber material
     CabanaPD::ForceModel force_model_fiber( model_type{}, delta, K_f, G0_f );
+    // CabanaPD::ForceModel force_model_fiber( model_type{}, delta, K_m, G0_m );
 
     // ====================================================
     //                 Particle generation
@@ -85,14 +91,25 @@ void fiberReinforcedCompositeExample( const std::string filename )
                                    exec_space{} );
 
     // ====================================================
+    //                Boundary conditions planes
+    // ====================================================
+    double dy = particles.dx[1];
+    CabanaPD::Region<CabanaPD::RectangularPrism> plane1(
+        low_corner[0], high_corner[0], low_corner[1] - dy, low_corner[1] + dy,
+        low_corner[2], high_corner[2] );
+    CabanaPD::Region<CabanaPD::RectangularPrism> plane2(
+        low_corner[0], high_corner[0], high_corner[1] - dy, high_corner[1] + dy,
+        low_corner[2], high_corner[2] );
+
+    // ====================================================
     //            Custom particle initialization
     // ====================================================
-
     std::array<double, 3> system_size = inputs["system_size"];
 
     auto rho = particles.sliceDensity();
     auto x = particles.sliceReferencePosition();
     auto type = particles.sliceType();
+    auto nofail = particles.sliceNoFail();
 
     // Fiber-reinforced composite geometry parameters
     double Vf = inputs["fiber_volume_fraction"];
@@ -198,6 +215,11 @@ void fiberReinforcedCompositeExample( const std::string filename )
             // Density (matrix)
             rho( pid ) = rho0_m;
         }
+
+        // No-fail zone
+        // if ( x( pid, 1 ) <= plane1.low[1] + delta + 1e-10 ||
+        //     x( pid, 1 ) >= plane2.high[1] - delta - 1e-10 )
+        nofail( pid ) = 1;
     };
     particles.updateParticles( exec_space{}, init_functor );
 
@@ -214,16 +236,9 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // ====================================================
     // Create BC last to ensure ghost particles are included.
     double sigma0 = inputs["traction"];
-    double dy = particles.dx[1];
     double b0 = sigma0 / dy;
     auto f = solver.particles.sliceForce();
     x = solver.particles.sliceReferencePosition();
-    CabanaPD::Region<CabanaPD::RectangularPrism> plane1(
-        low_corner[0], high_corner[0], low_corner[1] - dy, low_corner[1] + dy,
-        low_corner[2], high_corner[2] );
-    CabanaPD::Region<CabanaPD::RectangularPrism> plane2(
-        low_corner[0], high_corner[0], high_corner[1] - dy, high_corner[1] + dy,
-        low_corner[2], high_corner[2] );
 
     // Create a symmetric force BC in the y-direction.
     auto bc_op = KOKKOS_LAMBDA( const int pid, const double )
