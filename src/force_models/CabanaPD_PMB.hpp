@@ -328,7 +328,6 @@ struct ForceModel<PMB, Elastic, NoFracture, TemperatureDependent,
                 const double _alpha, const double _temp0 = 0.0 )
         : base_type( model, fracture, _delta, _K )
         , base_temperature_type( _temp, _alpha, _temp0 )
-
     {
     }
 };
@@ -348,7 +347,6 @@ struct ForceModel<PMB, Elastic, Fracture, TemperatureDependent, TemperatureType>
                 const double _alpha, const double _temp0 = 0.0 )
         : base_type( model, NoFracture{}, _delta, _K )
         , base_temperature_type( _delta, _K, _G0, _temp, _alpha, _temp0 )
-
     {
     }
 
