@@ -57,10 +57,12 @@ struct Inputs<CabanaPD::PMB>
     using base_model = CabanaPD::PMB;
     double delta;
     double K;
-    double s0;
+    double coeff;
     double boundary_width;
 
-    void update( const double new_s0 ) { s0 = new_s0; }
+    // This represents either stretch or displacement for the linear or
+    // quadratic cases below.
+    void update( const double new_coeff ) { coeff = new_coeff; }
 };
 
 template <>
@@ -70,10 +72,12 @@ struct Inputs<CabanaPD::LPS>
     double delta;
     double K;
     double G;
-    double s0;
+    double coeff;
     double boundary_width;
 
-    void update( const double new_s0 ) { s0 = new_s0; }
+    // This represents either stretch or displacement for the linear or
+    // quadratic cases below.
+    void update( const double new_coeff ) { coeff = new_coeff; }
 };
 
 //---------------------------------------------------------------------------//
@@ -588,7 +592,7 @@ void checkResults( HostParticleType aosoa_host, double local_min[3],
                    double local_max[3], TestType test_tag, ModelType model,
                    const int m, const InputType inputs, const double Phi )
 {
-    const double s0 = inputs.s0;
+    const double s0 = inputs.coeff;
     const double boundary_width = inputs.boundary_width;
     double delta = inputs.delta;
     double ref_Phi = 0.0;
@@ -631,7 +635,7 @@ void checkResults( HostParticleType aosoa_host, double local_min[3],
                            sigma, ref_sigma, x );
             particles_checked++;
         }
-        checkAnalyticalDilatation( model, test_tag, inputs.s0,
+        checkAnalyticalDilatation( model, test_tag, inputs.coeff,
                                    theta_host( p ) );
 
         // Check total sum of strain energy matches per particle sum.
@@ -702,7 +706,7 @@ void checkAnalyticalStrainEnergy(
     // Relatively large error for small m.
     double threshold = W * 0.15;
     double K = inputs.K;
-    double s0 = inputs.s0;
+    double s0 = inputs.coeff;
     double analytical_W = 9.0 / 2.0 * K * s0 * s0;
     EXPECT_NEAR( W, analytical_W, threshold );
 }
@@ -716,7 +720,7 @@ void checkAnalyticalStrainEnergy(
 {
     // LPS is exact.
     double K = inputs.K;
-    double s0 = inputs.s0;
+    double s0 = inputs.coeff;
     double analytical_W = 9.0 / 2.0 * K * s0 * s0;
     EXPECT_FLOAT_EQ( W, analytical_W );
 }
@@ -729,7 +733,7 @@ void checkAnalyticalStrainEnergy(
         int>::type* = 0 )
 {
     double threshold = W * 0.05;
-    const double u11 = inputs.s0;
+    const double u11 = inputs.coeff;
     double K = inputs.K;
     double analytical_W =
         18.0 * K * u11 * u11 *
@@ -745,7 +749,7 @@ void checkAnalyticalStrainEnergy(
         int>::type* = 0 )
 {
     double threshold = W * 0.20;
-    const double u11 = inputs.s0;
+    const double u11 = inputs.coeff;
     double K = inputs.K;
     double G = inputs.G;
     double analytical_W =
@@ -764,7 +768,7 @@ void checkAnalyticalForce(
 {
     double threshold = fx * 0.10;
     double K = inputs.K;
-    double s0 = inputs.s0;
+    double s0 = inputs.coeff;
     double analytical_f = 18.0 / 5.0 * K * s0;
     EXPECT_NEAR( fx, analytical_f, threshold );
 }
@@ -779,7 +783,7 @@ void checkAnalyticalForce(
     double threshold = fx * 0.10;
     double K = inputs.K;
     double G = inputs.G;
-    double s0 = inputs.s0;
+    double s0 = inputs.coeff;
     double analytical_f = 2.0 * ( K + 4.0 / 3.0 * G ) * s0;
     EXPECT_NEAR( fx, analytical_f, threshold );
 }
@@ -841,7 +845,7 @@ void testForce( ModelType model, const double dx, const double m,
                 const TestType test_tag, const InputType inputs )
 {
     using model_tag = typename ModelType::base_model;
-    auto particles = createParticles( model_tag{}, test_tag, dx, inputs.s0 );
+    auto particles = createParticles( model_tag{}, test_tag, dx, inputs.coeff );
 
     // This needs to exactly match the mesh spacing to compare with the single
     // particle calculation.
