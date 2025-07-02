@@ -9,7 +9,6 @@
     "fiber_volume_fraction"  : {"value": 0.5},
     "fiber_diameter"         : {"value": 0.0025, "unit": "m"},
     "stacking_sequence"      : {"value": [0, 90]},
-    "traction_OLD"               : {"value": 2.0e6, "unit": "Pa"},
     "velocity_bc"            : {"value": 1e-1, "unit": "m/s"},
     "final_time"             : {"value": 3.0e-6, "unit": "s"},
     "timestep"               : {"value": 1.5e-8, "unit": "s"},

@@ -90,7 +90,6 @@ void fiberReinforcedCompositeExample( const std::string filename )
     auto rho = particles.sliceDensity();
     auto x = particles.sliceReferencePosition();
     auto type = particles.sliceType();
-    auto nofail = particles.sliceNoFail();
 
     // Fiber-reinforced composite geometry parameters
     double Vf = inputs["fiber_volume_fraction"];
