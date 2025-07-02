@@ -18,7 +18,8 @@
 
 #include <CabanaPD.hpp>
 
-// Generate a unidirectional fiber-reinforced composite geometry.
+// Unidirectional fiber-reinforced composite laminate subjected to displacement
+// boundary conditions.
 void fiberReinforcedCompositeExample( const std::string filename )
 {
     // ====================================================
@@ -38,27 +39,20 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // Matrix material
     double rho0_m = inputs["density"][0];
     double E_m = inputs["elastic_modulus"][0];
-    double nu_m = 1.0 / 3.0;
-    double K_m = E_m / ( 3.0 * ( 1.0 - 2.0 * nu_m ) );
+    double G_m = inputs["shear_modulus_matrix"];
+    double K_m = E_m * G_m / ( 3.0 * ( 3.0 * G_m - E_m ) );
     double G0_m = inputs["fracture_energy"][0];
-    // double G0_m = inputs["fracture_energy_matrix"];
-    // double G_m = E_m / ( 2.0 * ( 1.0 + nu_m ) ); // Only for LPS.
-
-    // Read horizon first because it is needed to compute the fiber fracture
-    // energy.
-    double delta = inputs["horizon"];
-    delta += 1e-10;
 
     // Fiber material
     double rho0_f = inputs["density"][1];
     double E_f = inputs["elastic_modulus"][1];
-    double nu_f = 1.0 / 3.0;
+    double nu_f = 1.0 / 4.0;
     double K_f = E_f / ( 3.0 * ( 1.0 - 2.0 * nu_f ) );
-    double G0_f = inputs["fracture_energy"][1];
-    // double G0_f = inputs["fracture_energy_fiber"];
-    // double sc_f = inputs["critical_stretch_fiber"];
-    // double G0_f = 9 * K_f * delta * ( sc_f * sc_f ) / 5;
     // double G_f = E_f / ( 2.0 * ( 1.0 + nu_f ) ); // Only for LPS.
+    double G0_f = inputs["fracture_energy"][1];
+
+    double delta = inputs["horizon"];
+    delta += 1e-10;
 
     // ====================================================
     //                  Discretization
@@ -73,15 +67,13 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    // Matrix material
     using model_type = CabanaPD::PMB;
+
+    // Matrix material
     CabanaPD::ForceModel force_model_matrix( model_type{}, delta, K_m, G0_m );
-    // CabanaPD::ForceModel force_model_matrix( model_type{}, delta, K_f, G0_f
-    // );
 
     // Fiber material
     CabanaPD::ForceModel force_model_fiber( model_type{}, delta, K_f, G0_f );
-    // CabanaPD::ForceModel force_model_fiber( model_type{}, delta, K_m, G0_m );
 
     // ====================================================
     //                 Particle generation
@@ -89,17 +81,6 @@ void fiberReinforcedCompositeExample( const std::string filename )
     CabanaPD::Particles particles( memory_space{}, model_type{}, low_corner,
                                    high_corner, num_cells, halo_width,
                                    exec_space{} );
-
-    // ====================================================
-    //                Boundary conditions planes
-    // ====================================================
-    double dy = particles.dx[1];
-    CabanaPD::Region<CabanaPD::RectangularPrism> plane1(
-        low_corner[0], high_corner[0], low_corner[1] - dy, low_corner[1] + dy,
-        low_corner[2], high_corner[2] );
-    CabanaPD::Region<CabanaPD::RectangularPrism> plane2(
-        low_corner[0], high_corner[0], high_corner[1] - dy, high_corner[1] + dy,
-        low_corner[2], high_corner[2] );
 
     // ====================================================
     //            Custom particle initialization
@@ -215,11 +196,6 @@ void fiberReinforcedCompositeExample( const std::string filename )
             // Density (matrix)
             rho( pid ) = rho0_m;
         }
-
-        // No-fail zone
-        // if ( x( pid, 1 ) <= plane1.low[1] + delta + 1e-10 ||
-        //     x( pid, 1 ) >= plane2.high[1] - delta - 1e-10 )
-        nofail( pid ) = 1;
     };
     particles.updateParticles( exec_space{}, init_functor );
 
@@ -232,23 +208,39 @@ void fiberReinforcedCompositeExample( const std::string filename )
     CabanaPD::Solver solver( inputs, particles, models );
 
     // ====================================================
-    //                Boundary conditions
+    //                  Boundary conditions
     // ====================================================
-    // Create BC last to ensure ghost particles are included.
-    double sigma0 = inputs["traction"];
-    double b0 = sigma0 / dy;
-    auto f = solver.particles.sliceForce();
-    x = solver.particles.sliceReferencePosition();
+    // Grip velocity
+    double v0 = inputs["velocity_bc"];
 
-    // Create a symmetric force BC in the y-direction.
-    auto bc_op = KOKKOS_LAMBDA( const int pid, const double )
+    // Create region for boundary conditions
+    CabanaPD::Region<CabanaPD::RectangularPrism> plane1(
+        low_corner[0] - delta, low_corner[0] + delta, low_corner[1],
+        high_corner[1], low_corner[2], high_corner[2] );
+    CabanaPD::Region<CabanaPD::RectangularPrism> plane2(
+        high_corner[0] - delta, high_corner[0] + delta, low_corner[1],
+        high_corner[1], low_corner[2], high_corner[2] );
+
+    // Create BC last to ensure ghost particles are included.
+    x = solver.particles.sliceReferencePosition();
+    auto u = solver.particles.sliceDisplacement();
+    auto disp_func = KOKKOS_LAMBDA( const int pid, const double t )
     {
-        auto ypos = x( pid, 1 );
-        auto sign = std::abs( ypos ) / ypos;
-        f( pid, 1 ) += b0 * sign;
+        if ( plane1.inside( x, pid ) )
+        {
+            u( pid, 0 ) = 0.0;
+            u( pid, 1 ) = 0.0;
+            u( pid, 2 ) = 0.0;
+        }
+        else if ( plane2.inside( x, pid ) )
+        {
+            u( pid, 0 ) = v0 * t;
+            u( pid, 1 ) = 0.0;
+            u( pid, 2 ) = 0.0;
+        }
     };
-    auto bc = createBoundaryCondition( bc_op, exec_space{}, solver.particles,
-                                       true, plane1, plane2 );
+    auto bc = CabanaPD::createBoundaryCondition(
+        disp_func, exec_space{}, solver.particles, false, plane1, plane2 );
 
     // ====================================================
     //                   Simulation run
