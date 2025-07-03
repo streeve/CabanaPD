@@ -18,8 +18,8 @@
 
 #include <CabanaPD.hpp>
 
-// Unidirectional fiber-reinforced composite laminate subjected to displacement
-// boundary conditions.
+// Two-ply unidirectional fiber-reinforced composite laminate with 0-degree and
+// 90-degree plies subjected to displacement boundary conditions.
 void fiberReinforcedCompositeExample( const std::string filename )
 {
     // ====================================================
@@ -39,7 +39,7 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // Matrix material
     double rho0_m = inputs["density"][0];
     double E_m = inputs["elastic_modulus"][0];
-    double G_m = inputs["shear_modulus_matrix"];
+    double G_m = inputs["shear_modulus_matrix"]; // Only for LPS.
     double K_m = E_m * G_m / ( 3.0 * ( 3.0 * G_m - E_m ) );
     double G0_m = inputs["fracture_energy"][0];
 
@@ -48,7 +48,7 @@ void fiberReinforcedCompositeExample( const std::string filename )
     double E_f = inputs["elastic_modulus"][1];
     double nu_f = 1.0 / 4.0;
     double K_f = E_f / ( 3.0 * ( 1.0 - 2.0 * nu_f ) );
-    // double G_f = E_f / ( 2.0 * ( 1.0 + nu_f ) ); // Only for LPS.
+    double G_f = E_f / ( 2.0 * ( 1.0 + nu_f ) ); // Only for LPS.
     double G0_f = inputs["fracture_energy"][1];
 
     double delta = inputs["horizon"];
@@ -68,12 +68,17 @@ void fiberReinforcedCompositeExample( const std::string filename )
     //                    Force model
     // ====================================================
     using model_type = CabanaPD::PMB;
+    // using model_type = CabanaPD::LPS;
 
     // Matrix material
     CabanaPD::ForceModel force_model_matrix( model_type{}, delta, K_m, G0_m );
+    // CabanaPD::ForceModel force_model_matrix( model_type{}, delta, K_m, G_m,
+    // G0_m );
 
     // Fiber material
     CabanaPD::ForceModel force_model_fiber( model_type{}, delta, K_f, G0_f );
+    // CabanaPD::ForceModel force_model_fiber( model_type{}, delta, K_f, G_f,
+    // G0_f );
 
     // ====================================================
     //                 Particle generation
@@ -85,69 +90,44 @@ void fiberReinforcedCompositeExample( const std::string filename )
     // ====================================================
     //            Custom particle initialization
     // ====================================================
-    std::array<double, 3> system_size = inputs["system_size"];
-
     auto rho = particles.sliceDensity();
     auto x = particles.sliceReferencePosition();
     auto type = particles.sliceType();
 
-    // Fiber-reinforced composite geometry parameters
-    double Vf = inputs["fiber_volume_fraction"];
-    double Df = inputs["fiber_diameter"];
-    std::vector<double> stacking_vector = inputs["stacking_sequence"];
-    Kokkos::View<double*, memory_space> stacking_sequence(
-        stacking_vector.data(), stacking_vector.size() );
+    // Number of fibers per dimension
+    int Nf = inputs["fibers_per_dimension"];
+    // Check if Nf is even
+    if ( Nf % 2 != 0 )
+    {
+        throw std::runtime_error( "Error: Nf is odd. It must be even." );
+    }
 
     // Fiber radius
+    double Df = inputs["fiber_diameter"];
     double Rf = 0.5 * Df;
 
     // System sizes
+    std::array<double, 3> system_size = inputs["system_size"];
     double Lx = system_size[0];
     double Ly = system_size[1];
     double Lz = system_size[2];
 
-    // Number of plies
-    auto Nplies = stacking_sequence.size();
-    // Ply thickness (in z-direction)
-    double dzply = Lz / Nplies;
+    // Fiber grid spacings
+    double dxf = Lx / Nf;
+    double dyf = Ly / Nf;
+    double dzf = Lz / Nf;
 
-    // Single-fiber volume (assume a 0° fiber orientation)
-    double Vfs = CabanaPD::pi * Rf * Rf * Lx;
-    // Domain volume
-    double Vd = Lx * Ly * Lz;
-    // Total fiber volume
-    double Vftotal = Vf * Vd;
-    // Total number of fibers
-    int Nf = std::floor( Vftotal / Vfs );
-    // Cross section corresponding to a single fiber in the YZ-plane
-    // (assume all plies have 0° fiber orientation)
-    double Af = Ly * Lz / Nf;
-    // Number of fibers in y-direction (assume Af is a square area)
-    int Nfy = std::round( Ly / std::sqrt( Af ) );
-    // Ensure Nfy is even.
-    if ( Nfy % 2 == 1 )
-        Nfy = Nfy + 1;
-
-    // Number of fibers in z-direction
-    int Nfz = std::round( Nf / Nfy );
-    // Ensure number of fibers in z-direction within each ply is even.
-    int nfz = std::round( Nfz / Nplies );
-    if ( nfz % 2 == 0 )
+    // Check fibers do not overlap
+    if ( Df > dxf || Df > dyf || Df > dzf )
     {
-        Nfz = nfz * Nplies;
+        throw std::runtime_error( "Error: Fiber diameter is too large for "
+                                  "given number of fibers per dimension." );
     }
-    else
-    {
-        Nfz = ( nfz + 1 ) * Nplies;
-    };
 
-    // Fiber grid spacings (assume all plies have 0° fiber orientation)
-    double dyf = Ly / Nfy;
-    double dzf = Lz / Nfz;
-
-    // Domain center x- and y-coordinates
+    // Domain center coordinates
     double Xc = 0.5 * ( low_corner[0] + high_corner[0] );
     double Yc = 0.5 * ( low_corner[1] + high_corner[1] );
+    double Zc = 0.5 * ( low_corner[2] + high_corner[2] );
 
     auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
@@ -156,44 +136,57 @@ void fiberReinforcedCompositeExample( const std::string filename )
         double yi = x( pid, 1 );
         double zi = x( pid, 2 );
 
-        // Find ply number of particle (counting from 0).
-        int nply = Kokkos::floor( ( zi - low_corner[2] ) / dzply );
-
-        // Ply fiber orientation (in radians)
-        double theta = stacking_sequence( nply ) * CabanaPD::pi / 180;
-
-        // Translate then rotate (clockwise) y-coordinate of particle in
-        // XY-plane.
-        double yinew = -Kokkos::sin( theta ) * ( xi - Xc ) +
-                       Kokkos::cos( theta ) * ( yi - Yc );
-
-        // Find center of ply in z-direction (first ply has nply = 0).
-        double Zply_bot = low_corner[2] + nply * dzply;
-        double Zply_top = Zply_bot + dzply;
-        double Zcply = 0.5 * ( Zply_bot + Zply_top );
-
-        // Translate point in z-direction.
-        double zinew = zi - Zcply;
-
-        // Find nearest fiber grid center point in YZ plane.
-        double Iyf = Kokkos::floor( yinew / dyf );
-        double Izf = Kokkos::floor( zinew / dzf );
-        double YI = 0.5 * dyf + dyf * Iyf;
-        double ZI = 0.5 * dzf + dzf * Izf;
-
-        // Check if point belongs to fiber
-        if ( ( yinew - YI ) * ( yinew - YI ) + ( zinew - ZI ) * ( zinew - ZI ) <
-             Rf * Rf + 1e-8 )
+        // --------------------------------------------
+        // Bottom ply: fiber orientation in x-direction
+        // --------------------------------------------
+        if ( x( pid, 2 ) < Zc )
         {
-            // Material type: 1 = fiber (default is 0 = matrix)
-            type( pid ) = 1;
-            // Density (fiber)
-            rho( pid ) = rho0_f;
+            // Find nearest fiber grid center point in YZ plane.
+            double Iyf = Kokkos::floor( yi / dyf );
+            double Izf = Kokkos::floor( zi / dzf );
+            double YI = 0.5 * dyf + dyf * Iyf;
+            double ZI = 0.5 * dzf + dzf * Izf;
+
+            // Check if point belongs to fiber
+            if ( ( yi - YI ) * ( yi - YI ) + ( zi - ZI ) * ( zi - ZI ) <
+                 Rf * Rf + 1e-8 )
+            {
+                // Material type: 1 = fiber (default is 0 = matrix)
+                type( pid ) = 1;
+                // Density (fiber)
+                rho( pid ) = rho0_f;
+            }
+            else
+            {
+                // Density (matrix)
+                rho( pid ) = rho0_m;
+            }
         }
+        // --------------------------------------------
+        // Top ply: fiber orientation in y-direction
+        // --------------------------------------------
         else
         {
-            // Density (matrix)
-            rho( pid ) = rho0_m;
+            // Find nearest fiber grid center point in XZ plane.
+            double Ixf = Kokkos::floor( xi / dxf );
+            double Izf = Kokkos::floor( zi / dzf );
+            double XI = 0.5 * dxf + dxf * Ixf;
+            double ZI = 0.5 * dzf + dzf * Izf;
+
+            // Check if point belongs to fiber
+            if ( ( xi - XI ) * ( xi - XI ) + ( zi - ZI ) * ( zi - ZI ) <
+                 Rf * Rf + 1e-8 )
+            {
+                // Material type: 1 = fiber (default is 0 = matrix)
+                type( pid ) = 1;
+                // Density (fiber)
+                rho( pid ) = rho0_f;
+            }
+            else
+            {
+                // Density (matrix)
+                rho( pid ) = rho0_m;
+            }
         }
     };
     particles.updateParticles( exec_space{}, init_functor );
@@ -214,11 +207,11 @@ void fiberReinforcedCompositeExample( const std::string filename )
 
     // Create region for boundary conditions
     CabanaPD::Region<CabanaPD::RectangularPrism> plane1(
-        low_corner[0] - delta, low_corner[0] + delta, low_corner[1],
+        low_corner[0] - 2.0 * delta, low_corner[0] + 2.0 * delta, low_corner[1],
         high_corner[1], low_corner[2], high_corner[2] );
     CabanaPD::Region<CabanaPD::RectangularPrism> plane2(
-        high_corner[0] - delta, high_corner[0] + delta, low_corner[1],
-        high_corner[1], low_corner[2], high_corner[2] );
+        high_corner[0] - 2.0 * delta, high_corner[0] + 2.0 * delta,
+        low_corner[1], high_corner[1], low_corner[2], high_corner[2] );
 
     // Create BC last to ensure ghost particles are included.
     x = solver.particles.sliceReferencePosition();
