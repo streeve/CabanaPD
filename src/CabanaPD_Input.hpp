@@ -15,6 +15,7 @@
 #include <fstream>
 #include <iostream>
 #include <string>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -206,27 +207,24 @@ class Inputs
         std::vector<double> K;
         if ( inputs.contains( "bulk_modulus" ) )
         {
-            // Necessary because JSON can't determine the type otherwise.
-            std::vector<double> K_vec = inputs["bulk_modulus"]["value"];
-            K = K_vec;
+            K = getVector( "bulk_modulus" );
         }
         else
         {
-            std::vector<double> E = inputs["elastic_modulus"]["value"];
+            auto E = getVector( "elastic_modulus" );
             // This is only exact for bond-based (PMB).
             double nu = 0.25;
 
-            // Resize K to match the size of E
             K.resize( E.size() );
-
+            double denom = ( 3.0 * ( 1.0 - 2.0 * nu ) );
             for ( std::size_t i = 0; i < E.size(); i++ )
-                K[i] = E[i] / ( 3.0 * ( 1.0 - 2.0 * nu ) );
+                K[i] = E[i] / denom;
         }
 
         // Support for multi-material: find the minimum density-bulk modulus
         // ratio for the correct critical timestep.
         std::vector<double> rho_over_K;
-        std::vector<double> rho = inputs["density"]["value"];
+        auto rho = getVector( "density" );
         for ( std::size_t i = 0; i < rho.size(); i++ )
             rho_over_K[i] = rho[i] / K[i];
         min_index = std::distance( std::begin( rho_over_K ),
@@ -239,7 +237,8 @@ class Inputs
         // origin).
         int m = inputs["m"]["value"];
         double delta = inputs["horizon"]["value"];
-        // FIXME: this is copied from the forces
+        // FIXME: this is copied from the forces.
+        // FIXME: if delta is not constant this needs to be updated accordingly.
         double c = 18.0 * min_K / ( pi * delta * delta * delta * delta );
 
         for ( int i = -( m + 1 ); i < m + 2; i++ )
@@ -304,6 +303,27 @@ class Inputs
             double dt_ht_crit = rho * cp / sum_ht;
             compareCriticalTimeStep( "heat_transfer", dt_ht, dt_ht_crit );
         }
+    }
+
+    // Return vector for either array or scalar inputs to support both single
+    // and multi-material.
+    std::vector<double> getVector( const std::string key )
+    {
+        std::vector<double> v;
+        auto j = inputs[key]["value"];
+        if ( j.is_array() )
+        {
+            // Resize to match
+            v.resize( j.size() );
+            for ( std::size_t i = 0; i < j.size(); i++ )
+                v[i] = j[i];
+        }
+        else
+        {
+            v.resize( 1 );
+            v[0] = j;
+        }
+        return v;
     }
 
     // Parse JSON file.
