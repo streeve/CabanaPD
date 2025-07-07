@@ -86,6 +86,9 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         s_coeff_i = 15.0 * G;
         theta_coeff_j = theta_coeff_i;
         s_coeff_j = s_coeff_i;
+
+        if ( influence_type > 1 || influence_type < 0 )
+            log_err( std::cout, "Influence function type must be 0 or 1." );
     }
 
     KOKKOS_INLINE_FUNCTION auto operator()( InfluenceFunctionTag,
