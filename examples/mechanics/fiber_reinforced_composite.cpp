@@ -48,7 +48,7 @@ void fiberReinforcedCompositeExample( const std::string filename )
     double E_f = inputs["elastic_modulus"][1];
     double nu_f = 1.0 / 4.0;
     double K_f = E_f / ( 3.0 * ( 1.0 - 2.0 * nu_f ) );
-    double G_f = E_f / ( 2.0 * ( 1.0 + nu_f ) ); // Only for LPS.
+    // double G_f = E_f / ( 2.0 * ( 1.0 + nu_f ) ); // Only for LPS.
     double G0_f = inputs["fracture_energy"][1];
 
     double delta = inputs["horizon"];
@@ -125,10 +125,7 @@ void fiberReinforcedCompositeExample( const std::string filename )
     }
 
     // Domain center coordinates
-    double Xc = 0.5 * ( low_corner[0] + high_corner[0] );
-    double Yc = 0.5 * ( low_corner[1] + high_corner[1] );
     double Zc = 0.5 * ( low_corner[2] + high_corner[2] );
-
     auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
         // Particle position
