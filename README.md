@@ -115,6 +115,7 @@ CabanaPD currently includes the following:
     - Hybrid DEM-PD
     - Multi-material systems can be constructed for any models of the **same category** 
       (bond-based, state-based, contact) above (*Currently 2-material systems only*)
+      - Cross-term interactions can be averaged, requiring they use **identical model** types
  - Mechanical response:
    - Elastic only (no failure)
    - Brittle fracture
