@@ -303,13 +303,21 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     void createDomain( std::array<double, dim> low_corner,
                        std::array<double, dim> high_corner,
                        const std::array<int, dim> num_cells,
-                       const int max_halo_width )
+                       const int max_halo_width, const int ignore_1 = -1,
+                       const int ignore_2 = -1 )
     {
         _init_timer.start();
         halo_width = max_halo_width;
 
-        // Create the MPI partitions.
+        // Create the MPI partitions. Default to 3d partitioning.
         Cabana::Grid::DimBlockPartitioner<dim> partitioner;
+        // 1d partition.
+        if ( ignore_1 != -1 && ignore_2 != -1 )
+            partitioner =
+                Cabana::Grid::DimBlockPartitioner<dim>( ignore_1, ignore_2 );
+        // 2d partition.
+        else if ( ignore_1 != -1 )
+            partitioner = Cabana::Grid::DimBlockPartitioner<dim>( ignore_1 );
 
         // Create global mesh of MPI partitions.
         auto global_mesh = Cabana::Grid::createUniformGlobalMesh(
