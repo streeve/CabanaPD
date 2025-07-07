@@ -150,7 +150,9 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
                std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
                const std::array<int, dim> num_cells, const int max_halo_width,
-               const ExecSpace exec_space, const bool create_frozen = false )
+               const ExecSpace exec_space, const bool create_frozen = false,
+               typename std::enable_if<
+                   (Kokkos::is_execution_space_v<ExecSpace>), int>::type* = 0 )
         : _plist_x( "positions" )
         , _plist_f( "forces" )
     {
@@ -161,7 +163,9 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     Particles( MemorySpace, ModelType, std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
                const std::array<int, dim> num_cells, const int max_halo_width,
-               const ExecSpace exec_space, const bool create_frozen = false )
+               const ExecSpace exec_space, const bool create_frozen = false,
+               typename std::enable_if<
+                   (Kokkos::is_execution_space_v<ExecSpace>), int>::type* = 0 )
         : _plist_x( "positions" )
         , _plist_f( "forces" )
     {
@@ -174,7 +178,9 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
                std::array<double, dim> low_corner,
                std::array<double, dim> high_corner,
                const std::array<int, dim> num_cells, const int max_halo_width,
-               const ExecSpace exec_space, const bool create_frozen = false )
+               const ExecSpace exec_space, const bool create_frozen = false,
+               typename std::enable_if<
+                   (Kokkos::is_execution_space_v<ExecSpace>), int>::type* = 0 )
         : _plist_x( "positions" )
         , _plist_f( "forces" )
     {
@@ -1361,26 +1367,18 @@ Particles( MemorySpace, ModelType, OutputType, Inputs, ExecSpace )
                  TemperatureIndependent, OutputType>;
 
 template <typename MemorySpace, typename ModelType, typename ThermalType,
-          typename ExecSpace, std::size_t Dim, typename OutputType>
+          typename OutputType, std::size_t Dim, typename... Args>
 Particles( MemorySpace, ModelType, ThermalType, OutputType,
-           std::array<double, Dim>, std::array<double, Dim>,
-           const std::array<int, Dim>, int, ExecSpace, const bool = false,
-           typename std::enable_if<(is_temperature<ThermalType>::value &&
-                                    Kokkos::is_execution_space_v<ExecSpace>),
-                                   int>::type* = 0 )
+           std::array<double, Dim>, Args... args )
     -> Particles<MemorySpace, typename ModelType::base_model,
-                 typename ThermalType::base_type, OutputType>;
+                 typename ThermalType::base_type, OutputType, Dim>;
 
 template <typename MemorySpace, typename ModelType, typename OutputType,
-          typename ExecSpace, class UserFunctor, std::size_t Dim>
+          std::size_t Dim, typename... Args>
 Particles( MemorySpace, ModelType, OutputType, std::array<double, Dim>,
-           std::array<double, Dim>, const std::array<int, Dim>, const int,
-           UserFunctor, const ExecSpace, const bool = false,
-           typename std::enable_if<(is_output<OutputType>::value &&
-                                    Kokkos::is_execution_space_v<ExecSpace>),
-                                   int>::type* = 0 )
+           Args&&... args )
     -> Particles<MemorySpace, typename ModelType::base_model,
-                 TemperatureIndependent, OutputType>;
+                 TemperatureIndependent, OutputType, Dim>;
 
 template <typename MemorySpace, typename ModelType, typename OutputType,
           typename ExecSpace, class InitType, class UserFunctor,
