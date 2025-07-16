@@ -38,10 +38,10 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
     using base_type::K;
     double G;
     // Store coefficients for both i and j for multi-material systems.
-    double theta_coeff_i;
-    double s_coeff_i;
-    double theta_coeff_j;
-    double s_coeff_j;
+    double theta_coeff_1;
+    double s_coeff_1;
+    double theta_coeff_2;
+    double s_coeff_2;
 
     BaseForceModelLPS( LPS, NoFracture, const double _delta, const double _K,
                        const double _G, const int _influence = 0 )
@@ -68,10 +68,10 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         : base_type( model1, model2 )
     {
         G = ( model1.G + model2.G ) / 2.0;
-        theta_coeff_i = 3.0 * model1.K - 5.0 * model1.G;
-        s_coeff_i = 15.0 * model1.G;
-        theta_coeff_j = 3.0 * model2.K - 5.0 * model2.G;
-        s_coeff_j = 15.0 * model2.G;
+        theta_coeff_1 = 3.0 * model1.K - 5.0 * model1.G;
+        s_coeff_1 = 15.0 * model1.G;
+        theta_coeff_2 = 3.0 * model2.K - 5.0 * model2.G;
+        s_coeff_2 = 15.0 * model2.G;
 
         influence_type = model1.influence_type;
         if ( model2.influence_type != model1.influence_type )
@@ -82,10 +82,10 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
 
     void init()
     {
-        theta_coeff_i = 3.0 * K - 5.0 * G;
-        s_coeff_i = 15.0 * G;
-        theta_coeff_j = theta_coeff_i;
-        s_coeff_j = s_coeff_i;
+        theta_coeff_1 = 3.0 * K - 5.0 * G;
+        s_coeff_1 = 15.0 * G;
+        theta_coeff_2 = theta_coeff_1;
+        s_coeff_2 = s_coeff_1;
 
         if ( influence_type > 1 || influence_type < 0 )
             log_err( std::cout, "Influence function type must be 0 or 1." );
@@ -124,28 +124,55 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         return 3.0 * theta_i / m_i;
     }
 
-    KOKKOS_INLINE_FUNCTION auto operator()( ForceCoeffTag, const int, const int,
-                                            const double s, const double xi,
-                                            const double vol, const double m_i,
-                                            const double m_j,
-                                            const double theta_i,
-                                            const double theta_j ) const
+    KOKKOS_INLINE_FUNCTION auto
+    operator()( ForceCoeffTag, NeedsTypesTag, const int type_i,
+                const int type_j, const double s, const double xi,
+                const double vol, const double m_i, const double m_j,
+                const double theta_i, const double theta_j ) const
     {
         auto influence = ( *this )( influence_tag, xi );
+        double theta_coeff_i = getThetaCoeff( type_i );
+        double theta_coeff_j = getThetaCoeff( type_j );
+        double s_coeff_i = getSCoeff( type_i );
+        double s_coeff_j = getSCoeff( type_j );
+
         return ( theta_coeff_i * theta_i / m_i + theta_coeff_j * theta_j / m_j +
                  s * ( s_coeff_i / m_i + s_coeff_j / m_j ) ) *
                influence * xi * vol;
     }
 
     KOKKOS_INLINE_FUNCTION
-    auto operator()( EnergyTag, const int, const int, const double s,
-                     const double xi, const double vol, const double m_i,
-                     const double theta_i, const double num_bonds ) const
+    auto operator()( EnergyTag, NeedsTypesTag, const int type_i, const int,
+                     const double s, const double xi, const double vol,
+                     const double m_i, const double theta_i,
+                     const double num_bonds ) const
     {
         auto influence = ( *this )( influence_tag, xi );
+
+        double theta_coeff_i = getThetaCoeff( type_i );
+        double s_coeff_i = getSCoeff( type_i );
         return 1.0 / num_bonds * 0.5 * theta_coeff_i / 3.0 *
                    ( theta_i * theta_i ) +
                0.5 * ( s_coeff_i / m_i ) * influence * s * s * xi * xi * vol;
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    double getThetaCoeff( const int t ) const
+    {
+        // FIXME: only works for binary.
+        if ( t == 0 )
+            return theta_coeff_1;
+        else
+            return theta_coeff_2;
+    }
+    KOKKOS_INLINE_FUNCTION
+    double getSCoeff( const int t ) const
+    {
+        // FIXME: only works for binary.
+        if ( t == 0 )
+            return s_coeff_1;
+        else
+            return s_coeff_2;
     }
 };
 

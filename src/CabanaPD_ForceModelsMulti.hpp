@@ -20,6 +20,9 @@ namespace CabanaPD
 /******************************************************************************
   Multi-material models
 ******************************************************************************/
+struct NeedsTypesTag
+{
+};
 struct AverageTag
 {
 };
@@ -89,6 +92,31 @@ struct ForceModels
             return model2( tag, i, j, std::forward<Args>( args )... );
         else if ( type == 2 )
             return model12( tag, i, j, std::forward<Args>( args )... );
+        else
+            Kokkos::abort( "Invalid model index." );
+    }
+
+    // This is only for LPS force/energy, currently the only cases that require
+    // type information.
+    template <typename Tag, typename... Args>
+    KOKKOS_INLINE_FUNCTION auto operator()( Tag tag1, NeedsTypesTag tag2,
+                                            const int i, const int j,
+                                            Args... args ) const
+    {
+        const int type_i = type( i );
+        const int type_j = type( j );
+
+        auto type = getIndex( i, j );
+        // Call individual model.
+        if ( type == 0 )
+            return model1( tag1, tag2, type_i, type_j,
+                           std::forward<Args>( args )... );
+        else if ( type == 1 )
+            return model2( tag1, tag2, type_i, type_j,
+                           std::forward<Args>( args )... );
+        else if ( type == 2 )
+            return model12( tag1, tag2, type_i, type_j,
+                            std::forward<Args>( args )... );
         else
             Kokkos::abort( "Invalid model index." );
     }
