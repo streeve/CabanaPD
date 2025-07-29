@@ -125,7 +125,20 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
     }
 
     KOKKOS_INLINE_FUNCTION auto
-    operator()( ForceCoeffTag, NeedsTypesTag, const int type_i,
+    operator()( ForceCoeffTag, SingleMaterial const int, const int,
+                const double s, const double xi, const double vol,
+                const double m_i, const double m_j, const double theta_i,
+                const double theta_j ) const
+    {
+        auto influence = ( *this )( influence_tag, xi );
+
+        return ( theta_coeff_1 * theta_i / m_i + theta_coeff_1 * theta_j / m_j +
+                 s * ( s_coeff_1 / m_i + s_coeff_1 / m_j ) ) *
+               influence * xi * vol;
+    }
+
+    KOKKOS_INLINE_FUNCTION auto
+    operator()( ForceCoeffTag, MultiMaterial, const int type_i,
                 const int type_j, const double s, const double xi,
                 const double vol, const double m_i, const double m_j,
                 const double theta_i, const double theta_j ) const
