@@ -182,7 +182,7 @@ class Force<MemorySpace, ModelType, LPS, NoFracture>
             getDistance( x, u, i, j, xi, r, s, rx, ry, rz );
 
             const double coeff =
-                model( ForceCoeffTag{}, NeedsTypesTag{}, i, j, s, xi, vol( j ),
+                model( ForceCoeffTag{}, SingleMaterial{}, i, j, s, xi, vol( j ),
                        m( i ), m( j ), theta( i ), theta( j ) );
             fx_i = coeff * rx / r;
             fy_i = coeff * ry / r;
@@ -227,7 +227,7 @@ class Force<MemorySpace, ModelType, LPS, NoFracture>
                 Cabana::NeighborList<neighbor_list_type>::numNeighbor(
                     neigh_list, i ) );
 
-            double w = model( EnergyTag{}, NeedsTypesTag{}, i, j, s, xi,
+            double w = model( EnergyTag{}, SingleMaterial{}, i, j, s, xi,
                               vol( j ), m( i ), theta( i ), num_neighbors );
             W( i ) += w;
             Phi += w * vol( i );
@@ -269,7 +269,7 @@ class Force<MemorySpace, ModelType, LPS, NoFracture>
             getDistance( x, u, i, j, xi, r, s, rx, ry, rz, xi_x, xi_y, xi_z );
 
             double coeff =
-                model( ForceCoeffTag{}, NeedsTypesTag{}, i, j, s, xi, vol( j ),
+                model( ForceCoeffTag{}, SingleMaterial{}, i, j, s, xi, vol( j ),
                        m( i ), m( j ), theta( i ), theta( j ) );
             coeff *= 0.5;
             const double fx_i = coeff * rx / r;
@@ -478,8 +478,8 @@ class Force<MemorySpace, ModelType, LPS, Fracture>
                 else if ( mu( i, n ) > 0 )
                 {
                     const double coeff = model(
-                        ForceCoeffTag{}, NeedsTypesTag{}, i, j, s, xi, vol( j ),
-                        m( i ), m( j ), theta( i ), theta( j ) );
+                        ForceCoeffTag{}, SingleMaterial{}, i, j, s, xi,
+                        vol( j ), m( i ), m( j ), theta( i ), theta( j ) );
                     double muij = mu( i, n );
                     fx_i = muij * coeff * rx / r;
                     fy_i = muij * coeff * ry / r;
@@ -536,7 +536,7 @@ class Force<MemorySpace, ModelType, LPS, Fracture>
                 double xi, r, s;
                 getDistance( x, u, i, j, xi, r, s );
 
-                double w = mu( i, n ) * model( EnergyTag{}, NeedsTypesTag{}, i,
+                double w = mu( i, n ) * model( EnergyTag{}, SingleMaterial{}, i,
                                                j, s, xi, vol( j ), m( i ),
                                                theta( i ), num_bonds );
                 W( i ) += w;
@@ -592,7 +592,7 @@ class Force<MemorySpace, ModelType, LPS, Fracture>
                     getDistance( x, u, i, j, xi, r, s, rx, ry, rz, xi_x, xi_y,
                                  xi_z );
 
-                    double coeff = model( ForceCoeffTag{}, NeedsTypesTag{}, i,
+                    double coeff = model( ForceCoeffTag{}, SingleMaterial{}, i,
                                           j, s, xi, vol( j ), m( i ), m( j ),
                                           theta( i ), theta( j ) );
                     coeff *= 0.5;
@@ -680,7 +680,7 @@ class Force<MemorySpace, ModelType, LinearLPS, NoFracture>
             getLinearizedDistance( x, u, i, j, xi, linear_s, xi_x, xi_y, xi_z );
 
             const double coeff =
-                model( ForceCoeffTag{}, NeedsTypesTag{}, i, j, linear_s, xi,
+                model( ForceCoeffTag{}, SingleMaterial{}, i, j, linear_s, xi,
                        vol( j ), m( i ), m( j ), theta( i ), theta( j ) );
             fx_i = coeff * xi_x / xi;
             fy_i = coeff * xi_y / xi;
@@ -726,7 +726,7 @@ class Force<MemorySpace, ModelType, LinearLPS, NoFracture>
                 Cabana::NeighborList<neighbor_list_type>::numNeighbor(
                     neigh_list, i ) );
 
-            double w = model( EnergyTag{}, NeedsTypesTag{}, i, j, linear_s, xi,
+            double w = model( EnergyTag{}, SingleMaterial{}, i, j, linear_s, xi,
                               vol( j ), m( i ), theta( i ), num_neighbors );
             W( i ) += w;
             Phi += w * vol( i );
@@ -768,7 +768,7 @@ class Force<MemorySpace, ModelType, LinearLPS, NoFracture>
             getLinearizedDistance( x, u, i, j, xi, linear_s, xi_x, xi_y, xi_z );
 
             double coeff =
-                model( ForceCoeffTag{}, NeedsTypesTag{}, i, j, linear_s, xi,
+                model( ForceCoeffTag{}, SingleMaterial{}, i, j, linear_s, xi,
                        vol( j ), m( i ), m( j ), theta( i ), theta( j ) );
             coeff *= 0.5;
             const double fx_i = coeff * xi_x / xi;

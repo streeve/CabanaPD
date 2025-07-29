@@ -20,9 +20,6 @@ namespace CabanaPD
 /******************************************************************************
   Multi-material models
 ******************************************************************************/
-struct NeedsTypesTag
-{
-};
 struct AverageTag
 {
 };
@@ -97,9 +94,11 @@ struct ForceModels
     }
 
     // This is only for LPS force/energy, currently the only cases that require
-    // type information.
+    // type information. When running models individually, the SingleMaterial
+    // tag is used in the model directly; here it is replaced with the
+    // MultiMaterial tag instead.
     template <typename Tag, typename... Args>
-    KOKKOS_INLINE_FUNCTION auto operator()( Tag tag1, NeedsTypesTag tag2,
+    KOKKOS_INLINE_FUNCTION auto operator()( Tag tag, SingleMaterial,
                                             const int i, const int j,
                                             Args... args ) const
     {
@@ -107,15 +106,16 @@ struct ForceModels
         const int type_j = type( j );
 
         auto type = getIndex( i, j );
+        MultiMaterial mtag;
         // Call individual model.
         if ( type == 0 )
-            return model1( tag1, tag2, type_i, type_j,
+            return model1( tag, mtag, type_i, type_j,
                            std::forward<Args>( args )... );
         else if ( type == 1 )
-            return model2( tag1, tag2, type_i, type_j,
+            return model2( tag, mtag, type_i, type_j,
                            std::forward<Args>( args )... );
         else if ( type == 2 )
-            return model12( tag1, tag2, type_i, type_j,
+            return model12( tag, mtag, type_i, type_j,
                             std::forward<Args>( args )... );
         else
             Kokkos::abort( "Invalid model index." );

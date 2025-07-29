@@ -373,7 +373,7 @@ auto computeReferenceStress(
                     // We assume the dilatation and weighted volume are constant
                     f_mag =
                         model( CabanaPD::ForceCoeffTag{},
-                               CabanaPD::NeedsTypesTag{}, -1, -1, s0, xi, vol,
+                               CabanaPD::SingleMaterial{}, -1, -1, s0, xi, vol,
                                weighted_volume, weighted_volume, theta, theta );
                     f_x = f_mag * xi_x / xi;
                     f_y = f_mag * xi_y / xi;
@@ -425,7 +425,7 @@ double computeReferenceStrainEnergyDensity(
                 if ( xi > 0.0 && xi < model.delta + 1e-14 )
                 {
                     W += model( CabanaPD::EnergyTag{},
-                                CabanaPD::NeedsTypesTag{}, -1, -1, s0, xi, vol,
+                                CabanaPD::SingleMaterial{}, -1, -1, s0, xi, vol,
                                 weighted_volume, theta, num_neighbors );
                 }
             }
@@ -469,7 +469,7 @@ double computeReferenceStrainEnergyDensity(
                 if ( xi > 0.0 && xi < model.delta + 1e-14 )
                 {
                     W += model( CabanaPD::EnergyTag{},
-                                CabanaPD::NeedsTypesTag{}, -1, -1, s, xi, vol,
+                                CabanaPD::SingleMaterial{}, -1, -1, s, xi, vol,
                                 weighted_volume, theta_i, num_neighbors );
                 }
             }
@@ -514,7 +514,7 @@ double computeReferenceForceX(
                 if ( xi > 0.0 && xi < model.delta + 1e-14 )
                 {
                     fx += model( CabanaPD::ForceCoeffTag{},
-                                 CabanaPD::NeedsTypesTag{}, -1, -1, s, xi, vol,
+                                 CabanaPD::SingleMaterial{}, -1, -1, s, xi, vol,
                                  weighted_volume, weighted_volume, theta_i,
                                  theta_j ) *
                           rx / r;
