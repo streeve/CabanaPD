@@ -18,8 +18,8 @@
 
 #include <CabanaPD.hpp>
 
-// Simulate crack branching from an pre-crack.
-void crackBranchingExample( const std::string filename )
+// Simulate a crack interacting with an inclusion.
+void crackInclusionExample( const std::string filename )
 {
     // ====================================================
     //               Choose Kokkos spaces
@@ -43,7 +43,7 @@ void crackBranchingExample( const std::string filename )
     double G = E / ( 2 * ( 1 + nu ) ); // Only for LPS
     double G0 = inputs["fracture_energy"][0];
 
-    // Insertion
+    // Inclusion
     double rho0_I = inputs["density"][1];
     double E_I = inputs["elastic_modulus"][1];
     double nu_I = 0.25; // Use bond-based model
@@ -76,17 +76,13 @@ void crackBranchingExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    // using model_type = CabanaPD::PMB;
     using model_type = CabanaPD::LPS;
 
     // Glass plate material
-    // CabanaPD::ForceModel force_model_plate( model_type{}, delta, K, G0 );
     CabanaPD::ForceModel force_model_plate( model_type{}, delta, K, G, G0 );
 
-    // Insertion material
-    // CabanaPD::ForceModel force_model_insertion( model_type{}, delta, K_I,
-    // G0_I );
-    CabanaPD::ForceModel force_model_insertion( model_type{}, delta, K_I, G_I,
+    // Inclusion material
+    CabanaPD::ForceModel force_model_inclusion( model_type{}, delta, K_I, G_I,
                                                 G0_I );
 
     // ====================================================
@@ -117,9 +113,9 @@ void crackBranchingExample( const std::string filename )
     auto nofail = particles.sliceNoFail();
     auto type = particles.sliceType();
 
-    double R = inputs["insertion_radius"];
-    double xI = inputs["insertion_center"][0];
-    double yI = inputs["insertion_center"][1];
+    double R = inputs["inclusion_radius"];
+    double xI = inputs["inclusion_center"][0];
+    double yI = inputs["inclusion_center"][1];
 
     auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
@@ -129,10 +125,10 @@ void crackBranchingExample( const std::string filename )
         if ( x( pid, 1 ) <= plane1.low[1] + delta + 1e-10 ||
              x( pid, 1 ) >= plane2.high[1] - delta - 1e-10 )
             nofail( pid ) = 1;
-        // Distance squared from insertion center on the XY-plane
+        // Distance squared from inclusion center on the XY-plane
         double rsq = ( x( pid, 0 ) - xI ) * ( x( pid, 0 ) - xI ) +
                      ( x( pid, 1 ) - yI ) * ( x( pid, 1 ) - yI );
-        // Insertion material
+        // Inclusion material
         if ( rsq < R * R )
         {
             type( pid ) = 1;
@@ -151,10 +147,8 @@ void crackBranchingExample( const std::string filename )
     // ====================================================
     auto models = CabanaPD::createMultiForceModel(
         particles, CabanaPD::AverageTag{}, force_model_plate,
-        force_model_insertion );
+        force_model_inclusion );
     CabanaPD::Solver solver( inputs, particles, models );
-
-    // CabanaPD::Solver solver( inputs, particles, force_model );
 
     // ====================================================
     //                Boundary conditions
@@ -187,7 +181,7 @@ int main( int argc, char* argv[] )
     MPI_Init( &argc, &argv );
     Kokkos::initialize( argc, argv );
 
-    crackBranchingExample( argv[1] );
+    crackInclusionExample( argv[1] );
 
     Kokkos::finalize();
     MPI_Finalize();
