@@ -20,7 +20,7 @@ jobs:
         cxx: ['g++', 'clang++']
         backend: ['SERIAL', 'OPENMP']
         cmake_build_type: ['Debug', 'Release']
-        kokkos_ver: ['4.1.00']
+        kokkos_ver: ['4.4.01']
         output: ['HDF5']
         include:
           - distro: 'ubuntu:latest'
@@ -58,6 +58,7 @@ jobs:
             -DCMAKE_CXX_COMPILER=${{ matrix.cxx }} \
             -DCMAKE_INSTALL_PREFIX=$HOME/kokkos \
             -DKokkos_ENABLE_${{ matrix.backend }}=ON \
+            -DKokkos_ENABLE_DEPRECATED_CODE_4=OFF \
             -DKokkos_ENABLE_HWLOC=ON
           cmake --build build --parallel 2
           cmake --install build
