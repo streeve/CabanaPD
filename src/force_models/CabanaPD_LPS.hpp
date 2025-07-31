@@ -135,9 +135,8 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
     {
         auto influence = ( *this )( influence_tag, xi );
 
-        return ( theta_coeff[0] * theta_i / m_i +
-                 theta_coeff[0] * theta_j / m_j +
-                 s * ( s_coeff[0] / m_i + s_coeff[0] / m_j ) ) *
+        return ( theta_coeff[0] * ( theta_i / m_i + theta_j / m_j ) +
+                 s_coeff[0] * s * ( 1.0 / m_i + 1.0 / m_j ) ) *
                influence * xi * vol;
     }
 
