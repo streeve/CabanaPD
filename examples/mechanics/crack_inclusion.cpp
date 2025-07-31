@@ -38,17 +38,17 @@ void crackInclusionExample( const std::string filename )
     // Plate
     double rho0 = inputs["density"][0];
     double E = inputs["elastic_modulus"][0];
-    double nu = 0.25; // Use bond-based model
+    double nu = inputs["Poisson's_ratio"][0];
     double K = E / ( 3 * ( 1 - 2 * nu ) );
-    double G = E / ( 2 * ( 1 + nu ) ); // Only for LPS
+    double G = E / ( 2 * ( 1 + nu ) );
     double G0 = inputs["fracture_energy"][0];
 
     // Inclusion
     double rho0_I = inputs["density"][1];
     double E_I = inputs["elastic_modulus"][1];
-    double nu_I = 0.25; // Use bond-based model
+    double nu_I = inputs["Poisson's_ratio"][1];
     double K_I = E_I / ( 3 * ( 1 - 2 * nu_I ) );
-    double G_I = E_I / ( 2 * ( 1 + nu_I ) ); // Only for LPS
+    double G_I = E_I / ( 2 * ( 1 + nu_I ) );
     double G0_I = inputs["fracture_energy"][1];
 
     double delta = inputs["horizon"];
@@ -66,7 +66,7 @@ void crackInclusionExample( const std::string filename )
     double height = inputs["system_size"][0];
     double thickness = inputs["system_size"][2];
     double L_prenotch = height / 2.0;
-    double y_prenotch = 0.0;
+    double y_prenotch = 0.5 * ( low_corner[1] + high_corner[1] );
     Kokkos::Array<double, 3> p01 = { low_corner[0], y_prenotch, low_corner[2] };
     Kokkos::Array<double, 3> v1 = { L_prenotch, 0, 0 };
     Kokkos::Array<double, 3> v2 = { 0, 0, thickness };
@@ -74,7 +74,7 @@ void crackInclusionExample( const std::string filename )
     CabanaPD::Prenotch<1> prenotch( v1, v2, notch_positions );
 
     // ====================================================
-    //                    Force model
+    //                   Force models
     // ====================================================
     using model_type = CabanaPD::LPS;
 
@@ -136,7 +136,6 @@ void crackInclusionExample( const std::string filename )
         }
         else
         {
-            // type( pid ) = 1;
             rho( pid ) = rho0;
         }
     };
