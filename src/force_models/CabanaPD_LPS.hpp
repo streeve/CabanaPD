@@ -148,6 +148,8 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
                 const double vol, const double m_i, const double m_j,
                 const double theta_i, const double theta_j ) const
     {
+        KOKKOS_ASSERT( type_i < 2 );
+        KOKKOS_ASSERT( type_j < 2 );
         auto influence = ( *this )( influence_tag, xi );
         double theta_coeff_i = theta_coeff[type_i];
         double theta_coeff_j = theta_coeff[type_j];
@@ -184,6 +186,7 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
     {
         auto influence = ( *this )( influence_tag, xi );
 
+        KOKKOS_ASSERT( type_i < 2 );
         double theta_coeff_i = theta_coeff[type_i];
         double s_coeff_i = s_coeff[type_i];
         return 1.0 / num_bonds * 0.5 * theta_coeff_i / 3.0 *
