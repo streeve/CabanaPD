@@ -39,10 +39,8 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
     double G;
     // Store coefficients for multi-material systems.
     // TODO: this currently only supports bi-material systems.
-    // The third index hides what seems to be a false positive array-bounds
-    // warning.
-    Kokkos::Array<double, 3> theta_coeff;
-    Kokkos::Array<double, 3> s_coeff;
+    Kokkos::Array<double, 2> theta_coeff;
+    Kokkos::Array<double, 2> s_coeff;
 
     BaseForceModelLPS( LPS, NoFracture, const double _delta, const double _K,
                        const double _G, const int _influence = 0 )
@@ -73,9 +71,6 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         s_coeff[0] = 15.0 * model1.G;
         theta_coeff[1] = 3.0 * model2.K - 5.0 * model2.G;
         s_coeff[1] = 15.0 * model2.G;
-        // This index should never be used.
-        theta_coeff[2] = 0.0;
-        s_coeff[2] = 0.0;
 
         influence_type = model1.influence_type;
         if ( model2.influence_type != model1.influence_type )
@@ -91,9 +86,6 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         // Set extra coefficients for multi-material.
         theta_coeff[1] = theta_coeff[0];
         s_coeff[1] = s_coeff[0];
-        // This index should never be used.
-        theta_coeff[2] = 0.0;
-        s_coeff[2] = 0.0;
 
         if ( influence_type > 1 || influence_type < 0 )
             log_err( std::cout, "Influence function type must be 0 or 1." );
@@ -148,6 +140,10 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
                influence * xi * vol;
     }
 
+    // CI failures for gcc-13 in release show an apparent false-positive warning
+    // for array bounds of the coefficients.
+#pragma GCC diagnostic warning "-Warray-bounds"
+#pragma GCC diagnostic push
     // In this case we may have any combination of material types. These
     // coefficients may still be the same for some interaction pairs.
     KOKKOS_INLINE_FUNCTION auto
@@ -201,6 +197,7 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
                    ( theta_i * theta_i ) +
                0.5 * ( s_coeff_i / m_i ) * influence * s * s * xi * xi * vol;
     }
+#pragma GCC diagnostic pop
 };
 
 template <>
