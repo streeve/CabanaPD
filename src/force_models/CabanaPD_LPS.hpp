@@ -39,6 +39,8 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
     double G;
     // Store coefficients for multi-material systems.
     // TODO: this currently only supports bi-material systems.
+    // The third index hides what seems to be a false positive array-bounds
+    // warning.
     Kokkos::Array<double, 3> theta_coeff;
     Kokkos::Array<double, 3> s_coeff;
 
@@ -71,6 +73,7 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         s_coeff[0] = 15.0 * model1.G;
         theta_coeff[1] = 3.0 * model2.K - 5.0 * model2.G;
         s_coeff[1] = 15.0 * model2.G;
+        // This index should never be used.
         theta_coeff[2] = 0.0;
         s_coeff[2] = 0.0;
 
@@ -88,6 +91,7 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         // Set extra coefficients for multi-material.
         theta_coeff[1] = theta_coeff[0];
         s_coeff[1] = s_coeff[0];
+        // This index should never be used.
         theta_coeff[2] = 0.0;
         s_coeff[2] = 0.0;
 
