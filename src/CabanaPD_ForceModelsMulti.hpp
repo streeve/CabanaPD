@@ -81,13 +81,13 @@ struct ForceModels
     KOKKOS_INLINE_FUNCTION auto operator()( Tag tag, const int i, const int j,
                                             Args... args ) const
     {
-        auto type = getIndex( i, j );
+        auto t = getIndex( i, j );
         // Call individual model.
-        if ( type == 0 )
+        if ( t == 0 )
             return model1( tag, i, j, std::forward<Args>( args )... );
-        else if ( type == 1 )
+        else if ( t == 1 )
             return model2( tag, i, j, std::forward<Args>( args )... );
-        else if ( type == 2 )
+        else if ( t == 2 )
             return model12( tag, i, j, std::forward<Args>( args )... );
         else
             Kokkos::abort( "Invalid model index." );
@@ -105,16 +105,16 @@ struct ForceModels
         const int type_i = type( i );
         const int type_j = type( j );
 
-        auto type = getIndex( i, j );
+        auto t = getIndex( i, j );
         MultiMaterial mtag;
         // Call individual model.
-        if ( type == 0 )
+        if ( t == 0 )
             return model1( tag, mtag, type_i, type_j,
                            std::forward<Args>( args )... );
-        else if ( type == 1 )
+        else if ( t == 1 )
             return model2( tag, mtag, type_i, type_j,
                            std::forward<Args>( args )... );
-        else if ( type == 2 )
+        else if ( t == 2 )
             return model12( tag, mtag, type_i, type_j,
                             std::forward<Args>( args )... );
         else
