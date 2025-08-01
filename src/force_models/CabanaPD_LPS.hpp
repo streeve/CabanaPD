@@ -39,8 +39,8 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
     double G;
     // Store coefficients for multi-material systems.
     // TODO: this currently only supports bi-material systems.
-    Kokkos::Array<double, 2> theta_coeff;
-    Kokkos::Array<double, 2> s_coeff;
+    Kokkos::Array<double, 3> theta_coeff;
+    Kokkos::Array<double, 3> s_coeff;
 
     BaseForceModelLPS( LPS, NoFracture, const double _delta, const double _K,
                        const double _G, const int _influence = 0 )
@@ -86,6 +86,8 @@ struct BaseForceModelLPS<Elastic> : public BaseForceModel
         // Set extra coefficients for multi-material.
         theta_coeff[1] = theta_coeff[0];
         s_coeff[1] = s_coeff[0];
+        theta_coeff[2] = 0.0;
+        s_coeff[2] = 0.0;
 
         if ( influence_type > 1 || influence_type < 0 )
             log_err( std::cout, "Influence function type must be 0 or 1." );
