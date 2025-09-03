@@ -107,7 +107,9 @@ class Solver
         Neighbor<memory_space, typename force_model_type::fracture_type>;
 
     // Optional module types.
-    using heat_transfer_type = HeatTransfer<memory_space, force_model_type>;
+    using heat_transfer_type =
+        HeatTransfer<memory_space, force_model_type,
+                     typename force_model_type::fracture_type>;
     using contact_type = Force<memory_space, ContactModelType, ContactModel>;
     using contact_model_type = ContactModelType;
 

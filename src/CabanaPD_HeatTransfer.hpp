@@ -20,20 +20,20 @@
 namespace CabanaPD
 {
 
-template <class MemorySpace, class ModelType>
+template <class MemorySpace, class ModelType, class FractureType>
 class HeatTransfer;
 
 // Peridynamic heat transfer with forward-Euler time integration.
 // Inherits only because this is a similar neighbor-based kernel.
-template <class MemorySpace, class MechanicsType, class... ModelParams>
-class HeatTransfer<MemorySpace, ForceModel<PMB, MechanicsType, NoFracture,
-                                           DynamicTemperature, ModelParams...>>
+template <class MemorySpace, class ModelType>
+class HeatTransfer<MemorySpace, ModelType, NoFracture>
+    : public BaseForce<MemorySpace>
 {
   public:
     // Using the default exec_space.
     using exec_space = typename MemorySpace::execution_space;
-    using model_type = ForceModel<PMB, MechanicsType, NoFracture,
-                                  DynamicTemperature, ModelParams...>;
+    using model_type = ModelType;
+    using base_type = BaseForce<MemorySpace>;
 
   protected:
     Timer _timer;
@@ -95,37 +95,24 @@ class HeatTransfer<MemorySpace, ForceModel<PMB, MechanicsType, NoFracture,
     }
 };
 
-template <class MemorySpace, class MechanicsType, class... ModelParams>
-class HeatTransfer<MemorySpace, ForceModel<PMB, MechanicsType, Fracture,
-                                           DynamicTemperature, ModelParams...>>
-    : public HeatTransfer<MemorySpace,
-                          ForceModel<PMB, MechanicsType, NoFracture,
-                                     DynamicTemperature, ModelParams...>>
+template <class MemorySpace, class ModelType>
+class HeatTransfer<MemorySpace, ModelType, Fracture>
+    : public HeatTransfer<MemorySpace, ModelType, NoFracture>
 {
   public:
     // Using the default exec_space.
     using exec_space = typename MemorySpace::execution_space;
-    using model_type = ForceModel<PMB, MechanicsType, Fracture,
-                                  DynamicTemperature, ModelParams...>;
-    using base_type =
-        HeatTransfer<MemorySpace,
-                     ForceModel<PMB, MechanicsType, NoFracture,
-                                DynamicTemperature, ModelParams...>>;
+    using model_type = ModelType;
+    using base_type = HeatTransfer<MemorySpace, ModelType, NoFracture>;
 
   protected:
     using base_type::_euler_timer;
+    using base_type::_model;
     using base_type::_timer;
-    model_type _model;
 
   public:
-    // Explicit base model construction is necessary because of the indirect
-    // model inheritance. This could be avoided with a BaseHeatTransfer object.
     HeatTransfer( const model_type model )
-        : base_type( typename base_type::model_type(
-              PMB{}, NoFracture{}, model.delta, model.K, model.temperature,
-              model.kappa, model.cp, model.alpha, model.temp0,
-              model.constant_microconductivity ) )
-        , _model( model )
+        : base_type( model )
     {
     }
 
