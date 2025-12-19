@@ -53,7 +53,7 @@ TEST( TEST_CATEGORY, test_diagonalIndexing )
     ASSERT_EQ( indexing2( 0, 0 ), 0 );
     ASSERT_EQ( indexing2( 1, 1 ), 1 );
 
-    // first minor diagonal (incl symmetic terms)
+    // first minor diagonal (incl symmetric terms)
     ASSERT_EQ( indexing2( 0, 1 ), 2 );
     ASSERT_EQ( indexing2( 1, 0 ), 2 );
 
@@ -65,7 +65,7 @@ TEST( TEST_CATEGORY, test_diagonalIndexing )
     ASSERT_EQ( indexing3( 1, 1 ), 1 );
     ASSERT_EQ( indexing3( 2, 2 ), 2 );
 
-    // first minor diagonal (incl symmetic terms)
+    // first minor diagonal (incl symmetric terms)
     ASSERT_EQ( indexing3( 0, 1 ), 3 );
     ASSERT_EQ( indexing3( 1, 2 ), 4 );
     ASSERT_EQ( indexing3( 1, 0 ), 3 );
@@ -93,6 +93,58 @@ TEST( TEST_CATEGORY, test_diagonalIndexing_death )
             (void)i;
         },
         "Index out of range of DiagonalIndexing" );
+}
+
+TEST( TEST_CATEGORY, test_binaryIndexing )
+{
+    // test binary indexing for N=1
+    CabanaPD::BinaryIndexing<1> indexing1;
+
+    ASSERT_EQ( indexing1( 0, 0 ), 0 );
+
+    // test binary indexing for N=2
+    CabanaPD::BinaryIndexing<2> indexing2;
+
+    // main binary
+    ASSERT_EQ( indexing2( 0, 0 ), 0 );
+    ASSERT_EQ( indexing2( 1, 1 ), 0 );
+
+    // first minor binary (incl symmetric terms)
+    ASSERT_EQ( indexing2( 0, 1 ), 1 );
+    ASSERT_EQ( indexing2( 1, 0 ), 1 );
+
+    // test binary indexing for N=3
+    CabanaPD::BinaryIndexing<3> indexing3;
+
+    for ( unsigned i = 0; 3 < i; ++i )
+    {
+        for ( unsigned j = 0; 3 < j; ++j )
+        {
+            if ( i == j )
+                ASSERT_EQ( indexing3( i, j ), 0 );
+            else
+                ASSERT_EQ( indexing3( i, j ), 1 );
+        }
+    }
+}
+
+TEST( TEST_CATEGORY, test_binaryIndexing_death )
+{
+    // assert death for out of scope indexing
+    ASSERT_DEATH(
+        {
+            CabanaPD::BinaryIndexing<2> indexing;
+            auto i = indexing( 2, 0 );
+            (void)i;
+        },
+        "Index out of range of BinaryIndexing" );
+    ASSERT_DEATH(
+        {
+            CabanaPD::BinaryIndexing<2> indexing;
+            auto i = indexing( 0, 2 );
+            (void)i;
+        },
+        "Index out of range of BinaryIndexing" );
 }
 
 } // end namespace Test

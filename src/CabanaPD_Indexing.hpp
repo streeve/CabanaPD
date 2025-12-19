@@ -14,6 +14,7 @@
 
 namespace CabanaPD
 {
+// Index along each diagonal sequentially (symmetric).
 template <unsigned NumBaseModels>
 struct DiagonalIndexing
 {
@@ -37,6 +38,22 @@ struct DiagonalIndexing
             firstType < secondType ? firstType : secondType;
 
         return offset + indexAlongDiagonal;
+    }
+};
+
+// Index same type as 0 and differing types as 1.
+template <unsigned NumBaseModels>
+struct BinaryIndexing
+{
+    static_assert( NumBaseModels > 0, "NumBaseModels must be larger than 0" );
+
+    KOKKOS_FUNCTION unsigned operator()( unsigned firstType,
+                                         unsigned secondType ) const
+    {
+        KOKKOS_ASSERT( firstType < NumBaseModels );
+        KOKKOS_ASSERT( secondType < NumBaseModels );
+
+        return firstType != secondType;
     }
 };
 } // namespace CabanaPD
