@@ -137,7 +137,36 @@ void crackBranchingExample( const std::string filename )
     //                   Simulation run
     // ====================================================
     solver.init( bc, prenotch );
-    solver.run( bc );
+
+    std::array<int, 3> num_cells = inputs["num_cells"];
+    double adrSubDeltaT = 1.0;
+    auto particleADRIntegator = CabanaPD::createADRParticleIntegrator(
+        exec_space{}, f, adrSubDeltaT, horizon,
+        ( high_corner[0] - low_corner[0] ) / num_cells[0],
+        18.0 * static_cast<double>( K ) /
+            ( Kokkos::numbers::pi * horizon * horizon * horizon * horizon ),
+        5. );
+    particleADRIntegator.reset( exec_space{} );
+
+    double time = 0.0;
+    double adrFinalTime = 0.8 * static_cast<double>( inputs["final_time"] );
+    double adrDeltaT = 0.1 * static_cast<double>( inputs["final_time"] );
+    int numADRSteps = adrFinalTime / adrDeltaT;
+
+    for ( int adrTimeStep = 1; adrTimeStep < numADRSteps; ++adrTimeStep )
+    {
+        time = adrDeltaT * adrTimeStep;
+        unsigned num_subIterations = 3000;
+        for ( unsigned subIterations = 0; subIterations < num_subIterations;
+              subIterations++ )
+        {
+            CabanaPD::runStepWithExternalIntegrator(
+                exec_space{}, particleADRIntegator, particles, bc, time );
+        }
+        CabanaPD::runStepWithExternalIntegratorAndOutput(
+            exec_space{}, particleADRIntegator, particles, bc, time,
+            adrTimeStep );
+    }
 }
 
 // Initialize MPI+Kokkos.
