@@ -16,10 +16,13 @@ target_link_libraries(RandomCracks LINK_PUBLIC CabanaPD)
 add_executable(DogboneTensileTest dogbone_tensile_test.cpp)
 target_link_libraries(DogboneTensileTest LINK_PUBLIC CabanaPD)
 
+add_executable(DogboneTensileTestADR dogbone_tensile_test_ADR.cpp)
+target_link_libraries(DogboneTensileTestADR LINK_PUBLIC CabanaPD)
+
 add_executable(PlateWithHole plate_with_hole.cpp)
 target_link_libraries(PlateWithHole LINK_PUBLIC CabanaPD)
 
 add_executable(CrackInclusion crack_inclusion.cpp)
 target_link_libraries(CrackInclusion LINK_PUBLIC CabanaPD)
 
-install(TARGETS ElasticWave KalthoffWinkler CrackBranching FragmentingCylinder RandomCracks DogboneTensileTest PlateWithHole CrackInclusion DESTINATION ${CMAKE_INSTALL_BINDIR})
+install(TARGETS ElasticWave KalthoffWinkler CrackBranching FragmentingCylinder RandomCracks DogboneTensileTest DogboneTensileTestADR PlateWithHole CrackInclusion DESTINATION ${CMAKE_INSTALL_BINDIR})
