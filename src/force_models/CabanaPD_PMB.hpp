@@ -583,6 +583,12 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     DensityType rho;
     CurrentDensityType rho_current;
 
+    typename base_type::neighbor_view _s_c;
+
+    double epsilon_c = 0.0;
+    double lambda = 0.0;
+    double dt = 1e-8;
+
     // Define which base functions to use (do not use LPS).
     using base_type::cutoff;
     using base_type::energy;
@@ -608,6 +614,41 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
         , rho_current( _rho_c )
     {
         coeff = 18.0 / pi / delta / delta / delta / delta;
+
+        Kokkos::realloc( _s_c, base_type::_s_p.extent( 0 ),
+                         base_type::_s_p.extent( 1 ) );
+        Kokkos::deep_copy( _s_c, 0.0 );
+    }
+
+    // FIXME: avoiding multiple inheritance.
+    KOKKOS_INLINE_FUNCTION
+    auto creepStretch( const int i, const double s, const int n ) const
+    {
+        // Update bond plastic stretch.
+        auto s_c_n = _s_c( i, n );
+        auto s_c_n1 = s - base_type::_s_p( i, n ) - s_c_n;
+        if ( Kokkos::abs( s_c_n1 ) > epsilon_c )
+            _s_c( i, n ) = s_c_n + dt / lambda * s_c_n1;
+
+        return _s_c( i, n );
+    }
+
+    KOKKOS_INLINE_FUNCTION
+    auto plasticStretch( const int i, const double s, const int n,
+                         const double s_c_n, const double s_c_n1 ) const
+    {
+        // Update bond plastic stretch.
+        auto s_p = _s_p( i, n );
+
+        // Yield in tension.
+        if ( s >= s_p + s_c_n1 + s_Y )
+            _s_p( i, n ) = s - s_Y;
+        // Yield in compression.
+        else if ( s <= s_p - s_Y )
+            _s_p( i, n ) = s + s_Y;
+        // else: Elastic (in between), do not modify.
+
+        return _s_p( i, n );
     }
 
     KOKKOS_INLINE_FUNCTION
@@ -641,9 +682,13 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                      const double vol ) const
     {
         auto c_current = currentC( i );
+
+        auto s_c_n = _s_c( i, n );
+        auto s_c_n1 = creepStretch( i, s, n );
+
         // FIXME: this is just reimplementing the plastic force from the base.
-        auto s_p = base_type::plasticStretch( i, s, n );
-        return c_current * ( s - s_p ) * vol;
+        auto s_p = plasticStretch( i, s, n, s_c_n, s_c_n1 );
+        return c_current * ( s - s_p - s_c_n1 ) * vol;
     }
 
     // Update plastic dilatation.
