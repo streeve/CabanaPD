@@ -583,11 +583,15 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     DensityType rho;
     CurrentDensityType rho_current;
 
-    typename base_type::neighbor_view _s_c;
+    // We need to store both the creep stretch and the total stretch here
+    // (plasticity is in the base).
+    using typename base_type::neighbor_view;
+    neighbor_view _s_c;
+    neighbor_view _s;
 
+    double dt;
     double epsilon_c = 0.0;
-    double lambda = 0.0;
-    double dt = 1e-8;
+    double lambda = 1.0;
 
     // Define which base functions to use (do not use LPS).
     using base_type::cutoff;
@@ -603,21 +607,23 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     ForceDensityModel( PMB model, ElasticPerfectlyPlastic mechanics,
                        const DensityType& _rho,
                        const CurrentDensityType& _rho_c, const double delta,
-                       const double K, const double G0, const double sigma_y,
-                       const double _rho0, const TemperatureType _temp,
-                       const double alpha, const double temp0 = 0.0 )
+                       const double _dt, const double K, const double G0,
+                       const double sigma_y, const double _rho0,
+                       const TemperatureType _temp, const double alpha,
+                       const double temp0 = 0.0 )
         : base_type( model, mechanics, delta, K, G0, sigma_y, _temp, alpha,
                      temp0 )
         , lps_base_type( LPS{}, Fracture{}, delta, K, ( 3.0 / 5.0 * K ), G0 )
         , rho0( _rho0 )
         , rho( _rho )
         , rho_current( _rho_c )
+        , _s_c( neighbor_view( "creep_stretch", base_type::_s_p.extent( 0 ),
+                               base_type::_s_p.extent( 1 ) ) )
+        , _s( neighbor_view( "stretch", base_type::_s_p.extent( 0 ),
+                             base_type::_s_p.extent( 1 ) ) )
+        , dt( _dt )
     {
         coeff = 18.0 / pi / delta / delta / delta / delta;
-
-        Kokkos::realloc( _s_c, base_type::_s_p.extent( 0 ),
-                         base_type::_s_p.extent( 1 ) );
-        Kokkos::deep_copy( _s_c, 0.0 );
     }
 
     // FIXME: avoiding multiple inheritance.
@@ -626,28 +632,30 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     {
         // Update bond plastic stretch.
         auto s_c_n = _s_c( i, n );
-        auto s_c_n1 = s - base_type::_s_p( i, n ) - s_c_n;
+        auto s_c_n1 = s - _s_p( i, n ) - s_c_n;
         if ( Kokkos::abs( s_c_n1 ) > epsilon_c )
             _s_c( i, n ) = s_c_n + dt / lambda * s_c_n1;
 
         return _s_c( i, n );
     }
 
+    // Update bond plastic stretch.
     KOKKOS_INLINE_FUNCTION
-    auto plasticStretch( const int i, const double s, const int n,
+    auto plasticStretch( const int i, const double s_n1, const int n,
                          const double s_c_n, const double s_c_n1 ) const
     {
-        // Update bond plastic stretch.
-        auto s_p = _s_p( i, n );
+        // Previous state.
+        auto s_p_n = _s_p( i, n );
+        auto s_n = _s( i, n );
+        // Set state for next iteration.
+        _s( i, n ) = s_n1;
 
-        // Yield in tension.
-        if ( s >= s_p + s_c_n1 + s_Y )
-            _s_p( i, n ) = s - s_Y;
-        // Yield in compression.
-        else if ( s <= s_p - s_Y )
-            _s_p( i, n ) = s + s_Y;
-        // else: Elastic (in between), do not modify.
-
+        // Update if yielded.
+        if ( s_n - s_p_n - s_c_n >= s_Y ) // - theta_n / 3.0
+        {
+            _s_p( i, n ) = s_p_n - ( s_n1 - s_n ) -
+                           ( s_c_n1 - s_c_n ); // - (theta_n1 - theta_n) / 3.0
+        }
         return _s_p( i, n );
     }
 
@@ -683,11 +691,12 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     {
         auto c_current = currentC( i );
 
+        // Extract previous creep stretch before updating.
         auto s_c_n = _s_c( i, n );
         auto s_c_n1 = creepStretch( i, s, n );
 
-        // FIXME: this is just reimplementing the plastic force from the base.
         auto s_p = plasticStretch( i, s, n, s_c_n, s_c_n1 );
+        // FIXME: Missing theta term.
         return c_current * ( s - s_p - s_c_n1 ) * vol;
     }
 
@@ -723,8 +732,9 @@ template <typename DensityType, typename CurrentDensityType,
           typename TemperatureType>
 ForceDensityModel( PMB, ElasticPerfectlyPlastic, DensityType rho,
                    const CurrentDensityType& rho_c, const double delta,
-                   const double K, const double G0, const double sigma_y,
-                   const double rho0, TemperatureType temp, const double _alpha,
+                   const double dt, const double K, const double G0,
+                   const double sigma_y, const double rho0,
+                   TemperatureType temp, const double _alpha,
                    const double _temp0 )
     -> ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                          TemperatureDependent, TemperatureType, DensityType,
@@ -759,15 +769,16 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     ForceDensityModel( PMB model, ElasticPerfectlyPlastic mechanics,
                        const DensityType& _rho,
                        const CurrentDensityType& _rho_c, const double _delta,
-                       const double _K, const double _G0, const double _sigma_y,
-                       const double _rho0, const TemperatureType _temp,
-                       const double _kappa, const double _cp,
-                       const double _alpha, const double _temp0 = 0.0,
+                       const double _dt, const double _K, const double _G0,
+                       const double _sigma_y, const double _rho0,
+                       const TemperatureType _temp, const double _kappa,
+                       const double _cp, const double _alpha,
+                       const double _temp0 = 0.0,
                        const bool _constant_microconductivity = true )
         : base_temperature_type( _delta, _kappa, _cp,
                                  _constant_microconductivity )
-        , base_type( model, mechanics, _rho, _rho_c, _delta, _K, _G0, _sigma_y,
-                     _rho0, _temp, _alpha, _temp0 )
+        , base_type( model, mechanics, _rho, _rho_c, _delta, _dt, _K, _G0,
+                     _sigma_y, _rho0, _temp, _alpha, _temp0 )
     {
     }
 };
@@ -776,9 +787,10 @@ template <typename DensityType, typename CurrentDensityType,
           typename TemperatureType>
 ForceDensityModel( PMB, ElasticPerfectlyPlastic, DensityType rho,
                    const CurrentDensityType& rho_c, const double delta,
-                   const double K, const double G0, const double sigma_y,
-                   const double rho0, TemperatureType temp, const double _kappa,
-                   const double _cp, const double _alpha, const double _temp0 )
+                   const double dt, const double K, const double G0,
+                   const double sigma_y, const double rho0,
+                   TemperatureType temp, const double _kappa, const double _cp,
+                   const double _alpha, const double _temp0 )
     -> ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                          DynamicTemperature, TemperatureType, DensityType,
                          CurrentDensityType>;

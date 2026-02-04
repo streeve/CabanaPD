@@ -159,12 +159,13 @@ void HIPREVExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
+    double dt = inputs["timestep"];
     rho = particles.sliceDensity();
     auto rho_current = particles.sliceCurrentDensity();
     temp = particles.sliceTemperature();
     CabanaPD::ForceDensityModel force_model(
-        model_type{}, mechanics_type{}, rho, rho_current, delta, K, G0, sigma_y,
-        rho0, temp, kappa, cp, alpha, temp0 );
+        model_type{}, mechanics_type{}, rho, rho_current, delta, dt, K, G0,
+        sigma_y, rho0, temp, kappa, cp, alpha, temp0 );
 
     // ====================================================
     //                   Create solver

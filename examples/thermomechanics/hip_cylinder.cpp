@@ -164,12 +164,13 @@ void HIPCylinderExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
+    double dt = inputs["timestep"];
     rho = particles.sliceDensity();
     auto rho_current = particles.sliceCurrentDensity();
     temp = particles.sliceTemperature();
     CabanaPD::ForceDensityModel force_model(
-        model_type{}, mechanics_type{}, rho, rho_current, delta, K, G0, sigma_y,
-        rho0, temp, kappa, cp, alpha, temp0 );
+        model_type{}, mechanics_type{}, rho, rho_current, delta, dt, K, G0,
+        sigma_y, rho0, temp, kappa, cp, alpha, temp0 );
 
     // ====================================================
     //                   Create solver
@@ -200,7 +201,6 @@ void HIPCylinderExample( const std::string filename )
     double trampup = inputs["ramp_up_bc_time"];
     double trampdown = inputs["ramp_down_bc_time"];
     double tempmax = inputs["maximum_temperature"];
-    double dx = solver.particles.dx[0];
     double dz = solver.particles.dx[2];
     // double b0max = Pmax / dx;
     double b0max = Pmax / W;
