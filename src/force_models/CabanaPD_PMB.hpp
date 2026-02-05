@@ -617,10 +617,6 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
         , rho0( _rho0 )
         , rho( _rho )
         , rho_current( _rho_c )
-        , _s_c( neighbor_view( "creep_stretch", base_type::_s_p.extent( 0 ),
-                               base_type::_s_p.extent( 1 ) ) )
-        , _s( neighbor_view( "stretch", base_type::_s_p.extent( 0 ),
-                             base_type::_s_p.extent( 1 ) ) )
         , dt( _dt )
     {
         coeff = 18.0 / pi / delta / delta / delta / delta;
@@ -727,6 +723,17 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
         base_type::update( particles );
         rho = particles.sliceDensity();
         rho_current = particles.sliceCurrentDensity();
+    }
+
+    // Must update later because number of neighbors not known at construction.
+    void updateBonds( const int num_local, const int max_neighbors )
+    {
+        base_type::updateBonds( num_local, max_neighbors );
+
+        Kokkos::realloc( _s_c, num_local, max_neighbors );
+        Kokkos::deep_copy( _s_c, 0.0 );
+        Kokkos::realloc( _s, num_local, max_neighbors );
+        Kokkos::deep_copy( _s, 0.0 );
     }
 };
 
