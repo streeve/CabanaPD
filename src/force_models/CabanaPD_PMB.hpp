@@ -628,11 +628,13 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
 
     // FIXME: avoiding multiple inheritance.
     KOKKOS_INLINE_FUNCTION
-    auto creepStretch( const int i, const double s, const int n ) const
+    auto creepStretch( const int i, const int n ) const
     {
         // Update bond plastic stretch.
         auto s_c_n = _s_c( i, n );
-        auto s_c_n1 = s - _s_p( i, n ) - s_c_n;
+        auto s_p_n = _s_p( i, n );
+        auto s_n = _s( i, n );
+        auto s_c_n1 = s_n - s_p_n - s_c_n;
         if ( Kokkos::abs( s_c_n1 ) > epsilon_c )
             _s_c( i, n ) = s_c_n + dt / lambda * s_c_n1;
 
@@ -693,7 +695,7 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
 
         // Extract previous creep stretch before updating.
         auto s_c_n = _s_c( i, n );
-        auto s_c_n1 = creepStretch( i, s, n );
+        auto s_c_n1 = creepStretch( i, n );
 
         auto s_p = plasticStretch( i, s, n, s_c_n, s_c_n1 );
         // FIXME: Missing theta term.
