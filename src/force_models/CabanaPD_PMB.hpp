@@ -555,13 +555,10 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                          TemperatureDependent, TemperatureType, DensityType,
                          CurrentDensityType>
     : public ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
-                        TemperatureDependent, TemperatureType>,
-      ForceModel<LPS, Elastic, Fracture, TemperatureIndependent>
+                        TemperatureDependent, TemperatureType>
 {
     using base_type = ForceModel<PMB, ElasticPerfectlyPlastic, Fracture,
                                  TemperatureDependent, TemperatureType>;
-    using lps_base_type =
-        ForceModel<LPS, Elastic, Fracture, TemperatureIndependent>;
     using typename base_type::model_type;
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
@@ -592,7 +589,7 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     double s_C = 0.0;
     double lambda = 1.0;
 
-    // Define which base functions to use (do not use LPS).
+    // Define which base functions to use.
     using base_type::cutoff;
     using base_type::energy;
     using base_type::thermalStretch;
@@ -612,7 +609,6 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                        const double temp0 = 0.0 )
         : base_type( model, mechanics, delta, K, G0, sigma_y, _temp, alpha,
                      temp0 )
-        , lps_base_type( LPS{}, Fracture{}, delta, K, ( 3.0 / 5.0 * K ), G0 )
         , rho0( _rho0 )
         , rho( _rho )
         , rho_current( _rho_c )

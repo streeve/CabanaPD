@@ -413,18 +413,13 @@ class Force<MemorySpace, ModelType, PMB, Fracture>
 
 template <class MemorySpace, class ModelType>
 class Force<MemorySpace, ModelType, PMB, Fracture, DynamicDensity>
-    : public Force<MemorySpace, ModelType, PMB, Fracture>,
-      public Dilatation<MemorySpace, ModelType, Fracture>
+    : public Force<MemorySpace, ModelType, PMB, Fracture>
 {
   public:
     // Using the default exec_space.
     using exec_space = typename MemorySpace::execution_space;
     using model_type = ModelType;
     using base_type = Force<MemorySpace, ModelType, PMB, Fracture>;
-    using dilatation_type = Dilatation<MemorySpace, ModelType, Fracture>;
-
-    using dilatation_type::computeDilatation;
-    using dilatation_type::computeWeightedVolume;
 
   protected:
     using base_type::_model;
@@ -435,7 +430,6 @@ class Force<MemorySpace, ModelType, PMB, Fracture, DynamicDensity>
   public:
     Force( const model_type model )
         : base_type( model )
-        , dilatation_type( model )
     {
     }
 
@@ -453,7 +447,7 @@ class Force<MemorySpace, ModelType, PMB, Fracture, DynamicDensity>
         auto model = _model;
         const auto vol = particles.sliceVolume();
         const auto nofail = particles.sliceNoFail();
-        auto theta = particles.sliceDilatation();
+        auto theta_p = particles.slicePlasticDilatation();
 
         auto force_full = KOKKOS_LAMBDA( const int i )
         {
@@ -477,7 +471,7 @@ class Force<MemorySpace, ModelType, PMB, Fracture, DynamicDensity>
 
                 model.thermalStretch( s, i, j );
 
-                model.updateDensity( i, theta( i ) );
+                model.updateDensity( i, theta_p( i ) );
 
                 // Break if beyond critical stretch unless in no-fail zone.
                 if ( model.criticalStretch( i, j, r, xi ) && !nofail( i ) &&
@@ -516,11 +510,9 @@ class Force<MemorySpace, ModelType, PMB, Fracture, DynamicDensity>
         const auto x = particles.sliceReferencePosition();
         auto u = particles.sliceDisplacement();
         const auto vol = particles.sliceVolume();
-        auto theta = particles.sliceDilatation();
         auto model = _model;
         using neighbor_list_type = typename NeighborType::list_type;
         auto neigh_list = neighbor.list();
-        Cabana::deep_copy( theta, 0.0 );
 
         auto full = KOKKOS_LAMBDA( const int i )
         {
