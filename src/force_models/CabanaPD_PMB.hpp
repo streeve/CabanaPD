@@ -590,7 +590,7 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     neighbor_view _s;
 
     double dt;
-    double epsilon_c = 0.0;
+    double s_C = 0.0;
     double lambda = 1.0;
 
     // Define which base functions to use (do not use LPS).
@@ -622,37 +622,36 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
         coeff = 18.0 / pi / delta / delta / delta / delta;
     }
 
-    // FIXME: avoiding multiple inheritance.
     KOKKOS_INLINE_FUNCTION
     auto creepStretch( const int i, const int n ) const
     {
-        // Update bond plastic stretch.
-        auto s_c_n = _s_c( i, n );
-        auto s_p_n = _s_p( i, n );
-        auto s_n = _s( i, n );
-        auto s_c_n1 = s_n - s_p_n - s_c_n;
-        if ( Kokkos::abs( s_c_n1 ) > epsilon_c )
-            _s_c( i, n ) = s_c_n + dt / lambda * s_c_n1;
+        // Update bond creep stretch.
+        auto s_c_n0 = _s_c( i, n );
+        auto s_p_n0 = _s_p( i, n );
+        auto s_n0 = _s( i, n );
+        auto s_e_n0 =
+            s_n0 - s_p_n0 - s_c_n0; // - (theta_n - theta_p_n - theta_c_n) / 3.0
+        if ( Kokkos::abs( s_e_n0 ) > s_C )
+            _s_c( i, n ) = s_c_n0 + dt / lambda * s_e_n0;
 
         return _s_c( i, n );
     }
 
     // Update bond plastic stretch.
     KOKKOS_INLINE_FUNCTION
-    auto plasticStretch( const int i, const double s_n1, const int n,
-                         const double s_c_n, const double s_c_n1 ) const
+    auto plasticStretch( const int i, const double s_n0, const double s_n1,
+                         const int n, const double s_c_n0,
+                         const double s_c_n1 ) const
     {
         // Previous state.
-        auto s_p_n = _s_p( i, n );
-        auto s_n = _s( i, n );
-        // Set state for next iteration.
-        _s( i, n ) = s_n1;
+        auto s_p_n0 = _s_p( i, n );
 
         // Update if yielded.
-        if ( s_n - s_p_n - s_c_n >= s_Y ) // - theta_n / 3.0
+        // FIXME: Missing theta term.
+        if ( s_n0 - s_p_n0 - s_c_n0 >= s_Y ) // - theta_n / 3.0
         {
-            _s_p( i, n ) = s_p_n + ( s_n1 - s_n ) -
-                           ( s_c_n1 - s_c_n ); // - (theta_n1 - theta_n) / 3.0
+            _s_p( i, n ) = s_p_n0 + ( s_n1 - s_n0 ) -
+                           ( s_c_n1 - s_c_n0 ); // - (theta_n1 - theta_n) / 3.0
         }
         return _s_p( i, n );
     }
@@ -684,18 +683,23 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     }
 
     KOKKOS_INLINE_FUNCTION
-    auto forceCoeff( const int i, const int n, const double s,
+    auto forceCoeff( const int i, const int n, const double s_n1,
                      const double vol ) const
     {
         auto c_current = currentC( i );
 
         // Extract previous creep stretch before updating.
-        auto s_c_n = _s_c( i, n );
+        auto s_c_n0 = _s_c( i, n );
         auto s_c_n1 = creepStretch( i, n );
 
-        auto s_p = plasticStretch( i, s, n, s_c_n, s_c_n1 );
+        auto s_n0 = _s( i, n );
+        auto s_p_n1 = plasticStretch( i, s_n0, s_n1, n, s_c_n0, s_c_n1 );
+
+        // Set state for next iteration.
+        _s( i, n ) = s_n1;
+
         // FIXME: Missing theta term.
-        return c_current * ( s - s_p - s_c_n1 ) * vol;
+        return c_current * ( s_n1 - s_p_n1 - s_c_n1 ) * vol;
     }
 
     // Update plastic dilatation.
