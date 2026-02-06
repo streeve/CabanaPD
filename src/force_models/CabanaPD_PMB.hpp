@@ -651,7 +651,7 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
         // Update if yielded.
         if ( s_n - s_p_n - s_c_n >= s_Y ) // - theta_n / 3.0
         {
-            _s_p( i, n ) = s_p_n - ( s_n1 - s_n ) -
+            _s_p( i, n ) = s_p_n + ( s_n1 - s_n ) -
                            ( s_c_n1 - s_c_n ); // - (theta_n1 - theta_n) / 3.0
         }
         return _s_p( i, n );
