@@ -1401,6 +1401,7 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputType, DynamicDensity,
     {
         base_type::resize( std::forward<Args>( args )... );
         _aosoa_density.resize( base_type::localOffset() );
+        _aosoa_dilatation.resize( base_type::localOffset() );
     }
 
     template <typename... OtherFields>
