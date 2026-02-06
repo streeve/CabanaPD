@@ -586,8 +586,8 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     neighbor_view _s_c;
 
     double dt;
-    double s_C = 0.0;
-    double lambda = 1.0;
+    double s_C;
+    double lambda;
 
     // Define which base functions to use.
     using base_type::cutoff;
@@ -605,6 +605,7 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                        const CurrentDensityType& _rho_c, const double delta,
                        const double _dt, const double K, const double G0,
                        const double sigma_y, const double _rho0,
+                       const double epsilon_C, const double _lambda,
                        const TemperatureType _temp, const double alpha,
                        const double temp0 = 0.0 )
         : base_type( model, mechanics, delta, K, G0, sigma_y, _temp, alpha,
@@ -613,6 +614,8 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
         , rho( _rho )
         , rho_current( _rho_c )
         , dt( _dt )
+        , s_C( epsilon_C )
+        , lambda( _lambda )
     {
         coeff = 18.0 / pi / delta / delta / delta / delta;
     }
@@ -757,6 +760,7 @@ ForceDensityModel( PMB, ElasticPerfectlyPlastic, DensityType rho,
                    const CurrentDensityType& rho_c, const double delta,
                    const double dt, const double K, const double G0,
                    const double sigma_y, const double rho0,
+                   const double epsilon_C, const double _lambda,
                    TemperatureType temp, const double _alpha,
                    const double _temp0 )
     -> ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
@@ -794,6 +798,7 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                        const CurrentDensityType& _rho_c, const double _delta,
                        const double _dt, const double _K, const double _G0,
                        const double _sigma_y, const double _rho0,
+                       const double epsilon_C, const double _lambda,
                        const TemperatureType _temp, const double _kappa,
                        const double _cp, const double _alpha,
                        const double _temp0 = 0.0,
@@ -801,7 +806,8 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
         : base_temperature_type( _delta, _kappa, _cp,
                                  _constant_microconductivity )
         , base_type( model, mechanics, _rho, _rho_c, _delta, _dt, _K, _G0,
-                     _sigma_y, _rho0, _temp, _alpha, _temp0 )
+                     _sigma_y, _rho0, epsilon_C, _lambda, _temp, _alpha,
+                     _temp0 )
     {
     }
 };
@@ -812,6 +818,7 @@ ForceDensityModel( PMB, ElasticPerfectlyPlastic, DensityType rho,
                    const CurrentDensityType& rho_c, const double delta,
                    const double dt, const double K, const double G0,
                    const double sigma_y, const double rho0,
+                   const double epsilon_C, const double _lambda,
                    TemperatureType temp, const double _kappa, const double _cp,
                    const double _alpha, const double _temp0 )
     -> ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
