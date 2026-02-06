@@ -1377,6 +1377,7 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputType, DynamicDensity,
         // Forward arguments to standard or custom particle creation.
         base_type::createParticles( std::forward<Args>( args )... );
         _aosoa_density.resize( base_type::localOffset() );
+        _aosoa_dilatation.resize( base_type::localOffset() );
     }
 
     auto sliceCurrentDensity()
