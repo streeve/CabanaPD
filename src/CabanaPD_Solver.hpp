@@ -321,6 +321,8 @@ class Solver
         {
             _step_timer.start();
 
+            force->computePartialPlasticCreepStretch( particles, *neighbor );
+
             // Integrate - velocity Verlet first half.
             integrator->initialHalfStep( exec_space{}, particles );
 
@@ -372,6 +374,8 @@ class Solver
         {
             _step_timer.start();
 
+            force->computePartialPlasticCreepStretch( particles, *neighbor );
+
             // Integrate - velocity Verlet first half.
             integrator->initialHalfStep( exec_space{}, particles );
 
@@ -413,6 +417,9 @@ class Solver
         // Compute and communicate dilatation for LPS (does nothing for PMB).
         force->computeDilatation( particles, *neighbor );
         comm->gatherDilatation();
+
+        force->computePlasticCreepDilatation( particles, *neighbor );
+        // comm->gatherPlasticCreepDilatation();
 
         // Compute internal forces.
         computeForce( *force, particles, *neighbor );

@@ -161,6 +161,15 @@ class BaseForce
     {
     }
 
+    template <class ParticleType, class NeighborType>
+    void computePartialPlasticCreepStretch( ParticleType&, const NeighborType )
+    {
+    }
+    template <class ParticleType, class NeighborType>
+    void computePlasticCreepDilatation( ParticleType&, const NeighborType )
+    {
+    }
+
     auto time() { return _timer.time(); };
     auto timeEnergy() { return _energy_timer.time(); };
 };
@@ -240,6 +249,15 @@ class Dilatation<MemorySpace, ModelType, NoFracture>
                           "CabanaPD::Dilatation::compute" );
 
         _timer.stop();
+    }
+
+    template <class ParticleType, class NeighborType>
+    void computePartialPlasticCreepStretch( ParticleType&, const NeighborType )
+    {
+    }
+    template <class ParticleType, class NeighborType>
+    void computePlasticCreepDilatation( ParticleType&, const NeighborType )
+    {
     }
 
     auto time() { return _timer.time(); };

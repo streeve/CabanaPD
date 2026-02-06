@@ -506,6 +506,90 @@ class Force<MemorySpace, ModelType, PMB, Fracture, DynamicDensity>
                                 "CabanaPD::ForcePMBDamage::computeFull" );
         _timer.stop();
     }
+
+    template <class ParticleType, class NeighborType>
+    void computePartialPlasticCreepStretch( ParticleType& particles,
+                                            const NeighborType& neighbor )
+    {
+        _timer.start();
+
+        const auto x = particles.sliceReferencePosition();
+        auto u = particles.sliceDisplacement();
+        const auto vol = particles.sliceVolume();
+        auto theta = particles.sliceDilatation();
+        auto model = _model;
+        using neighbor_list_type = typename NeighborType::list_type;
+        auto neigh_list = neighbor.list();
+        Cabana::deep_copy( theta, 0.0 );
+
+        auto full = KOKKOS_LAMBDA( const int i )
+        {
+            std::size_t num_neighbors =
+                Cabana::NeighborList<neighbor_list_type>::numNeighbor(
+                    neigh_list, i );
+            for ( std::size_t n = 0; n < num_neighbors; n++ )
+            {
+                {
+                    std::size_t j =
+                        Cabana::NeighborList<neighbor_list_type>::getNeighbor(
+                            neigh_list, i, n );
+
+                    // Get the bond distance, displacement, and stretch.
+                    double xi, r, s;
+                    getDistance( x, u, i, j, xi, r, s );
+                    model.plasticStretchFirstHalf( i, s, n );
+                    model.creepStretch( i, s, n );
+                }
+            }
+        };
+
+        neighbor.iterateLinear( exec_space{}, full, particles,
+                                "CabanaPD::PlasticCreepStretch::compute" );
+
+        _timer.stop();
+    }
+
+    template <class ParticleType, class NeighborType>
+    void computePlasticCreepDilatation( ParticleType& particles,
+                                        const NeighborType& neighbor )
+    {
+        _timer.start();
+
+        const auto x = particles.sliceReferencePosition();
+        auto u = particles.sliceDisplacement();
+        const auto vol = particles.sliceVolume();
+        auto model = _model;
+        using neighbor_list_type = typename NeighborType::list_type;
+        auto neigh_list = neighbor.list();
+
+        auto full = KOKKOS_LAMBDA( const int i )
+        {
+            std::size_t num_neighbors =
+                Cabana::NeighborList<neighbor_list_type>::numNeighbor(
+                    neigh_list, i );
+            for ( std::size_t n = 0; n < num_neighbors; n++ )
+            {
+                {
+                    std::size_t j =
+                        Cabana::NeighborList<neighbor_list_type>::getNeighbor(
+                            neigh_list, i, n );
+
+                    // Get the bond distance, displacement, and stretch.
+                    double xi, r, s;
+                    getDistance( x, u, i, j, xi, r, s );
+                    model.plasticStretchFinalHalf( i, s, n );
+                    // Not used for PMB.
+                    // model.creepDilatation( i, n, s, xi, vol( j ), 0.0 );
+                    model.plasticDilatation( i, n, s, xi, vol( j ), 0.0 );
+                }
+            }
+        };
+
+        neighbor.iterateLinear( exec_space{}, full, particles,
+                                "CabanaPD::PlasticCreepStretch::compute" );
+
+        _timer.stop();
+    }
 };
 
 template <class MemorySpace, class ModelType>

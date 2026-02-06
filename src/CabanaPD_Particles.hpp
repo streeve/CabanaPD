@@ -1355,7 +1355,7 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputType, DynamicDensity,
     using memory_space = typename base_type::memory_space;
     using base_type::dim;
 
-    using aosoa_density_type =
+    using aosoa_scalar_type =
         Cabana::AoSoA<Cabana::MemberTypes<double>, memory_space, 1>;
 
     template <typename... Args>
@@ -1363,8 +1363,11 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputType, DynamicDensity,
                DynamicDensity, Args&&... args )
         : base_type( space, LPS{}, temp, std::forward<Args>( args )... )
     {
-        _aosoa_density = aosoa_density_type( "Particle Output Fields",
-                                             base_type::localOffset() );
+        _aosoa_density = aosoa_scalar_type( "Particle Output Fields",
+                                            base_type::localOffset() );
+        _aosoa_dilatation =
+            aosoa_scalar_type( "Plastic Dilatation", base_type::localOffset() );
+
         init();
     }
 
@@ -1383,6 +1386,14 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputType, DynamicDensity,
     auto sliceCurrentDensity() const
     {
         return Cabana::slice<0>( _aosoa_density, "current_density" );
+    }
+    auto slicePlasticDilatation()
+    {
+        return Cabana::slice<0>( _aosoa_dilatation, "plastic_dilatation" );
+    }
+    auto slicePlasticDilatation() const
+    {
+        return Cabana::slice<0>( _aosoa_dilatation, "plastic_dilatation" );
     }
 
     template <typename... Args>
@@ -1412,9 +1423,13 @@ class Particles<MemorySpace, ModelType, ThermalType, OutputType, DynamicDensity,
         auto reference = base_type::sliceDensity();
         auto current = sliceCurrentDensity();
         Cabana::deep_copy( current, reference );
+
+        auto plastic_dilatation = slicePlasticDilatation();
+        Cabana::deep_copy( plastic_dilatation, 0.0 );
     }
 
-    aosoa_density_type _aosoa_density;
+    aosoa_scalar_type _aosoa_density;
+    aosoa_scalar_type _aosoa_dilatation;
 };
 
 /******************************************************************************
