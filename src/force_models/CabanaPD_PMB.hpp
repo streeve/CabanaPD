@@ -641,9 +641,8 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                      const double vol ) const
     {
         auto c_current = currentC( i );
-        // FIXME: this is just reimplementing the plastic force from the base.
-        auto s_p = base_type::plasticStretch( i, s, n );
-        return c_current * ( s - s_p ) * vol;
+        // FIXME: plastic term is unstable here?
+        return c_current * (s)*vol;
     }
 
     // Update plastic dilatation.
