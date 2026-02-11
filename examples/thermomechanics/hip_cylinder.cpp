@@ -155,13 +155,6 @@ void HIPCylinderExample( const std::string filename )
     particles.updateParticles( exec_space{}, init_functor );
 
     // ====================================================
-    //                Boundary conditions planes
-    // ====================================================
-    CabanaPD::RegionBoundary<CabanaPD::RectangularPrism> plane(
-        low_corner[0], high_corner[0], low_corner[1], high_corner[1],
-        low_corner[2], high_corner[2] );
-
-    // ====================================================
     //                    Force model
     // ====================================================
     rho = particles.sliceDensity();
