@@ -841,6 +841,8 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput,
                                  base_type::localOffset() );
         _aosoa_theta = aosoa_theta_type( "Particle Dilatations",
                                          base_type::localOffset() );
+        _aosoa_theta_p = aosoa_theta_type( "Particle Inelastic Dilatations",
+                                           base_type::localOffset() );
         init_lps();
         _init_timer.stop();
     }
@@ -853,6 +855,7 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput,
         _init_timer.start();
         _aosoa_m.resize( base_type::localOffset() );
         _aosoa_theta.resize( base_type::localOffset() );
+        _aosoa_theta_p.resize( base_type::localOffset() );
         _init_timer.stop();
     }
 
@@ -872,6 +875,14 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput,
     {
         return Cabana::slice<0>( _aosoa_m, "weighted_volume" );
     }
+    auto sliceInelasticDilatation()
+    {
+        return Cabana::slice<0>( _aosoa_theta_p, "inelastic_dilatation" );
+    }
+    auto sliceInelasticDilatation() const
+    {
+        return Cabana::slice<0>( _aosoa_theta_p, "inelastic_dilatation" );
+    }
 
     void resize( int new_local, int new_ghost )
     {
@@ -879,6 +890,7 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput,
         _timer.start();
         _aosoa_theta.resize( base_type::referenceOffset() );
         _aosoa_m.resize( base_type::referenceOffset() );
+        _aosoa_theta_p.resize( base_type::referenceOffset() );
         _timer.stop();
     }
 
@@ -888,6 +900,7 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput,
     {
         base_type::output( output_step, output_time, use_reference,
                            sliceWeightedVolume(), sliceDilatation(),
+                           sliceInelasticDilatation(),
                            std::forward<OtherFields>( other )... );
     }
 
@@ -901,9 +914,12 @@ class Particles<MemorySpace, LPS, TemperatureIndependent, BaseOutput,
         Cabana::deep_copy( theta, 0.0 );
         auto m = sliceWeightedVolume();
         Cabana::deep_copy( m, 0.0 );
+        auto theta_p = sliceDilatation();
+        Cabana::deep_copy( theta_p, 0.0 );
     }
 
     aosoa_theta_type _aosoa_theta;
+    aosoa_theta_type _aosoa_theta_p;
     aosoa_m_type _aosoa_m;
 
     using base_type::_init_timer;

@@ -319,6 +319,7 @@ class Dilatation<MemorySpace, ModelType, Fracture>
         const auto vol = particles.sliceVolume();
         auto m = particles.sliceWeightedVolume();
         auto theta = particles.sliceDilatation();
+        auto theta_p = particles.sliceInelasticDilatation();
         auto model = _model;
 
         Cabana::deep_copy( theta, 0.0 );
@@ -343,9 +344,22 @@ class Dilatation<MemorySpace, ModelType, Fracture>
                 // broken, because m=0 only occurs when all bonds are broken.
                 // mu is still included to account for individual bond breaking.
                 if ( m( i ) > 0 )
+                {
                     theta( i ) +=
                         mu( i, n ) *
                         model.dilatation( i, n, s, xi, vol( j ), m( i ) );
+
+                    // Update creep stretch first, then plastic.
+                    // This needs updated dilatation.
+                    const double theta_ij = theta( i ) + theta( j );
+                    const double theta_p_ij = theta_p( i ) + theta_p( j );
+                    model.creepStretch( i, s, n, theta_ij, theta_p_ij );
+                    model.plasticStretch( i, s, n, theta_ij );
+
+                    // This needs updated plastic/creep stretch.
+                    theta_p( i ) +=
+                        model.inelasticDilatation( i, n, xi, vol( j ) );
+                }
             }
         };
 

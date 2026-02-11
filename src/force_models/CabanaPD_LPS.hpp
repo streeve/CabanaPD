@@ -94,6 +94,25 @@ struct ForceModel<LPS, Elastic, NoFracture>
         return 3.0 * theta_i / m_i;
     }
 
+    KOKKOS_FUNCTION
+    auto creepStretch( const int, const double, const int, const double,
+                       const double ) const
+    {
+    }
+    KOKKOS_FUNCTION
+    auto plasticStretch( const int, const double, const int,
+                         const double ) const
+    {
+    }
+
+    // Currently not implemented.
+    KOKKOS_INLINE_FUNCTION
+    auto inelasticDilatation( const int, const int, const double,
+                              const double ) const
+    {
+        return 0.0;
+    }
+
     KOKKOS_INLINE_FUNCTION auto forceCoeff( const double s, const double xi,
                                             const double vol, const double m_i,
                                             const double m_j,

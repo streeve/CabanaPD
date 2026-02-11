@@ -589,6 +589,14 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     using base_type::thermalStretch;
     using base_type::updateBonds;
 
+    // Creep stretch (plasticity is in the base).
+    using typename base_type::neighbor_view;
+    neighbor_view _s_c;
+
+    const double s_C = 0.0;
+    const double lambda = 1.0;
+    double dt;
+
     // Thermal parameters
     using base_type::alpha;
     using base_type::temp0;
@@ -598,14 +606,16 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                        const DensityType& _rho,
                        const CurrentDensityType& _rho_c, const double delta,
                        const double K, const double G0, const double sigma_y,
-                       const double _rho0, const TemperatureType _temp,
-                       const double alpha, const double temp0 = 0.0 )
+                       const double _rho0, const double _dt,
+                       const TemperatureType _temp, const double alpha,
+                       const double temp0 = 0.0 )
         : base_type( model, mechanics, delta, K, G0, sigma_y, _temp, alpha,
                      temp0 )
         , lps_base_type( LPS{}, Fracture{}, delta, K, ( 3.0 / 5.0 * K ), G0 )
         , rho0( _rho0 )
         , rho( _rho )
         , rho_current( _rho_c )
+        , dt( _dt )
     {
         coeff = 18.0 / pi / delta / delta / delta / delta;
     }
@@ -637,22 +647,56 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     }
 
     KOKKOS_INLINE_FUNCTION
-    auto forceCoeff( const int i, const int n, const double s,
-                     const double vol ) const
+    auto forceCoeffTmp( const int i, const int n, const double s,
+                        const double vol, const double theta_p_ij ) const
     {
+        auto s_c = _s_c( i, n );
+        auto s_p = _s_p( i, n );
         auto c_current = currentC( i );
-        // FIXME: this is just reimplementing the plastic force from the base.
-        auto s_p = base_type::plasticStretch( i, s, n );
-        return c_current * ( s - s_p ) * vol;
+        return c_current * ( s - s_p - s_c + theta_p_ij / 6.0 ) * vol;
     }
 
-    // Update plastic dilatation.
+    // Update bond creep stretch.
     KOKKOS_INLINE_FUNCTION
-    auto dilatation( const int i, const int n, const double s, const double xi,
-                     const double vol, const double ) const
+    auto creepStretch( const int i, const double s, const int n,
+                       const double theta_ij, const double theta_p_ij ) const
     {
-        auto s_p = base_type::plasticStretch( i, s, n );
-        return coeff / 6.0 * s_p * xi * vol;
+        // Update bond creep stretch.
+        auto s_c = _s_c( i, n );
+        auto s_p = _s_p( i, n );
+        auto s_de = s - s_p - s_c - ( theta_ij - theta_p_ij ) / 6.0;
+        if ( Kokkos::abs( s_de ) > s_C )
+            _s_c( i, n ) += dt / lambda * s_de;
+    }
+
+    // Update bond plastic stretch.
+    KOKKOS_INLINE_FUNCTION
+    auto plasticStretch( const int i, const double s, const int n,
+                         const double theta_ij ) const
+    {
+        auto s_p = _s_p( i, n );
+        const auto s_c = _s_c( i, n );
+        const auto s_e = s - s_c - theta_ij / 6.0;
+
+        // Update if yielded.
+        // Yield in tension.
+        if ( s_e >= s_p + s_Y )
+            _s_p( i, n ) = s_e - s_Y;
+        // Yield in compression.
+        else if ( s_e <= s_p - s_Y )
+            _s_p( i, n ) = s_e + s_Y;
+        // else: Elastic (in between), do not modify.
+
+        return _s_p( i, n );
+    }
+
+    // Update plastic+creep dilatation. Must be called after stretch is updated.
+    KOKKOS_INLINE_FUNCTION
+    auto inelasticDilatation( const int i, const int n, const double xi,
+                              const double vol ) const
+    {
+        const double s_c_p = _s_c( i, n ) + _s_p( i, n );
+        return coeff / 6.0 * s_c_p * xi * vol;
     }
 
     // Density update using plastic dilatation.
@@ -672,6 +716,14 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
         rho = particles.sliceDensity();
         rho_current = particles.sliceCurrentDensity();
     }
+
+    // Must update later because number of neighbors not known at construction.
+    void updateBonds( const int num_local, const int max_neighbors )
+    {
+        base_type::updateBonds( num_local, max_neighbors );
+        Kokkos::realloc( _s_c, num_local, max_neighbors );
+        Kokkos::deep_copy( _s_c, 0.0 );
+    }
 };
 
 template <typename DensityType, typename CurrentDensityType,
@@ -679,8 +731,8 @@ template <typename DensityType, typename CurrentDensityType,
 ForceDensityModel( PMB, ElasticPerfectlyPlastic, DensityType rho,
                    const CurrentDensityType& rho_c, const double delta,
                    const double K, const double G0, const double sigma_y,
-                   const double rho0, TemperatureType temp, const double _alpha,
-                   const double _temp0 )
+                   const double rho0, const double _dt, TemperatureType temp,
+                   const double _alpha, const double _temp0 )
     -> ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                          TemperatureDependent, TemperatureType, DensityType,
                          CurrentDensityType>;
@@ -715,14 +767,15 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                        const DensityType& _rho,
                        const CurrentDensityType& _rho_c, const double _delta,
                        const double _K, const double _G0, const double _sigma_y,
-                       const double _rho0, const TemperatureType _temp,
-                       const double _kappa, const double _cp,
-                       const double _alpha, const double _temp0 = 0.0,
+                       const double _rho0, const double _dt,
+                       const TemperatureType _temp, const double _kappa,
+                       const double _cp, const double _alpha,
+                       const double _temp0 = 0.0,
                        const bool _constant_microconductivity = true )
         : base_temperature_type( _delta, _kappa, _cp,
                                  _constant_microconductivity )
         , base_type( model, mechanics, _rho, _rho_c, _delta, _K, _G0, _sigma_y,
-                     _rho0, _temp, _alpha, _temp0 )
+                     _rho0, _dt, _temp, _alpha, _temp0 )
     {
     }
 };
@@ -732,8 +785,9 @@ template <typename DensityType, typename CurrentDensityType,
 ForceDensityModel( PMB, ElasticPerfectlyPlastic, DensityType rho,
                    const CurrentDensityType& rho_c, const double delta,
                    const double K, const double G0, const double sigma_y,
-                   const double rho0, TemperatureType temp, const double _kappa,
-                   const double _cp, const double _alpha, const double _temp0 )
+                   const double rho0, const double _dt, TemperatureType temp,
+                   const double _kappa, const double _cp, const double _alpha,
+                   const double _temp0 )
     -> ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                          DynamicTemperature, TemperatureType, DensityType,
                          CurrentDensityType>;
