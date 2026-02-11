@@ -338,10 +338,24 @@ void HIPREVExample( const std::string filename )
                                   true );
 
     // ====================================================
+    //                      Outputs
+    // ====================================================
+    CabanaPD::Region<CabanaPD::RectangularPrism> volume(
+        low_corner[0] + W, high_corner[0] - W, low_corner[1] + W,
+        high_corner[1] - W, low_corner[2] + W, high_corner[2] - W );
+
+    // Output average total density.
+    auto rho_c = particles.sliceCurrentDensity();
+    auto density_func = KOKKOS_LAMBDA( const int p ) { return rho_c( p ); };
+    auto output_rho = CabanaPD::createOutputTimeSeries(
+        "output_density.txt", inputs, exec_space{}, solver.particles,
+        density_func, volume );
+
+    // ====================================================
     //                   Simulation run
     // ====================================================
     solver.init( body_term );
-    solver.run( body_term );
+    solver.run( body_term, output_rho );
 }
 
 // Initialize MPI+Kokkos.
