@@ -710,8 +710,8 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     using base_model = typename base_type::base_model;
     using fracture_type = typename base_type::fracture_type;
     using mechanics_type = typename base_type::mechanics_type;
-    using thermal_type = typename base_type::thermal_type;
     using density_type = typename base_type::density_type;
+    using thermal_type = DynamicTemperature;
 
     // Explicitly use the temperature-dependent stretch.
     using base_type::thermalStretch;
