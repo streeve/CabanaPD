@@ -17,6 +17,7 @@
 #include <CabanaPD_Constants.hpp>
 #include <CabanaPD_ForceModels.hpp>
 #include <CabanaPD_Types.hpp>
+#include <force_models/CabanaPD_Contact.hpp>
 
 namespace CabanaPD
 {
@@ -583,6 +584,8 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     DensityType rho;
     CurrentDensityType rho_current;
 
+    NormalRepulsionModel contact;
+
     // Define which base functions to use (do not use LPS).
     using base_type::cutoff;
     using base_type::energy;
@@ -598,14 +601,16 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                        const DensityType& _rho,
                        const CurrentDensityType& _rho_c, const double delta,
                        const double K, const double G0, const double sigma_y,
-                       const double _rho0, const TemperatureType _temp,
-                       const double alpha, const double temp0 = 0.0 )
+                       const double _rho0, const double contact_radius,
+                       const TemperatureType _temp, const double alpha,
+                       const double temp0 = 0.0 )
         : base_type( model, mechanics, delta, K, G0, sigma_y, _temp, alpha,
                      temp0 )
-        , lps_base_type( LPS{}, Fracture{}, delta, K, ( 3.0 / 5.0 * K ), G0 )
+        , lps_base_type( LPS{}, Fracture{}, delta, K, ( 3.0 / 5.0 * K ), G0, 1 )
         , rho0( _rho0 )
         , rho( _rho )
         , rho_current( _rho_c )
+        , contact( delta, contact_radius, 0.0, K )
     {
         coeff = 18.0 / pi / delta / delta / delta / delta;
     }
@@ -678,7 +683,8 @@ template <typename DensityType, typename CurrentDensityType,
 ForceDensityModel( PMB, ElasticPerfectlyPlastic, DensityType rho,
                    const CurrentDensityType& rho_c, const double delta,
                    const double K, const double G0, const double sigma_y,
-                   const double rho0, TemperatureType temp, const double _alpha,
+                   const double rho0, const double contact_radius,
+                   TemperatureType temp, const double _alpha,
                    const double _temp0 )
     -> ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                          TemperatureDependent, TemperatureType, DensityType,
@@ -714,14 +720,15 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                        const DensityType& _rho,
                        const CurrentDensityType& _rho_c, const double _delta,
                        const double _K, const double _G0, const double _sigma_y,
-                       const double _rho0, const TemperatureType _temp,
-                       const double _kappa, const double _cp,
-                       const double _alpha, const double _temp0 = 0.0,
+                       const double _rho0, const double contact_radius,
+                       const TemperatureType _temp, const double _kappa,
+                       const double _cp, const double _alpha,
+                       const double _temp0 = 0.0,
                        const bool _constant_microconductivity = true )
         : base_temperature_type( _delta, _kappa, _cp,
                                  _constant_microconductivity )
         , base_type( model, mechanics, _rho, _rho_c, _delta, _K, _G0, _sigma_y,
-                     _rho0, _temp, _alpha, _temp0 )
+                     _rho0, contact_radius, _temp, _alpha, _temp0 )
     {
     }
 };
@@ -731,8 +738,9 @@ template <typename DensityType, typename CurrentDensityType,
 ForceDensityModel( PMB, ElasticPerfectlyPlastic, DensityType rho,
                    const CurrentDensityType& rho_c, const double delta,
                    const double K, const double G0, const double sigma_y,
-                   const double rho0, TemperatureType temp, const double _kappa,
-                   const double _cp, const double _alpha, const double _temp0 )
+                   const double rho0, const double contact_radius,
+                   TemperatureType temp, const double _kappa, const double _cp,
+                   const double _alpha, const double _temp0 )
     -> ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
                          DynamicTemperature, TemperatureType, DensityType,
                          CurrentDensityType>;

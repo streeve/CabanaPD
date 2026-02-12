@@ -160,9 +160,10 @@ void HIPCylinderExample( const std::string filename )
     rho = particles.sliceDensity();
     auto rho_current = particles.sliceCurrentDensity();
     temp = particles.sliceTemperature();
+    const double contact_r = 0.95 * particles.dx[0];
     CabanaPD::ForceDensityModel force_model(
         model_type{}, mechanics_type{}, rho, rho_current, delta, K, G0, sigma_y,
-        rho0, temp, kappa, cp, alpha, temp0 );
+        rho0, contact_r, temp, kappa, cp, alpha, temp0 );
 
     // ====================================================
     //                   Create solver

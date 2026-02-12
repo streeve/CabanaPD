@@ -155,9 +155,11 @@ void HIPREVExample( const std::string filename )
     rho = particles.sliceDensity();
     auto rho_current = particles.sliceCurrentDensity();
     temp = particles.sliceTemperature();
+    const double contact_horizon_factor = inputs["contact_horizon_factor"];
+    const double contact_r = contact_horizon_factor * particles.dx[0];
     CabanaPD::ForceDensityModel force_model(
         model_type{}, mechanics_type{}, rho, rho_current, delta, K, G0, sigma_y,
-        rho0, temp, kappa, cp, alpha, temp0 );
+        rho0, contact_r, temp, kappa, cp, alpha, temp0 );
 
     // ====================================================
     //                   Create solver
@@ -165,7 +167,6 @@ void HIPREVExample( const std::string filename )
     CabanaPD::Solver solver( inputs, particles, force_model );
     /*
     using contact_type = CabanaPD::NormalRepulsionModel;
-    auto dx = particles.dx;
 
     // Use contact radius and extension relative to particle spacing.
     double r_c = inputs["contact_horizon_factor"];
@@ -191,7 +192,7 @@ void HIPREVExample( const std::string filename )
     double dx = solver.particles.dx[0];
     double dy = solver.particles.dx[1];
     double dz = solver.particles.dx[2];
-    // double b0max = Pmax / dx;
+    //  double b0max = Pmax / dx;
     double b0max = Pmax / W;
     x = solver.particles.sliceReferencePosition();
     auto f = solver.particles.sliceForce();
@@ -279,7 +280,17 @@ void HIPREVExample( const std::string filename )
             // Temperature BC
             temp( pid ) = temp_bc;
         }
-
+        /*
+        const double rsq = Kokkos::sqrt( f( pid, 0 ) * f( pid, 0 ) +
+                                         f( pid, 1 ) * f( pid, 1 ) +
+                                         f( pid, 2 ) * f( pid, 2 ) );
+        if ( rsq > b0 )
+        {
+            f( pid, 0 ) /= rsq * b0;
+            f( pid, 1 ) /= rsq * b0;
+            f( pid, 2 ) /= rsq * b0;
+        }
+        */
         // -----------------------
         //      Temperature BC
         // -----------------------

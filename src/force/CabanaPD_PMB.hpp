@@ -455,6 +455,7 @@ class Force<MemorySpace, ModelType, PMB, Fracture, DynamicDensity>
         const auto nofail = particles.sliceNoFail();
         auto theta = particles.sliceDilatation();
 
+        auto contact = model.contact;
         auto force_full = KOKKOS_LAMBDA( const int i )
         {
             std::size_t num_neighbors =
@@ -488,7 +489,11 @@ class Force<MemorySpace, ModelType, PMB, Fracture, DynamicDensity>
                 // Else if statement is only for performance.
                 else if ( mu( i, n ) > 0 )
                 {
-                    const double coeff = model.forceCoeff( i, n, s, vol( j ) );
+                    double coeff = model.forceCoeff( i, n, s, vol( j ) );
+
+                    // Add a short-range repulsive force
+                    if ( r <= contact.radius )
+                        coeff += contact.forceCoeff( r, vol( j ) );
 
                     double muij = mu( i, n );
                     fx_i = muij * coeff * rx / r;
