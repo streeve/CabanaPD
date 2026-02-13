@@ -314,6 +314,15 @@ auto createBoundaryCondition( UserFunctor user_functor,
     return BoundaryCondition( bc_indices, user_functor, force_update );
 }
 
+template <class>
+struct is_bc : public std::false_type
+{
+};
+template <class BCTag, class SVType>
+struct is_bc<BoundaryCondition<BCTag, SVType>> : public std::true_type
+{
+};
+
 } // namespace CabanaPD
 
 #endif

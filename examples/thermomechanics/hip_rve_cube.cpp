@@ -75,14 +75,17 @@ void HIPREVExample( const std::string filename )
     double x_center = 0.5 * ( low_corner[0] + high_corner[0] );
     double y_center = 0.5 * ( low_corner[1] + high_corner[1] );
     double z_center = 0.5 * ( low_corner[2] + high_corner[2] );
-    double L = inputs["cube_side"];
+    double x_size = inputs["system_size"][0];
+    double R = x_size / 2.0;
+    double R2 = R * R;
+    double W = inputs["wall_thickness"];
+    double RW2 = ( R - W ) * ( R - W );
 
-    // Do not create particles outside given cubic region
+    // Do not create particles outside given region
     auto init_op = KOKKOS_LAMBDA( const int, const double x[3] )
     {
-        if ( Kokkos::abs( x[0] - x_center ) > 0.5 * L ||
-             Kokkos::abs( x[1] - y_center ) > 0.5 * L ||
-             Kokkos::abs( x[2] - z_center ) > 0.5 * L )
+        const double r2 = x[0] * x[0] + x[1] * x[1] + x[2] * x[2];
+        if ( r2 > R2 )
             return false;
         return true;
     };
@@ -92,7 +95,6 @@ void HIPREVExample( const std::string filename )
         low_corner, high_corner, num_cells, halo_width, init_op, exec_space{} );
 
     // Impose separate density values for powder and container particles.
-    double W = inputs["wall_thickness"];
     double D0 = inputs["powder_initial_relative_density"];
     auto rho = particles.sliceDensity();
     auto temp = particles.sliceTemperature();
@@ -110,9 +112,9 @@ void HIPREVExample( const std::string filename )
 
     auto init_functor = KOKKOS_LAMBDA( const int pid )
     {
-        if ( Kokkos::abs( x( pid, 0 ) - x_center ) < 0.5 * L - W &&
-             Kokkos::abs( x( pid, 1 ) - y_center ) < 0.5 * L - W &&
-             Kokkos::abs( x( pid, 2 ) - z_center ) < 0.5 * L - W )
+        const double r2 = x( pid, 0 ) * x( pid, 0 ) +
+                          x( pid, 1 ) * x( pid, 1 ) + x( pid, 2 ) * x( pid, 2 );
+        if ( r2 < RW2 )
         {
             // Powder density
             rho( pid ) = D0 * rho0;
@@ -145,7 +147,7 @@ void HIPREVExample( const std::string filename )
         temp( pid ) = temp0;
 
         // No fail: we enforce no-failure
-        nofail( pid ) = 1;
+        // nofail( pid ) = 1;
     };
     particles.updateParticles( exec_space{}, init_functor );
 
@@ -200,161 +202,97 @@ void HIPREVExample( const std::string filename )
     temp = solver.particles.sliceTemperature();
     double tf = inputs["final_time"];
 
+    auto sphere = KOKKOS_LAMBDA( const decltype( x ) x, const int p )
+    {
+        const double r2 = x( p, 0 ) * x( p, 0 ) + x( p, 1 ) * x( p, 1 ) +
+                          x( p, 2 ) * x( p, 2 );
+        return r2 > RW2;
+    };
+    CabanaPD::Region volume( sphere );
+
     // This is purposely delayed until after solver init so that ghosted
     // particles are correctly taken into account for lambda capture here.
-    auto force_temp_func = KOKKOS_LAMBDA( const int pid, const double t )
+    auto force_func = KOKKOS_LAMBDA( const int pid, const double t )
     {
         double b0;
-        double temp_bc;
-
         // Pressure and temperature ramping
         // Linear profile: f(x) = f(a) + (x-a) * (f(b)-f(a))/(b-a) for x in
         // [a,b]
         if ( t < trampup )
         {
             b0 = t * b0max / trampup;
-            temp_bc = temp0 + t * ( tempmax - temp0 ) / trampup;
         }
         else if ( t > tf - trampdown )
         {
             b0 = b0max - ( t - ( tf - trampdown ) ) * b0max / trampdown;
+        }
+        else
+        {
+            b0 = b0max;
+        }
+
+        const double r2 = x( pid, 0 ) * x( pid, 0 ) +
+                          x( pid, 1 ) * x( pid, 1 ) + x( pid, 2 ) * x( pid, 2 );
+        for ( int d = 0; d < 3; d++ )
+            f( pid, d ) = -b0 * x( pid, d ) / Kokkos::sqrt( r2 );
+    };
+    auto force_bc = CabanaPD::createBoundaryCondition(
+        force_func, exec_space{}, solver.particles, true, volume );
+
+    auto temp_func = KOKKOS_LAMBDA( const int pid, const double t )
+    {
+        double temp_bc;
+        // Pressure and temperature ramping
+        // Linear profile: f(x) = f(a) + (x-a) * (f(b)-f(a))/(b-a) for x in
+        // [a,b]
+        if ( t < trampup )
+        {
+            temp_bc = temp0 + t * ( tempmax - temp0 ) / trampup;
+        }
+        else if ( t > tf - trampdown )
+        {
             temp_bc = tempmax - ( t - ( tf - trampdown ) ) *
                                     ( tempmax - temp0 ) / trampdown;
         }
         else
         {
-            b0 = b0max;
             temp_bc = tempmax;
         }
 
-        // --------------------------------------
-        //  Isostatic pressure and temperature BC
-        // --------------------------------------
-        // x-direction
-        if ( x( pid, 0 ) > x_center + 0.5 * L - W )
+        const double r2 = x( pid, 0 ) * x( pid, 0 ) +
+                          x( pid, 1 ) * x( pid, 1 ) + x( pid, 2 ) * x( pid, 2 );
+        if ( r2 > RW2 )
         {
-            // Force BC
-            f( pid, 0 ) += -b0;
-            // Temperature BC
             temp( pid ) = temp_bc;
         }
 
-        if ( x( pid, 0 ) < x_center - 0.5 * L + W )
-        {
-            // Force BC
-            f( pid, 0 ) += b0;
-            // Temperature BC
-            temp( pid ) = temp_bc;
-        }
-
-        // y-direction
-        if ( x( pid, 1 ) > y_center + 0.5 * L - W )
-        {
-            // Force BC
-            f( pid, 1 ) += -b0;
-            // Temperature BC
-            temp( pid ) = temp_bc;
-        }
-
-        if ( x( pid, 1 ) < y_center - 0.5 * L + W )
-        {
-            // Force BC
-            f( pid, 1 ) += b0;
-            // Temperature BC
-            temp( pid ) = temp_bc;
-        }
-
-        // z-direction
-        if ( x( pid, 2 ) > z_center + 0.5 * L - W )
-        {
-            // Force BC
-            f( pid, 2 ) += -b0;
-            // Temperature BC
-            temp( pid ) = temp_bc;
-        }
-
-        if ( x( pid, 2 ) < z_center - 0.5 * L + W )
-        {
-            // Force BC
-            f( pid, 2 ) += b0;
-            // Temperature BC
-            temp( pid ) = temp_bc;
-        }
-        /*
-        const double rsq = Kokkos::sqrt( f( pid, 0 ) * f( pid, 0 ) +
-                                         f( pid, 1 ) * f( pid, 1 ) +
-                                         f( pid, 2 ) * f( pid, 2 ) );
-        if ( rsq > b0 )
-        {
-            f( pid, 0 ) /= rsq * b0;
-            f( pid, 1 ) /= rsq * b0;
-            f( pid, 2 ) /= rsq * b0;
-        }
-        */
-        // -----------------------
-        //      Temperature BC
-        // -----------------------
-        // temp( pid ) = Tmax;
-        // temp( pid ) = temp_bc;
-
-        // -----------------------
-        // Constrain displacements
-        // -----------------------
-
-        /*
-        // Only enable motion in x-direction on surfaces with x-normal
-        if ( x( pid, 0 ) > x_center + 0.5 * L - W ||
-             x( pid, 0 ) < x_center - 0.5 * L + W )
-        {
-            u( pid, 1 ) = 0.0;
-            u( pid, 2 ) = 0.0;
-        }
-
-        // Only enable motion in y-direction on surfaces with y-normal
-        if ( x( pid, 1 ) > y_center + 0.5 * L - W ||
-             x( pid, 1 ) < y_center - 0.5 * L + W )
-        {
-            u( pid, 0 ) = 0.0;
-            u( pid, 2 ) = 0.0;
-        }
-
-        // Only enable motion in z-direction on surfaces with z-normal
-        if ( x( pid, 2 ) > z_center + 0.5 * L - W ||
-             x( pid, 2 ) < z_center - 0.5 * L + W )
-        {
-            u( pid, 0 ) = 0.0;
-            u( pid, 1 ) = 0.0;
-        }
-        */
-
-        // Constraint 1: fix x-displacement on YZ-plane
-        if ( x( pid, 0 ) > x_center - dx && x( pid, 0 ) < x_center + dx )
+        // Constraint 1: fix x-displacement on YZ-plane of the surface
+        if ( r2 > RW2 && x( pid, 0 ) > x_center - dx &&
+             x( pid, 0 ) < x_center + dx )
         {
             u( pid, 0 ) = 0.0;
         }
 
-        // Constraint 2: fix y-displacement on XZ-plane
-        if ( x( pid, 1 ) > y_center - dy && x( pid, 1 ) < y_center + dy )
+        // Constraint 2: fix y-displacement on XZ-plane of the surface
+        if ( r2 > RW2 && x( pid, 1 ) > y_center - dy &&
+             x( pid, 1 ) < y_center + dy )
         {
             u( pid, 1 ) = 0.0;
         }
 
-        // Constraint 3: fix z-displacement on XY-plane
-        if ( x( pid, 2 ) > z_center - dz && x( pid, 2 ) < z_center + dz )
+        // Constraint 3: fix z-displacement on XY-plane of the surface
+        if ( r2 > RW2 && x( pid, 2 ) > z_center - dz &&
+             x( pid, 2 ) < z_center + dz )
         {
             u( pid, 2 ) = 0.0;
         }
     };
-    CabanaPD::BodyTerm body_term( force_temp_func, solver.particles.size(),
-                                  true );
+    auto temp_bc = CabanaPD::createBoundaryCondition(
+        temp_func, exec_space{}, solver.particles, false, volume );
 
     // ====================================================
     //                      Outputs
     // ====================================================
-    CabanaPD::Region<CabanaPD::RectangularPrism> volume(
-        low_corner[0] + W, high_corner[0] - W, low_corner[1] + W,
-        high_corner[1] - W, low_corner[2] + W, high_corner[2] - W );
-
     // Output average total density.
     auto rho_c = particles.sliceCurrentDensity();
     auto density_func = KOKKOS_LAMBDA( const int p ) { return rho_c( p ); };
@@ -365,8 +303,8 @@ void HIPREVExample( const std::string filename )
     // ====================================================
     //                   Simulation run
     // ====================================================
-    solver.init( body_term );
-    solver.run( body_term, output_rho );
+    solver.init( force_bc, temp_bc );
+    solver.run( force_bc, temp_bc, output_rho );
 }
 
 // Initialize MPI+Kokkos.

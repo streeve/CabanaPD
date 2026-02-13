@@ -239,6 +239,28 @@ class Solver
             particles.output( 0, 0.0, output_reference );
     }
 
+    template <typename ForceBoundaryType, typename NonForceBoundaryType>
+    void init( ForceBoundaryType force_bc, NonForceBoundaryType nonforce_bc,
+               const bool initial_output = true )
+    {
+        // Add non-force boundary condition.
+        nonforce_bc.apply( exec_space(), particles, 0.0 );
+
+        // Communicate temperature.
+        if constexpr ( is_temperature_dependent<
+                           typename force_model_type::thermal_type>::value )
+            comm->gatherTemperature();
+
+        // Force init without particle output.
+        init( false );
+
+        // Add force boundary condition.
+        force_bc.apply( exec_space(), particles, 0.0 );
+
+        if ( initial_output )
+            particles.output( 0, 0.0, output_reference );
+    }
+
     template <typename BoundaryType>
     void init( BoundaryType boundary_condition,
                const bool initial_output = true )
@@ -313,8 +335,54 @@ class Solver
 
     void updateNeighbors() { force->update( particles, 0.0, true ); }
 
+    template <typename ForceBoundaryType, typename NonForceBoundaryType>
+    void
+    runStep( const int step, ForceBoundaryType force_bc,
+             NonForceBoundaryType nonforce_bc,
+             typename std::enable_if<( is_bc<ForceBoundaryType>::value &&
+                                       is_bc<NonForceBoundaryType>::value ),
+                                     int>::type* = 0 )
+    {
+        // Integrate - velocity Verlet first half.
+        integrator->initialHalfStep( exec_space{}, particles );
+
+        // Update ghost particles.
+        comm->gatherDisplacement();
+
+        if constexpr ( is_heat_transfer<
+                           typename force_model_type::thermal_type>::value )
+        {
+            if ( step % thermal_subcycle_steps == 0 )
+                computeHeatTransfer( *heat_transfer, particles, *neighbor,
+                                     thermal_subcycle_steps * dt );
+        }
+
+        // Add non-force boundary condition.
+        nonforce_bc.apply( exec_space(), particles, step * dt );
+
+        if constexpr ( is_temperature_dependent<
+                           typename force_model_type::thermal_type>::value )
+            comm->gatherTemperature();
+
+        // Compute internal forces.
+        updateForce();
+
+        if constexpr ( is_contact<contact_model_type>::value )
+            computeForce( *contact, particles, *neighbor, false );
+
+        // Add force boundary condition.
+        force_bc.apply( exec_space(), particles, step * dt );
+
+        // Integrate - velocity Verlet second half.
+        integrator->finalHalfStep( exec_space{}, particles );
+
+        output( step );
+    }
+
     template <typename BoundaryType>
-    void runStep( const int step, BoundaryType boundary_condition )
+    void runStep( const int step, BoundaryType boundary_condition,
+                  typename std::enable_if<( is_bc<BoundaryType>::value ),
+                                          int>::type* = 0 )
     {
         // Integrate - velocity Verlet first half.
         integrator->initialHalfStep( exec_space{}, particles );
@@ -397,8 +465,34 @@ class Solver
         final_output( region_output... );
     }
 
+    template <typename ForceBoundaryType, typename NonForceBoundaryType,
+              typename... OutputType>
+    typename std::enable_if<is_bc<ForceBoundaryType>::value &&
+                                is_bc<NonForceBoundaryType>::value,
+                            void>::type
+    run( ForceBoundaryType& force_bc, NonForceBoundaryType nonforce_bc,
+         OutputType&... region_output )
+    {
+        init_output( force_bc.timeInit() );
+        init_output( nonforce_bc.timeInit() );
+
+        // Main timestep loop.
+        for ( int step = 1; step <= num_steps; step++ )
+        {
+            _step_timer.start();
+            runStep( step, force_bc, nonforce_bc );
+            // FIXME: not included in timing
+            if ( step % output_frequency == 0 )
+                updateRegion( region_output... );
+        }
+
+        // Final output and timings.
+        final_output( region_output... );
+    }
+
     template <typename BoundaryType, typename... OutputType>
-    void run( BoundaryType& boundary_condition, OutputType&... region_output )
+    typename std::enable_if<is_bc<BoundaryType>::value, void>::type
+    run( BoundaryType& boundary_condition, OutputType&... region_output )
     {
         init_output( boundary_condition.timeInit() );
 

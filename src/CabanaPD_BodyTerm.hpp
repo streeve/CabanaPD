@@ -16,6 +16,7 @@
 
 #include <Cabana_Core.hpp>
 
+#include <CabanaPD_Boundary.hpp>
 #include <CabanaPD_Output.hpp>
 #include <CabanaPD_Timer.hpp>
 
@@ -65,6 +66,11 @@ struct BodyTerm
 
     auto time() { return _timer.time(); };
     auto timeInit() { return 0.0; };
+};
+
+template <class UserFunctor>
+struct is_bc<BodyTerm<UserFunctor>> : public std::true_type
+{
 };
 
 } // namespace CabanaPD
