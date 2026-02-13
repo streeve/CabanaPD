@@ -285,9 +285,12 @@ class Inputs
         double rho = inputs["density"]["value"];
 
         // Mass scaling
-        double ms_factor = inputs["mass_scaling_factor"]["value"];
-        rho *= ms_factor;
-        dt *= std::sqrt( ms_factor );
+        if ( inputs.contains( "mass_scaling_factor" ) )
+        {
+            double ms_factor = inputs["mass_scaling_factor"]["value"];
+            rho *= ms_factor;
+            dt *= std::sqrt( ms_factor );
+        }
 
         double dt_crit = std::sqrt( 2.0 * rho / sum );
         compareCriticalTimeStep( "mechanics", dt, dt_crit );
@@ -313,7 +316,7 @@ class Inputs
     }
 
     // Get a single input.
-    auto operator[]( std::string label ) { return inputs[label]["value"]; }
+    auto operator[]( std::string label ) { return inputs.at( label )["value"]; }
 
     // Get a single input.
     std::string units( std::string label )
