@@ -39,6 +39,9 @@ struct DilatationTag
 struct InfluenceFunctionTag
 {
 };
+struct DensityTag
+{
+};
 
 /******************************************************************************
   Forward declarations.
