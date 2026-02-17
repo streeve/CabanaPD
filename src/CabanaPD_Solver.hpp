@@ -254,8 +254,9 @@ class Solver
     {
         _total_timer.start();
         // Add non-force boundary condition.
-        if ( !boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space(), particles, 0.0 );
+        if ( boundary_condition.nonforceUpdate() )
+            boundary_condition.apply( exec_space(), particles, 0.0, false,
+                                      true );
 
         // Communicate optional properties.
         if constexpr ( std::is_same<typename ForceModelType::material_type,
@@ -272,7 +273,8 @@ class Solver
         _total_timer.start();
         // Add force boundary condition.
         if ( boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space(), particles, 0.0 );
+            boundary_condition.apply( exec_space(), particles, 0.0, true,
+                                      false );
 
         if ( initial_output )
             particles.output( 0, 0.0, output_reference );
@@ -351,8 +353,9 @@ class Solver
         }
 
         // Add non-force boundary condition.
-        if ( !boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space(), particles, time );
+        if ( boundary_condition.nonforceUpdate() )
+            boundary_condition.apply( exec_space(), particles, time, false,
+                                      true );
 
         if constexpr ( is_temperature_dependent<
                            typename ForceModelType::thermal_tag>::value )
@@ -367,7 +370,8 @@ class Solver
 
         // Add force boundary condition.
         if ( boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space(), particles, time );
+            boundary_condition.apply( exec_space(), particles, time, true,
+                                      false );
 
         // Integrate - velocity Verlet second half.
         integrator->finalHalfStep( exec_space{}, particles );
