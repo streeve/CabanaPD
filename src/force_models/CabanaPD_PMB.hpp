@@ -99,10 +99,15 @@ struct MechanicsModel<PMB, Elastic, FunctorType> : public BaseForceModel
     // For multi material.
     KOKKOS_INLINE_FUNCTION
     auto operator()( DilatationTag, const int, const int, const double,
-                     const double, const double, const double ) const
+                     const double, const double, const double, const int ) const
     {
         return 0.0;
     }
+    KOKKOS_INLINE_FUNCTION auto operator()( DensityTag, const int,
+                                            const double ) const
+    {
+    }
+    auto getYieldStretch() const { return DBL_MAX; }
     auto getPlasticStretch( const int, const int ) const { return 0.0; }
 };
 
@@ -256,6 +261,10 @@ template <typename PDType, typename MechanicsType, typename ThermalType,
           typename CurrentDensityType>
 struct ForceDensityModel;
 
+struct PMBDensity
+{
+};
+
 // Force models with evolving density.
 template <typename TemperatureType, typename DensityType,
           typename CurrentDensityType>
@@ -270,7 +279,7 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
     using fracture_type = typename base_type::fracture_type;
     using mechanics_type = typename base_type::mechanics_type;
     using thermal_type = typename base_type::thermal_type;
-    using density_type = DynamicDensity;
+    using force_tag = PMBDensity;
 
     using base_type::operator();
 
@@ -411,8 +420,8 @@ struct ForceDensityModel<PMB, ElasticPerfectlyPlastic, Fracture,
 
     using fracture_type = typename base_type::fracture_type;
     using mechanics_type = typename base_type::mechanics_type;
-    using density_type = typename base_type::density_type;
     using thermal_type = DynamicTemperature;
+    using force_tag = PMBDensity;
 
     using base_type::operator();
 
