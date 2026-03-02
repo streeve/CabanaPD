@@ -24,13 +24,33 @@
 
 namespace CabanaPD
 {
+// Get all commandline inputs.
+inline auto getInputFiles( int argc, char* argv[] )
+{
+    std::vector<std::string> filenames( argc - 1 );
+    // Ignore the first since it will always be the exe name.
+    for ( int i = 0; i < argc - 1; ++i )
+    {
+        std::string f = argv[i + 1];
+        if ( f.find( ".json" ) != std::string::npos )
+            filenames[i] = f;
+    }
+    return filenames;
+}
+
 class Inputs
 {
   public:
     Inputs( const std::string filename )
+        : Inputs( std::vector{ filename } )
+    {
+    }
+
+    Inputs( const std::vector<std::string> filenames )
+        : inputs()
     {
         // Get user inputs.
-        inputs = parse( filename );
+        parse( filenames );
 
         // Add additional derived inputs to json. System size.
         setupSize();
@@ -105,7 +125,7 @@ class Inputs
             inputs["output_file"]["value"] = "cabanaPD.out";
         if ( !inputs.contains( "error_file" ) )
             inputs["error_file"]["value"] = "cabanaPD.err";
-        inputs["input_file"]["value"] = filename;
+        inputs["input_file"]["value"] = filenames;
 
         if ( !inputs.contains( "output_reference" ) )
             inputs["output_reference"]["value"] = true;
@@ -347,11 +367,15 @@ class Inputs
         return v;
     }
 
-    // Parse JSON file.
-    inline nlohmann::json parse( const std::string& filename )
+    // Parse JSON file(s).
+    void parse( const std::vector<std::string> filenames )
     {
-        std::ifstream stream( filename );
-        return nlohmann::json::parse( stream );
+        // Update JSON with all passed input files (initialized to be empty).
+        for ( std::size_t i = 0; i < filenames.size(); ++i )
+        {
+            std::ifstream stream( filenames[i] );
+            inputs.update( nlohmann::json::parse( stream ) );
+        }
     }
 
     // Get a single input.
