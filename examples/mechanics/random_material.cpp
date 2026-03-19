@@ -119,7 +119,8 @@ void randomMaterial( const std::string filename )
     //                    Force model
     // ====================================================
     using model_type = CabanaPD::PMB;
-    CabanaPD::ForceModel model1( model_type{}, horizon, K, G0 );
+    CabanaPD::ForceModel model1( model_type{}, CabanaPD::NoFracture{}, horizon,
+                                 K );
 
     // ====================================================
     //                 Particle generation
@@ -129,13 +130,12 @@ void randomMaterial( const std::string filename )
     particles.domain( inputs );
     particles.create( exec_space{} );
 
-    int num_types = 1;
-
+    int num_types = 4;
     auto model2( model1 );
-    // auto model3( model1 );
-    // auto model4( model1 );
+    auto model3( model1 );
+    auto model4( model1 );
     auto models = CabanaPD::createMultiForceModel(
-        particles, CabanaPD::AverageTag{}, model1, model2 );
+        particles, CabanaPD::AverageTag{}, model1, model2, model3, model4 );
 
     // ====================================================
     //                Boundary conditions planes
@@ -205,7 +205,7 @@ void randomMaterial( const std::string filename )
     // ====================================================
     //                   Simulation run
     // ====================================================
-    solver.init( bc, prenotch );
+    solver.init( bc );
     solver.run( bc );
 }
 
