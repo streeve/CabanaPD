@@ -257,26 +257,28 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
                 s = model( ThermalStretchTag{}, i, j, s );
 
                 // Break if beyond critical stretch unless in no-fail zone.
-                if ( model( CriticalStretchTag{}, i, j, r, xi ) &&
-                     !nofail( i ) && !nofail( j ) )
-                {
-                    mu( i, n ) = 0;
-                }
-                // Else if statement is only for performance.
-                else if ( mu( i, n ) > 0 )
-                {
-                    const double coeff =
-                        model( ForceCoeffTag{}, i, j, s, vol( j ), n );
+                int curr = model( CriticalStretchTag{}, i, j, r, xi );
+                int prev = mu( i, n );
+                // Do not allow bonds to unbreak.
+                mu( i, n ) = Kokkos::min( prev, curr );
+                /*
+                auto bb = model( CriticalStretchTag{}, i, j, r, xi );
+                bb -= 0.5 * nofail( i );
+                auto bb2 = Kokkos::ceil( bb );
+                bb2 -= 0.5 * nofail( j );
+                mu( i, n ) = static_cast<int>( Kokkos::ceil( bb ) );
+                */
+                const double coeff =
+                    model( ForceCoeffTag{}, i, j, s, vol( j ), n );
 
-                    double muij = mu( i, n );
-                    fx_i = muij * coeff * rx / r;
-                    fy_i = muij * coeff * ry / r;
-                    fz_i = muij * coeff * rz / r;
+                double muij = mu( i, n );
+                fx_i = muij * coeff * rx / r;
+                fy_i = muij * coeff * ry / r;
+                fz_i = muij * coeff * rz / r;
 
-                    f( i, 0 ) += fx_i;
-                    f( i, 1 ) += fy_i;
-                    f( i, 2 ) += fz_i;
-                }
+                f( i, 0 ) += fx_i;
+                f( i, 1 ) += fy_i;
+                f( i, 2 ) += fz_i;
             }
         };
 

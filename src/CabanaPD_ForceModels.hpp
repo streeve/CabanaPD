@@ -121,10 +121,11 @@ struct BaseFractureModel
     }
 
     KOKKOS_INLINE_FUNCTION
-    bool operator()( CriticalStretchTag, const int, const int, const double r,
-                     const double xi ) const
+    int operator()( CriticalStretchTag, const int, const int, const double r,
+                    const double xi ) const
     {
-        return r * r >= bond_break_coeff * xi * xi;
+        return Kokkos::ceil(
+            Kokkos::copysign( 0.5, bond_break_coeff * xi * xi - r * r ) );
     }
 };
 
