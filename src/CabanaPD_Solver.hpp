@@ -93,6 +93,7 @@ class Solver
     using exec_space = typename memory_space::execution_space;
 
     // Core module types - required for all problems.
+    using force_model_type = ForceModelType;
     using force_model_tag = typename ForceModelType::force_tag;
     using force_fracture_tag = typename ForceModelType::fracture_tag;
     using force_type = Force<memory_space, force_model_tag, force_fracture_tag>;
@@ -329,7 +330,8 @@ class Solver
     }
 
     template <typename BoundaryType>
-    void runStep( const int step, BoundaryType boundary_condition )
+    void runStep( const int step, const double time,
+                  BoundaryType boundary_condition )
     {
         _step_timer.start();
         // Integrate - velocity Verlet first half.
@@ -348,7 +350,7 @@ class Solver
 
         // Add non-force boundary condition.
         if ( !boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space(), particles, step * dt );
+            boundary_condition.apply( exec_space(), particles, time );
 
         if constexpr ( is_temperature_dependent<
                            typename ForceModelType::thermal_tag>::value )
@@ -363,7 +365,7 @@ class Solver
 
         // Add force boundary condition.
         if ( boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space(), particles, step * dt );
+            boundary_condition.apply( exec_space(), particles, time );
 
         // Integrate - velocity Verlet second half.
         integrator->finalHalfStep( exec_space{}, particles );
@@ -432,7 +434,7 @@ class Solver
         // Main timestep loop.
         for ( int step = 1; step <= num_steps; step++ )
         {
-            runStep( step, boundary_condition );
+            runStep( step, step * dt, boundary_condition );
             // FIXME: not included in timing
             if ( step % output_frequency == 0 )
                 updateRegion( region_output... );
@@ -614,7 +616,7 @@ class Solver
     // Sometimes necessary to update particles after solver creation.
     ParticleType particles;
 
-  protected:
+  public:
     template <std::size_t NumPrenotch>
     void init_prenotch( Prenotch<NumPrenotch> prenotch )
     {

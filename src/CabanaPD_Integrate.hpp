@@ -257,12 +257,13 @@ struct ADRIntegrator
     }
 
     template <typename ForceType>
-    void initialSubStep( ExecutionSpace, ForceType const& forces ) const
+    void initialSubStep( ExecutionSpace, const int start,
+                         ForceType const& forces ) const
     {
         Kokkos::parallel_for(
             "ADRIntegrator::initialStep",
             Kokkos::RangePolicy<ExecutionSpace>(
-                0, _forces_last_step.extent( 0 ) ),
+                start, _forces_last_step.extent( 0 ) ),
             KOKKOS_CLASS_LAMBDA( int64_t index ) {
                 for ( int i = 0; i < dim; ++i )
                     _forces_last_step( index, i ) = forces( index, i );
@@ -272,14 +273,14 @@ struct ADRIntegrator
 
     template <typename ForceType, typename VelocityType,
               typename DisplacementType>
-    void middleSubStep( ExecutionSpace, ForceType const& forces,
-                        VelocityType const& velocities,
+    void middleSubStep( ExecutionSpace, const int start,
+                        ForceType const& forces, VelocityType const& velocities,
                         DisplacementType const& displacements ) const
     {
         Kokkos::parallel_for(
             "ADRIntegrator::middleStep",
             Kokkos::RangePolicy<ExecutionSpace>(
-                0, _forces_last_step.extent( 0 ) ),
+                start, _forces_last_step.extent( 0 ) ),
             KOKKOS_CLASS_LAMBDA( int64_t index ) {
                 double mass[dim];
                 double stiffness[dim];
@@ -327,13 +328,14 @@ struct ADRIntegrator
     }
 
     template <typename VelocityType, typename DisplacementType>
-    void finalSubStep( ExecutionSpace, VelocityType const& velocities,
+    void finalSubStep( ExecutionSpace, const int start,
+                       VelocityType const& velocities,
                        DisplacementType const& displacements ) const
     {
         Kokkos::parallel_for(
             "ADRIntegrator::finalStep",
             Kokkos::RangePolicy<ExecutionSpace>(
-                0, _forces_last_step.extent( 0 ) ),
+                start, _forces_last_step.extent( 0 ) ),
             KOKKOS_CLASS_LAMBDA( int64_t index ) {
                 for ( int i = 0; i < dim; ++i )
                 {
@@ -412,7 +414,8 @@ struct ParticleIntegratorWrapper
                          ParticleType const& particles )
     {
         auto forces = particles.sliceForce();
-        _integrator.initialSubStep( exec_space, forces );
+        auto start = particles.numFrozen();
+        _integrator.initialSubStep( exec_space, start, forces );
     }
 
     template <typename ExecutionSpace, typename ParticleType>
@@ -422,7 +425,8 @@ struct ParticleIntegratorWrapper
         auto forces = particles.sliceForce();
         auto velocities = particles.sliceVelocity();
         auto displacements = particles.sliceDisplacement();
-        _integrator.middleSubStep( exec_space, forces, velocities,
+        auto start = particles.numFrozen();
+        _integrator.middleSubStep( exec_space, start, forces, velocities,
                                    displacements );
     }
 
@@ -432,7 +436,9 @@ struct ParticleIntegratorWrapper
     {
         auto velocities = particles.sliceVelocity();
         auto displacements = particles.sliceDisplacement();
-        _integrator.finalSubStep( exec_space, velocities, displacements );
+        auto start = particles.numFrozen();
+        _integrator.finalSubStep( exec_space, start, velocities,
+                                  displacements );
     }
 };
 
@@ -465,6 +471,15 @@ void runStepWithExternalIntegrator( ExecutionSpace const& exec_space,
     // Update ghost particles.
     // TODO not public
     // solver.comm->gatherDisplacement();
+
+    if constexpr ( is_heat_transfer<typename SolverType::force_model_type::
+                                        thermal_type>::value )
+    {
+        computeHeatTransfer( solver.force_model, *solver.heat_transfer,
+                             particles, *solver.neighbor,
+                             solver.thermal_subcycle_steps * solver.dt );
+    }
+
     // Compute internal forces.
     solver.updateForce();
 
@@ -497,11 +512,12 @@ template <typename ExecutionSpace, typename SolverType, typename IntegratorType,
 void runStepWithExternalIntegratorAndOutput(
     ExecutionSpace const& exec_space, SolverType& solver,
     IntegratorType& integrator, ParticleType& particles,
-    BoundaryType boundary_condition, double time, unsigned step, ARGS... args )
+    BoundaryType boundary_condition, double real_time, double output_time,
+    unsigned step, ARGS... args )
 {
     runStepWithExternalIntegrator( exec_space, solver, integrator, particles,
-                                   boundary_condition, time, args... );
-    particles.output( step, time, solver.output_reference );
+                                   boundary_condition, real_time, args... );
+    particles.output( step, output_time, solver.output_reference );
 }
 
 template <typename ExecutionSpace, typename IntegratorType,

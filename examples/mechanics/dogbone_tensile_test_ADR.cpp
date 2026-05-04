@@ -154,11 +154,14 @@ void dogboneTensileTestExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    CabanaPD::ForceModel force_model( model_type{}, mechanics_type{},
-                                      memory_space{}, horizon, K, G0, sigma_y );
+    CabanaPD::MechanicsModel mechanics_model(
+        model_type{}, mechanics_type{}, memory_space{}, horizon, K, sigma_y );
+    CabanaPD::FractureModel fracture_model( horizon, K, G0 );
+    CabanaPD::ForceModel force_model( mechanics_model, fracture_model );
 
-    CabanaPD::ForceModel stationary_force_model(
-        model_type{}, CabanaPD::Elastic{}, CabanaPD::NoFracture{}, horizon, K );
+    CabanaPD::MechanicsModel stationary_mechanics_model(
+        model_type{}, CabanaPD::Elastic{}, horizon, K );
+    CabanaPD::ForceModel stationary_force_model( stationary_mechanics_model );
 
     // ====================================================
     //                   Create solver
@@ -301,7 +304,7 @@ void dogboneTensileTestExample( const std::string filename )
         }
         CabanaPD::runStepWithExternalIntegratorAndOutput(
             exec_space{}, stationary_solver, particleADRIntegator, particles,
-            bc, time, adrTimeStep );
+            bc, time, time, adrTimeStep );
     }
 
     // TODO same here ... this is probably not what we want for our users
@@ -310,7 +313,7 @@ void dogboneTensileTestExample( const std::string filename )
     for ( unsigned i = 1; i < numVerletSteps; i++ )
     {
         int step = ( time / solver.dt ) + i;
-        solver.runStep( step, bc );
+        solver.runStep( step, time, bc );
     }
 }
 

@@ -139,12 +139,12 @@ void testIntegratorADRSingleMass( int steps )
     // Integrate one step
     for ( int s = 0; s < steps; ++s )
     {
-        integrator.initialSubStep( exec_space{}, forces );
+        integrator.initialSubStep( exec_space{}, 0, forces );
         Kokkos::parallel_for( "testIntegrateADRSingleMass::update_forces",
                               num_masses, force_lambda );
-        integrator.middleSubStep( exec_space{}, forces, velocities,
+        integrator.middleSubStep( exec_space{}, 0, forces, velocities,
                                   displacements );
-        integrator.finalSubStep( exec_space{}, velocities, displacements );
+        integrator.finalSubStep( exec_space{}, 0, velocities, displacements );
     }
 
     // Make a copy of final results on the host
