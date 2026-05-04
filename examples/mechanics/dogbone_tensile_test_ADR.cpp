@@ -154,8 +154,11 @@ void dogboneTensileTestExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    CabanaPD::ForceModel force_model( model_type{}, mechanics_type{},
-                                      memory_space{}, horizon, K, G0, sigma_y );
+    CabanaPD::MechanicsModel mechanics_model(
+        model_type{}, mechanics_type{}, memory_space{}, horizon, K, sigma_y );
+    CabanaPD::FractureModel fracture_model( horizon, K, G0 );
+    CabanaPD::ForceModel force_model( mechanics_model, fracture_model );
+
     // ====================================================
     //                   Create solver
     // ====================================================
@@ -291,7 +294,8 @@ void dogboneTensileTestExample( const std::string filename )
             exec_space{}, solver, particleADRIntegator, bc, time, false, 5e0,
             1e-10, 100'000, MPI_COMM_WORLD );
         CabanaPD::runStepWithExternalIntegratorAndOutput(
-            exec_space{}, solver, particleADRIntegator, bc, time, adrTimeStep );
+            exec_space{}, solver, particleADRIntegator, particles,
+            bc, time, time, adrTimeStep );
     }
 
     // switch to verlet integration for the rest of the simulation (when we
@@ -301,7 +305,7 @@ void dogboneTensileTestExample( const std::string filename )
     for ( unsigned i = 1; i < numVerletSteps; i++ )
     {
         int step = ( time / solver.dt ) + i;
-        solver.runStep( step, bc );
+        solver.runStep( step, time, bc );
     }
 }
 
