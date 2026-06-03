@@ -125,6 +125,16 @@ class OutputTimeSeries
         _profile = profile_type( "time_output", output_steps );
     }
 
+    OutputTimeSeries( std::string name, const int output_steps,
+                      const steering_vector_type indices, FunctorType output )
+        : _indices( indices )
+        , file_name( name )
+        , _output( output )
+        , index( 0 )
+    {
+        _profile = profile_type( "time_output", output_steps );
+    }
+
     void update()
     {
         Kokkos::RangePolicy<typename memory_space::execution_space> policy(
@@ -177,6 +187,17 @@ auto createOutputTimeSeries( std::string name, const Inputs inputs,
 {
     ParticleSteeringVector indices( exec_space, particles, geom );
     return OutputTimeSeries( name, inputs, indices, user );
+}
+
+template <typename FunctorType, typename ExecSpace, typename ParticleType,
+          typename GeometryType>
+auto createOutputTimeSeries( std::string name, const int output_steps,
+                             ExecSpace exec_space,
+                             const ParticleType& particles, FunctorType user,
+                             const GeometryType geom )
+{
+    ParticleSteeringVector indices( exec_space, particles, geom );
+    return OutputTimeSeries( name, output_steps, indices, user );
 }
 
 } // namespace CabanaPD
