@@ -65,28 +65,40 @@ struct TemperatureDependentPolynomial
     : public TemperatureDependentProperty<TemperatureType>
 {
     using base_type = TemperatureDependentProperty<TemperatureType>;
+    using memory_space = typename TemperatureType::memory_space;
 
     // Constructor with polynomial coefficients and temperature field.
     template <typename ArrayType>
     TemperatureDependentPolynomial( ArrayType array, const TemperatureType& t )
         : base_type( t )
-        , coeff( array.data() )
+        , coeff( Kokkos::View<double*, memory_space>( "coefficients",
+                                                      array.size() ) )
     {
+        Kokkos::View<double*, Kokkos::HostSpace> view( array.data(),
+                                                       array.size() );
+        Kokkos::deep_copy( coeff, view );
     }
 
     // Return temperature-dependent value.
     KOKKOS_FUNCTION
     auto operator()( const int p ) const
     {
-        double val = 0.0;
         const auto t = temp( p );
-        for ( std::size_t i = 0; i < coeff.size() - 1; i++ )
-            val += coeff( i ) * t;
-
-        return val + coeff( 0 );
+        return value( t );
     }
 
-    Kokkos::View<double*, typename TemperatureType::memory_space> coeff;
+    KOKKOS_FUNCTION
+    auto value( const double temp ) const
+    {
+        double val = 0.0;
+        const auto last = coeff.size() - 1;
+        for ( std::size_t i = 0; i < last; i++ )
+            val += coeff( i ) * temp;
+
+        return val + coeff( last );
+    }
+
+    Kokkos::View<double*, memory_space> coeff;
     using base_type::temp;
 };
 
@@ -99,16 +111,24 @@ struct TemperatureDependentPiecewise
     : public TemperatureDependentProperty<TemperatureType>
 {
     using base_type = TemperatureDependentProperty<TemperatureType>;
+    using memory_space = typename TemperatureType::memory_space;
 
     // Constructor with XY values to linearly interpolate and temperature field.
     template <typename ArrayType>
     TemperatureDependentPiecewise( ArrayType array_x, ArrayType array_y,
                                    const TemperatureType& t )
         : base_type( t )
-        , x( array_x.data() )
-        , y( array_y.data() )
+        , x( Kokkos::View<double*, memory_space>( "x", array_x.size() ) )
+        , y( Kokkos::View<double*, memory_space>( "y", array_y.size() ) )
     {
         assert( x.size() == y.size() );
+
+        Kokkos::View<double*, Kokkos::HostSpace> view_x( array_x.data(),
+                                                         array_x.size() );
+        Kokkos::deep_copy( x, view_x );
+        Kokkos::View<double*, Kokkos::HostSpace> view_y( array_y.data(),
+                                                         array_y.size() );
+        Kokkos::deep_copy( y, view_y );
     }
 
     // Return temperature-dependent value.
@@ -116,13 +136,21 @@ struct TemperatureDependentPiecewise
     auto operator()( const int p ) const
     {
         const auto t = temp( p );
-        if ( t < x( 0 ) )
+        return value( t );
+    }
+
+    KOKKOS_FUNCTION
+    auto value( const double temp ) const
+    {
+        if ( temp < x( 0 ) )
             return y( 0 );
 
         for ( std::size_t i = 1; i < x.size() - 1; i++ )
         {
-            if ( t < x( i ) )
-                return ( y( i - 1 ) - y( i ) ) / ( x( i - 1 ) - x( i ) );
+            if ( temp < x( i ) )
+                return y( i - 1 ) + ( temp - x( i - 1 ) ) *
+                                        ( y( i ) - y( i - 1 ) ) /
+                                        ( x( i ) - x( i - 1 ) );
         }
 
         return y( y.size() - 1 );
