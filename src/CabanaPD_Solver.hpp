@@ -332,7 +332,8 @@ class Solver
 
     template <typename BoundaryType>
     void runStep( const int step, const double time,
-                  BoundaryType boundary_condition )
+                  BoundaryType boundary_condition,
+                  const bool output_step = true )
     {
         _step_timer.start();
         // Integrate - velocity Verlet first half.
@@ -373,10 +374,11 @@ class Solver
 
         // Separate output time.
         _step_timer.stop();
-        output( step );
+        if ( output_step )
+            output( step );
     }
 
-    void runStep( const int step )
+    void runStep( const int step, const bool output_step = true )
     {
         _step_timer.start();
 
@@ -402,7 +404,8 @@ class Solver
 
         // Separate output time.
         _step_timer.stop();
-        output( step );
+        if ( output_step )
+            output( step );
     }
 
     template <typename... OutputType>
