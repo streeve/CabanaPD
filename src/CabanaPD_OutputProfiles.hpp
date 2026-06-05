@@ -99,7 +99,7 @@ template <typename MemorySpace, typename FunctorType>
 class OutputTimeSeries
 {
     using memory_space = MemorySpace;
-    using profile_type = Kokkos::View<double*, Kokkos::HostSpace>;
+    using profile_type = Kokkos::View<double* [2], Kokkos::HostSpace>;
 
     using steering_vector_type = ParticleSteeringVector<MemorySpace>;
     steering_vector_type _indices;
@@ -149,7 +149,8 @@ class OutputTimeSeries
                 auto p = indices._view( b );
                 px += output( p, time );
             },
-            _profile( index ) );
+            _profile( index, 1 ) );
+        _profile( index, 0 ) = time;
         Kokkos::fence();
         index++;
     }
@@ -171,8 +172,9 @@ class OutputTimeSeries
             for ( std::size_t t = 0; t < index; t++ )
             {
                 fout << std::fixed << std::setprecision( 15 )
-                     << profile_host( t ) << "  "
-                     << profile_host( t ) / num_particles << std::endl;
+                     << profile_host( t, 0 ) << "  " << profile_host( t, 1 )
+                     << "  " << profile_host( t, 1 ) / num_particles
+                     << std::endl;
             }
         }
     }
