@@ -116,6 +116,21 @@ class BasePlasticity
         Kokkos::realloc( _s_p, num_local, max_neighbors );
         Kokkos::deep_copy( _s_p, 0.0 );
     }
+
+    template <typename SliceType>
+    auto output( SliceType& per_particle )
+    {
+        auto s_p = _s_p;
+        Kokkos::parallel_for(
+            "CabanaPD::outputPlasticity",
+            Kokkos::RangePolicy<typename memory_space::execution_space>(
+                0, per_particle.size() ),
+            KOKKOS_LAMBDA( const int i ) {
+                for ( std::size_t j = 0; j < s_p.extent( 1 ); ++j )
+                    per_particle( i ) += Kokkos::abs( s_p( i, j ) );
+            } );
+        Kokkos::fence();
+    }
 };
 
 /******************************************************************************
@@ -656,6 +671,7 @@ struct ThermalForceModel : public MechanicsType, ThermalType
     using ThermalType::operator();
     using typename ThermalType::needs_update;
     using typename ThermalType::thermal_tag;
+    using thermal_type = ThermalType;
 
     ThermalForceModel(
         MechanicsType mechanics, ThermalType thermal,
