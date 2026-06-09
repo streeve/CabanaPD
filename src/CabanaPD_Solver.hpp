@@ -525,7 +525,7 @@ class Solver
         {
             global_damage = updateGlobal( force->totalDamage() );
         }
-        double relative_damage = global_damage / particles.numGlobal();
+        total_relative_damage = global_damage / particles.numGlobal();
         double total_strain_energy = updateGlobal( force->totalStrainEnergy() );
 
         if ( print )
@@ -546,7 +546,7 @@ class Solver
 
             timing_output.step(
                 output_file, step, num_steps, dt, total_strain_energy,
-                relative_damage, step_time, force->time(), contact_time,
+                total_relative_damage, step_time, force->time(), contact_time,
                 neigh_time, comm->time(), integrator->time(),
                 force->timeEnergy(), particles.timeOutput(), p_steps_per_sec );
         }
@@ -617,6 +617,8 @@ class Solver
         return global;
     }
 
+    auto totalRelativeDamage() { return total_relative_damage; }
+
     int num_steps;
     int output_frequency;
     bool output_reference;
@@ -624,6 +626,7 @@ class Solver
     int thermal_subcycle_steps;
     // Sometimes necessary to update particles after solver creation.
     ParticleType particles;
+    double total_relative_damage = 0.0;
 
   public:
     template <std::size_t NumPrenotch>
