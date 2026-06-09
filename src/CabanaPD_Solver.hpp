@@ -480,6 +480,11 @@ class Solver
         computeForce( force_model, *force, particles, *neighbor );
     }
 
+    void updateEnergy()
+    {
+        computeEnergy( force_model, *force, particles, *neighbor );
+    }
+
     void output( const int step )
     {
         // Print output.
