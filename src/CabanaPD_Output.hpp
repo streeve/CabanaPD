@@ -31,8 +31,10 @@
 #include <utility>
 
 #include <mpi.h>
+#include <nlohmann/json.hpp>
 
 #include <CabanaPD_Types.hpp>
+#include <CabanaPD_config.hpp>
 
 namespace CabanaPD
 {
@@ -309,6 +311,36 @@ struct TimingOutput<
         out.close();
     }
 };
+
+class Output
+{
+  public:
+    Output( const std::string& filename )
+        : name( filename )
+    {
+        outputs["version"] = CabanaPD_VERSION_STRING;
+        outputs["git_hash"] = CabanaPD_GIT_COMMIT_HASH;
+    }
+
+    template <typename Scalar>
+    void set( std::string label, const Scalar value )
+    {
+        outputs[label] = value;
+    }
+
+    void write()
+    {
+        // Write output.
+        std::ofstream stream( name );
+        // Use indent of 2.
+        stream << outputs.dump( 2 );
+    }
+
+  protected:
+    nlohmann::json outputs;
+    std::string name;
+};
+
 } // namespace CabanaPD
 
 #endif
