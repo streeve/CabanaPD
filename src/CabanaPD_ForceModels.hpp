@@ -126,10 +126,30 @@ class BasePlasticity
             Kokkos::RangePolicy<typename memory_space::execution_space>(
                 0, per_particle.size() ),
             KOKKOS_LAMBDA( const int i ) {
+                // Store maximum plasticity per bond.
                 for ( std::size_t j = 0; j < s_p.extent( 1 ); ++j )
-                    per_particle( i ) += Kokkos::abs( s_p( i, j ) );
+                    if ( Kokkos::abs( s_p( i, j ) ) > per_particle( i ) )
+                        per_particle( i ) = Kokkos::abs( s_p( i, j ) );
             } );
         Kokkos::fence();
+    }
+
+    auto total() const
+    {
+        double total_p;
+        auto s_p = _s_p;
+        Kokkos::parallel_reduce(
+            "CabanaPD::outputTotalPlasticity",
+            Kokkos::RangePolicy<typename memory_space::execution_space>(
+                0, s_p.extent( 0 ) ),
+            KOKKOS_LAMBDA( const int i, double& v ) {
+                // Store maximum plasticity per bond.
+                for ( std::size_t j = 0; j < s_p.extent( 1 ); ++j )
+                    v += 0.5 * Kokkos::abs( s_p( i, j ) );
+            },
+            Kokkos::Sum<double>( total_p ) );
+        Kokkos::fence();
+        return total_p;
     }
 };
 
