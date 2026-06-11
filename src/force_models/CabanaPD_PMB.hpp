@@ -151,16 +151,16 @@ struct MechanicsModel<PMB, ElasticPerfectlyPlastic, FunctorModulus,
 
     KOKKOS_INLINE_FUNCTION
     auto operator()( ForceCoeffTag, const int i, const int, const double s,
-                     const double vol, const int n ) const
+                     const double vol, const int n, const double time ) const
     {
         // Update bond plastic stretch.
         auto s_p = _s_p( i, n );
         // Yield in tension.
-        if ( s >= s_p + s_Y( i ) )
-            _s_p( i, n ) = s - s_Y( i );
+        if ( s >= s_p + s_Y( i, time ) )
+            _s_p( i, n ) = s - s_Y( i, time );
         // Yield in compression.
-        else if ( s <= s_p - s_Y( i ) )
-            _s_p( i, n ) = s + s_Y( i );
+        else if ( s <= s_p - s_Y( i, time ) )
+            _s_p( i, n ) = s + s_Y( i, time );
         // else: Elastic (in between), do not modify.
 
         // Must extract again if in the plastic regime.
@@ -172,16 +172,17 @@ struct MechanicsModel<PMB, ElasticPerfectlyPlastic, FunctorModulus,
     // compression.
     KOKKOS_INLINE_FUNCTION
     auto operator()( EnergyTag, const int i, const int, const double s,
-                     const double xi, const double vol, const int n ) const
+                     const double xi, const double vol, const int n,
+                     const double time ) const
     {
         auto s_p = _s_p( i, n );
         double stretch_term;
         // Yield in tension.
-        if ( s >= s_p + s_Y( i ) )
-            stretch_term = s_Y( i ) * ( 2.0 * s - s_Y( i ) );
+        if ( s >= s_p + s_Y( i, time ) )
+            stretch_term = s_Y( i, time ) * ( 2.0 * s - s_Y( i, time ) );
         // Yield in compression.
-        else if ( s <= s_p - s_Y( i ) )
-            stretch_term = s_Y( i ) * ( -2.0 * s - s_Y( i ) );
+        else if ( s <= s_p - s_Y( i, time ) )
+            stretch_term = s_Y( i, time ) * ( -2.0 * s - s_Y( i, time ) );
         else
             // Elastic (in between).
             stretch_term = s * s;

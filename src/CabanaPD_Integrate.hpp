@@ -736,7 +736,7 @@ void runStepWithExternalIntegrator( ExecutionSpace const& exec_space,
     solver.comm->gatherDisplacement();
 
     // Compute internal forces.
-    solver.updateForce();
+    solver.updateForce( time );
 
     // TODO comm not public
     if constexpr ( is_temperature_dependent<

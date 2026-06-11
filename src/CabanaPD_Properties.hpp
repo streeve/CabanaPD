@@ -27,7 +27,7 @@ struct ConstantProperty
     }
 
     KOKKOS_FUNCTION
-    auto operator()( const int ) const { return value; }
+    auto operator()( const int, const double = 0.0 ) const { return value; }
 
     template <typename ParticleType>
     void update( const ParticleType& )
@@ -81,7 +81,7 @@ struct TemperatureDependentPolynomial
 
     // Return temperature-dependent value.
     KOKKOS_FUNCTION
-    auto operator()( const int p ) const
+    auto operator()( const int p, const double time = 0.0 ) const
     {
         const auto t = temp( p );
         return value( t );
@@ -107,7 +107,7 @@ TemperatureDependentPolynomial( ArrayType, const TemperatureType )
     -> TemperatureDependentPolynomial<TemperatureType>;
 
 template <typename TemperatureType>
-struct TemperatureDependentPiecewise
+struct wTemperatureDependentPiecewise
     : public TemperatureDependentProperty<TemperatureType>
 {
     using base_type = TemperatureDependentProperty<TemperatureType>;
@@ -133,7 +133,7 @@ struct TemperatureDependentPiecewise
 
     // Return temperature-dependent value.
     KOKKOS_FUNCTION
-    auto operator()( const int p ) const
+    auto operator()( const int p, const double time = 0.0 ) const
     {
         const auto t = temp( p );
         return value( t );
@@ -164,6 +164,92 @@ struct TemperatureDependentPiecewise
 template <typename ArrayType, typename TemperatureType>
 TemperatureDependentPiecewise( ArrayType, ArrayType, const TemperatureType )
     -> TemperatureDependentPiecewise<TemperatureType>;
+
+template <typename MemorySpace>
+struct TimeDependentPolynomial
+{
+    // Constructor with polynomial coefficients and temperature field.
+    template <typename ArrayType>
+    TimeDependentPolynomial( MemorySpace, ArrayType array )
+        : coeff( Kokkos::View<double*, MemorySpace>( "coefficients",
+                                                     array.size() ) )
+    {
+        Kokkos::View<double*, Kokkos::HostSpace> view( array.data(),
+                                                       array.size() );
+        Kokkos::deep_copy( coeff, view );
+    }
+
+    // Return time-dependent value.
+    KOKKOS_FUNCTION
+    auto operator()( const int, const double time ) const
+    {
+        return value( time );
+    }
+
+    KOKKOS_FUNCTION
+    auto value( const double time ) const
+    {
+        double val = 0.0;
+        const auto last = coeff.size() - 1;
+        for ( std::size_t i = 0; i < last; i++ )
+            val += coeff( i ) * time;
+
+        return val + coeff( last );
+    }
+
+    Kokkos::View<double*, MemorySpace> coeff;
+};
+
+template <typename ArrayType, typename MemorySpace>
+TimeDependentPolynomial( MemorySpace, ArrayType array )
+    -> TimeDependentPolynomial<MemorySpace>;
+
+template <typename ViewType, typename TemperatureType>
+struct TimeTempDependentPolynomial : public TemperatureDependentProperty
+{
+    using base_type = TemperatureDependentProperty<TemperatureType>;
+    using memory_space = typename TemperatureType::memory_space;
+
+    TemperatureDependentPiecewise<TemperatureType> piecewise;
+
+    // Constructor with polynomial coefficients and temperature field.
+    template <typename ArrayTime>
+    TimeTempDependentPolynomial( ArrayTime array_time, ArrayType array_temp,
+                                 ArrayType array_temp_y,
+                                 const TemperatureType& t )
+        : piecewise( array_temp, array_temp_y, t )
+        , coeff( Kokkos::View<double**, MemorySpace>( "coefficients",
+                                                      array.size() ) )
+    {
+        Kokkos::deep_copy( coeff, view_2d );
+    }
+
+    // Return time-dependent value.
+    KOKKOS_FUNCTION
+    auto operator()( const int p, const double time ) const
+    {
+        const auto t = temp( p );
+        return value( t, time );
+    }
+
+    KOKKOS_FUNCTION
+    auto value( const double temp, const double time ) const
+    {
+        double val = 0.0;
+        const auto last_0 = coeff.extent( 0 ) - 1;
+        const auto last_1 = coeff.extent( 1 ) - 1;
+        for ( std::size_t i = 0; i < last_0; i++ )
+            for ( std::size_t i = 0; i < last_1; i++ )
+                val += coeff( i ) * time;
+
+        piecewise.value( temp );
+
+        return val + coeff( last );
+    }
+
+    Kokkos::View<double*, MemorySpace> coeff;
+    using base_type::temp;
+};
 
 } // namespace CabanaPD
 

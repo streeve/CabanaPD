@@ -177,7 +177,7 @@ template <class ModelType, class ForceType, class ParticleType,
           class NeighborType>
 void computeForce( const ModelType& model, ForceType& force,
                    ParticleType& particles, NeighborType& neighbor,
-                   const bool reset = true )
+                   const double time = 0.0, const bool reset = true )
 {
     auto x = particles.sliceReferencePosition();
     auto u = particles.sliceDisplacement();
@@ -191,16 +191,17 @@ void computeForce( const ModelType& model, ForceType& force,
     // Forces only atomic if using team threading.
     if constexpr ( std::is_same<typename NeighborType::Tag,
                                 Cabana::TeamOpTag>::value )
-        force.computeForceFull( model, f_a, x, u, particles, neighbor );
+        force.computeForceFull( model, f_a, x, u, particles, neighbor, time );
     else
-        force.computeForceFull( model, f, x, u, particles, neighbor );
+        force.computeForceFull( model, f, x, u, particles, neighbor, time );
     Kokkos::fence();
 }
 
 template <class ModelType, class ForceType, class ParticleType,
           class NeighborType>
 void computeEnergy( const ModelType& model, ForceType& force,
-                    ParticleType& particles, const NeighborType& neighbor )
+                    ParticleType& particles, const NeighborType& neighbor,
+                    const double time = 0.0 )
 {
     if constexpr ( is_energy_output<typename ParticleType::output_type>::value )
     {
@@ -213,7 +214,7 @@ void computeEnergy( const ModelType& model, ForceType& force,
         // Reset energy.
         Cabana::deep_copy( W, 0.0 );
 
-        force.computeEnergyFull( model, W, x, u, particles, neighbor );
+        force.computeEnergyFull( model, W, x, u, particles, neighbor, time );
         Kokkos::fence();
     }
 }

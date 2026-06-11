@@ -359,7 +359,7 @@ class Solver
             comm->gatherTemperature();
 
         // Compute internal forces.
-        updateForce();
+        updateForce( time );
 
         if constexpr ( is_contact<ContactModelType>::value )
             computeForce( *contact_model, *contact, particles,
@@ -389,7 +389,7 @@ class Solver
         comm->gatherDisplacement();
 
         // Compute internal forces.
-        updateForce();
+        updateForce( step * dt );
 
         if constexpr ( is_contact<ContactModelType>::value )
             computeForce( *contact_model, *contact, particles,
@@ -463,7 +463,7 @@ class Solver
 
     // Compute and communicate fields needed for force computation and update
     // forces.
-    void updateForce()
+    void updateForce( const double time = 0.0 )
     {
         // Compute and communicate weighted volume for LPS (does nothing for
         // PMB). Only computed once without fracture.
@@ -477,7 +477,7 @@ class Solver
         comm->gatherDilatation();
 
         // Compute internal forces.
-        computeForce( force_model, *force, particles, *neighbor );
+        computeForce( force_model, *force, particles, *neighbor, time );
     }
 
     void updateEnergy()

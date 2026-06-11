@@ -209,7 +209,7 @@ struct FractureModel<NoFracture>
     // current model does not support failure.
     KOKKOS_INLINE_FUNCTION
     bool operator()( CriticalStretchTag, const int, const int, const double,
-                     const double ) const
+                     const double, const double = 0.0 ) const
     {
         return false;
     }
@@ -254,9 +254,10 @@ struct FractureModel<CriticalStretch, FunctorType>
 
     KOKKOS_INLINE_FUNCTION
     bool operator()( CriticalStretchTag, const int i, const int, const double r,
-                     const double xi ) const
+                     const double xi, const double time = 0.0 ) const
     {
-        const double break_coeff = ( 1.0 + s0( i ) ) * ( 1.0 + s0( i ) );
+        const double break_coeff =
+            ( 1.0 + s0( i, time ) ) * ( 1.0 + s0( i, time ) );
         return r * r >= break_coeff * xi * xi;
     }
 
@@ -417,11 +418,13 @@ struct ThermalModel<TemperatureDependent, TemperatureType, CriticalStretch,
 
     KOKKOS_INLINE_FUNCTION
     bool operator()( CriticalStretchTag, const int i, const int j,
-                     const double r, const double xi ) const
+                     const double r, const double xi,
+                     const double time = 0.0 ) const
     {
         double temp_avg = 0.5 * ( temperature( i ) + temperature( j ) ) - temp0;
-        double bond_break_coeff = ( 1.0 + s0( i ) + alpha( i ) * temp_avg ) *
-                                  ( 1.0 + s0( i ) + alpha( i ) * temp_avg );
+        double bond_break_coeff =
+            ( 1.0 + s0( i, time ) + alpha( i ) * temp_avg ) *
+            ( 1.0 + s0( i, time ) + alpha( i ) * temp_avg );
         return r * r >= bond_break_coeff * xi * xi;
     }
 };
