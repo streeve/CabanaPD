@@ -481,7 +481,7 @@ void runStepWithExternalIntegrator( ExecutionSpace const& exec_space,
     }
 
     // Compute internal forces.
-    solver.updateForce();
+    solver.updateForce( time );
 
     // TODO typedef not public
     // if constexpr ( is_contact<typename SolverType::ContactModelType>::value )

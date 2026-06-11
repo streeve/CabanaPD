@@ -91,7 +91,7 @@ class Force<MemorySpace, PMB, NoFracture> : public BaseForce<MemorySpace>
     void computeForceFull( const ModelType& model, ForceType& f,
                            const PosType& x, const PosType& u,
                            const ParticleType& particles,
-                           NeighborType& neighbor )
+                           NeighborType& neighbor, const double time = 0.0 )
     {
         _timer.start();
 
@@ -128,7 +128,7 @@ class Force<MemorySpace, PMB, NoFracture> : public BaseForce<MemorySpace>
               class NeighborType>
     void computeEnergyFull( const ModelType& model, WType& W, const PosType& x,
                             const PosType& u, const ParticleType& particles,
-                            NeighborType& neighbor )
+                            NeighborType& neighbor, const double time = 0.0 )
     {
         _energy_timer.start();
 
@@ -221,10 +221,10 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
   public:
     template <class ModelType, class ForceType, class PosType,
               class ParticleType, class NeighborType>
-    void computeForceFull( const ModelType& model, ForceType& f,
-                           const PosType& x, const PosType& u,
-                           const ParticleType& particles,
-                           const NeighborType& neighbor )
+    void
+    computeForceFull( const ModelType& model, ForceType& f, const PosType& x,
+                      const PosType& u, const ParticleType& particles,
+                      const NeighborType& neighbor, const double time = 0.0 )
     {
         _timer.start();
         using neighbor_list_type = typename NeighborType::list_type;
@@ -257,7 +257,7 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
                 s = model( ThermalStretchTag{}, i, j, s );
 
                 // Break if beyond critical stretch unless in no-fail zone.
-                if ( model( CriticalStretchTag{}, i, j, r, xi ) &&
+                if ( model( CriticalStretchTag{}, i, j, r, xi, time ) &&
                      !nofail( i ) && !nofail( j ) )
                 {
                     mu( i, n ) = 0;
@@ -266,7 +266,7 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
                 else if ( mu( i, n ) > 0 )
                 {
                     const double coeff =
-                        model( ForceCoeffTag{}, i, j, s, vol( j ), n );
+                        model( ForceCoeffTag{}, i, j, s, vol( j ), n, time );
 
                     double muij = mu( i, n );
                     fx_i = muij * coeff * rx / r;
@@ -290,7 +290,7 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
               class NeighborType>
     void computeEnergyFull( const ModelType& model, WType& W, const PosType& x,
                             const PosType& u, ParticleType& particles,
-                            NeighborType& neighbor )
+                            NeighborType& neighbor, const double time = 0.0 )
     {
         _energy_timer.start();
         using neighbor_list_type = typename NeighborType::list_type;
@@ -318,8 +318,8 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
 
                 s = model( ThermalStretchTag{}, i, j, s );
 
-                double w =
-                    mu( i, n ) * model( EnergyTag{}, i, j, s, xi, vol( j ), n );
+                double w = mu( i, n ) *
+                           model( EnergyTag{}, i, j, s, xi, vol( j ), n, time );
                 W( i ) += w;
 
                 phi_i += mu( i, n ) * vol( j );
@@ -423,7 +423,8 @@ class Force<MemorySpace, LinearPMB, NoFracture> : public BaseForce<MemorySpace>
               class ParticleType, class NeighborType>
     void computeForceFull( const ModelType& model, ForceType& f,
                            const PosType& x, const PosType& u,
-                           ParticleType& particles, NeighborType& neighbor )
+                           ParticleType& particles, NeighborType& neighbor,
+                           const double time = 0.0 )
     {
         _timer.start();
 
@@ -462,7 +463,7 @@ class Force<MemorySpace, LinearPMB, NoFracture> : public BaseForce<MemorySpace>
               class NeighborType>
     void computeEnergyFull( const ModelType& model, WType& W, const PosType& x,
                             const PosType& u, ParticleType& particles,
-                            NeighborType& neighbor )
+                            NeighborType& neighbor, const double time = 0.0 )
     {
         _energy_timer.start();
 
