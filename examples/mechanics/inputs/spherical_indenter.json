@@ -1,0 +1,18 @@
+{
+    "num_cells"              : {"value": [200, 200, 10]},
+    "system_size"            : {"value": [1e-2, 1e-2, 5e-4], "unit": "m"},
+    "density"                : {"value": 2440, "unit": "kg/m^3"},
+    "elastic_modulus"        : {"value": 1e+8, "unit": "Pa"},
+    "fracture_energy"        : {"value": 3.8, "unit": "J/m^2"},
+    "horizon"                : {"value": 1.5e-4, "unit": "m"},
+    "indenter_radius"        : {"value": 2.6e-3, "unit": "m"},
+    "indenter_velocity"      : {"value": 1e-1, "unit": "m/s"},
+    "contact_horizon_factor"          : {"value": 0.9},
+    "contact_horizon_extend_factor"   : {"value": 0.01},
+    "pause_time"             : {"value": 100.0, "unit": "s"},
+    "final_time"             : {"value": 13.0, "unit": "s"},
+    "timestep"               : {"value": 1.8e-7, "unit": "s"},
+    "timestep_safety_factor" : {"value": 0.85},
+    "output_frequency"       : {"value": 1e1},
+    "output_reference"       : {"value": false}
+}
