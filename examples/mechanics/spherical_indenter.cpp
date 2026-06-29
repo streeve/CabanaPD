@@ -204,7 +204,7 @@ void sphericalIndenterExample( const std::string filename )
     // Initial z-coordinate of the indenter center
     double z0_indenter = z_top + R;
 
-    auto disp_func = KOKKOS_LAMBDA( const int pid, const double t )
+    auto in_indenter = KOKKOS_LAMBDA( const int pid, const double t )
     {
         // z-coordinate of the indenter center
         double z_indenter = z0_indenter - v0 * t;
@@ -232,11 +232,25 @@ void sphericalIndenterExample( const std::string filename )
                 ( x( pid, 0 ) - x_center ) * ( x( pid, 0 ) - x_center ) +
                 ( x( pid, 1 ) - y_center ) * ( x( pid, 1 ) - y_center );
 
-            // Indenter displacement
-            if ( r_sq <= r_indenter_sq )
-                u( pid, 2 ) =
-                    ( z_indenter - std::sqrt( R * R - r_sq ) ) - x( pid, 2 );
+            return r_sq <= r_indenter_sq;
         }
+        return false;
+    };
+
+    auto disp_func = KOKKOS_LAMBDA( const int pid, const double t )
+    {
+        // z-coordinate of the indenter center
+        double z_indenter = z0_indenter - v0 * t;
+
+        // Distance squared of particle to center on XY plane (assumes
+        // indenter is centered on the XY plane)
+        double r_sq = ( x( pid, 0 ) - x_center ) * ( x( pid, 0 ) - x_center ) +
+                      ( x( pid, 1 ) - y_center ) * ( x( pid, 1 ) - y_center );
+
+        // Indenter displacement
+        if ( in_indenter( pid, t ) )
+            u( pid, 2 ) =
+                ( z_indenter - std::sqrt( R * R - r_sq ) ) - x( pid, 2 );
 
         // Edge constraints
         if ( low_x_plane.inside( x, pid ) || high_x_plane.inside( x, pid ) )
@@ -268,9 +282,11 @@ void sphericalIndenterExample( const std::string filename )
     auto f = solver.particles.sliceForce();
 
     // Output force in x-direction.
-    auto force_func_x = KOKKOS_LAMBDA( const int p, const double )
+    auto force_func_x = KOKKOS_LAMBDA( const int p, const double t )
     {
-        return f( p, 0 ) * dx * dy * dz;
+        if ( in_indenter( p, t ) )
+            return f( p, 0 ) * dx * dy * dz;
+        return 0.0;
     };
 
     auto output_fx = CabanaPD::createOutputTimeSeries(
@@ -278,18 +294,22 @@ void sphericalIndenterExample( const std::string filename )
         force_func_x, output_region );
 
     // Output force in y-direction.
-    auto force_func_y = KOKKOS_LAMBDA( const int p, const double )
+    auto force_func_y = KOKKOS_LAMBDA( const int p, const double t )
     {
-        return f( p, 1 ) * dx * dy * dz;
+        if ( in_indenter( p, t ) )
+            return f( p, 1 ) * dx * dy * dz;
+        return 0.0;
     };
     auto output_fy = CabanaPD::createOutputTimeSeries(
         "output_force_y.txt", inputs, exec_space{}, solver.particles,
         force_func_y, output_region );
 
     // Output force in z-direction.
-    auto force_func_z = KOKKOS_LAMBDA( const int p, const double )
+    auto force_func_z = KOKKOS_LAMBDA( const int p, const double t )
     {
-        return f( p, 2 ) * dx * dy * dz;
+        if ( in_indenter( p, t ) )
+            return f( p, 2 ) * dx * dy * dz;
+        return 0.0;
     };
     auto output_fz = CabanaPD::createOutputTimeSeries(
         "output_force_z.txt", inputs, exec_space{}, solver.particles,
