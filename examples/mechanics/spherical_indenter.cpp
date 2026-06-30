@@ -9,7 +9,6 @@
  * SPDX-License-Identifier: BSD-3-Clause                                    *
  ****************************************************************************/
 
-#include <cmath>
 #include <fstream>
 #include <iostream>
 
@@ -18,71 +17,6 @@
 #include <Kokkos_Core.hpp>
 
 #include <CabanaPD.hpp>
-
-struct RegionGrowingCylinder : public CabanaPD::Region<CabanaPD::Cylinder>
-{
-    using base_type = CabanaPD::Region<CabanaPD::Cylinder>;
-    using base_type::radius_out;
-    double v0;
-    double R;
-
-    static constexpr double eps = 1.0e-14;
-
-    RegionGrowingCylinder( const double _R, const double _low_z,
-                           const double _high_z, const double _v0,
-                           const double _x_center = 0.0,
-                           const double _y_center = 0.0 )
-        : base_type( 0.0, eps, _low_z, _high_z, _x_center, _y_center )
-        , v0( _v0 )
-        , R( _R )
-    {
-        radius_out = 0.0; // ensure empty at t=0 (not eps)
-    }
-
-    void update( const double t )
-    {
-        const double indent_depth = v0 * t;
-
-        if ( indent_depth >= R )
-            radius_out = R;
-        else if ( indent_depth <= 0.0 )
-            radius_out = 0.0;
-        else
-            radius_out = std::sqrt( indent_depth * ( 2.0 * R - indent_depth ) );
-
-        // DEBUG: write to file to verify update() is being called
-        int rank = 0;
-#ifdef MPI_VERSION
-        MPI_Comm_rank( MPI_COMM_WORLD, &rank );
-#endif
-        if ( rank == 0 )
-        {
-            static int counter = 0;
-            std::ofstream os( "debug_region_radius.txt", std::ios::app );
-            os << t << " " << radius_out << "\n";
-        }
-    }
-
-    void print( MPI_Comm comm ) const
-    {
-        int rank = 0;
-#ifdef MPI_VERSION
-        MPI_Comm_rank( comm, &rank );
-#endif
-        if ( rank == 0 )
-            std::cout << "RegionGrowingCylinder: radius_out = " << radius_out
-                      << std::endl;
-    }
-
-    template <class PositionType>
-    KOKKOS_INLINE_FUNCTION bool inside( const PositionType& x,
-                                        const int pid ) const
-    {
-        if ( radius_out <= 0.0 )
-            return false;
-        return base_type::inside( x, pid );
-    }
-};
 
 // Simulate a spherical indenter on a plate.
 void sphericalIndenterExample( const std::string filename )
@@ -119,14 +53,12 @@ void sphericalIndenterExample( const std::string filename )
     //                    Force model
     // ====================================================
     using model_type = CabanaPD::PMB;
-    // using contact_type = CabanaPD::NormalRepulsionModel;
     CabanaPD::ForceModel force_model( model_type{}, horizon, K, G0 );
 
     // ====================================================
     //                 Particle generation
     // ====================================================
     CabanaPD::Particles particles( memory_space{}, model_type{} );
-    // CabanaPD::Particles particles( memory_space{}, contact_type{} );
 
     // Note that individual inputs can be passed instead (see other examples).
     particles.domain( inputs );
@@ -177,19 +109,6 @@ void sphericalIndenterExample( const std::string filename )
     //                   Create solver
     // ====================================================
     CabanaPD::Solver solver( inputs, particles, force_model );
-
-    /*
-    // Use contact radius and extension relative to particle spacing.
-    double r_c = inputs["contact_horizon_factor"];
-    double r_extend = inputs["contact_horizon_extend_factor"];
-    // NOTE: dx/2 is when particles first touch.
-    r_c *= dx / 2.0;
-    r_extend *= dx;
-
-    contact_type contact_model( horizon, r_c, r_extend, K );
-    CabanaPD::Solver solver( inputs, particles, force_model,
-                                 contact_model );
-    */
 
     // ====================================================
     //                Boundary conditions
@@ -275,10 +194,6 @@ void sphericalIndenterExample( const std::string filename )
     //========================================
     //            OUTPUTS
     //========================================
-    // Define cylindrical region to output force.
-    RegionGrowingCylinder output_region(
-        R, high_corner[2] - dz, high_corner[2] + dz, v0, x_center, y_center );
-
     auto f = solver.particles.sliceForce();
 
     // Output force in x-direction.
@@ -291,7 +206,7 @@ void sphericalIndenterExample( const std::string filename )
 
     auto output_fx = CabanaPD::createOutputTimeSeries(
         "output_force_x.txt", inputs, exec_space{}, solver.particles,
-        force_func_x, output_region );
+        force_func_x, pressure_region );
 
     // Output force in y-direction.
     auto force_func_y = KOKKOS_LAMBDA( const int p, const double t )
@@ -302,7 +217,7 @@ void sphericalIndenterExample( const std::string filename )
     };
     auto output_fy = CabanaPD::createOutputTimeSeries(
         "output_force_y.txt", inputs, exec_space{}, solver.particles,
-        force_func_y, output_region );
+        force_func_y, pressure_region );
 
     // Output force in z-direction.
     auto force_func_z = KOKKOS_LAMBDA( const int p, const double t )
@@ -313,15 +228,24 @@ void sphericalIndenterExample( const std::string filename )
     };
     auto output_fz = CabanaPD::createOutputTimeSeries(
         "output_force_z.txt", inputs, exec_space{}, solver.particles,
-        force_func_z, output_region );
+        force_func_z, pressure_region );
+
+    // Output contact area of indentation region (for testing).
+    auto area_func = KOKKOS_LAMBDA( const int p, const double t )
+    {
+        if ( in_indenter( p, t ) )
+            return dx * dy;
+        return 0.0;
+    };
+    auto output_contact_area = CabanaPD::createOutputTimeSeries(
+        "output_area.txt", inputs, exec_space{}, solver.particles, area_func,
+        pressure_region );
 
     // ====================================================
     //                   Simulation run
     // ====================================================
     solver.init( bc );
-    output_region.update( 0.0 );
-    output_region.print( MPI_COMM_WORLD );
-    solver.run( bc, output_region, output_fx, output_fy, output_fz );
+    solver.run( bc, output_contact_area, output_fx, output_fy, output_fz );
 }
 
 // Initialize MPI+Kokkos.
