@@ -75,7 +75,7 @@ struct CustomBodyTerm
             v( p, 2 ) = 0.0;
 
             f( p, 2 ) +=
-                -contact_model.forceCoeff( rz + radius, vn, vol0, rho0 );
+                -contact_model.normalForce( rz + radius, vn, vol0, rho0 );
         }
 
         // Interact with a cylindrical tube
@@ -89,8 +89,8 @@ struct CustomBodyTerm
             // Normal velocity
             double vn = v( p, 0 ) * nx + v( p, 1 ) * ny;
 
-            double fn = -contact_model.forceCoeff( cylinder_radius - r + radius,
-                                                   vn, vol0, rho0 );
+            double fn = -contact_model.normalForce(
+                cylinder_radius - r + radius, vn, vol0, rho0 );
 
             f( p, 0 ) += fn * nx;
             f( p, 1 ) += fn * ny;
@@ -107,14 +107,14 @@ struct CustomBodyTerm
             double nx = y( p, 0 ) >= 0.0 ? -1.0 : 1.0;
             double vn = v( p, 0 ) * nx;
             f( p, 0 ) +=
-                -contact_model.forceCoeff( rx + radius, vn, vol0, rho0 ) * nx;
+                -contact_model.normalForce( rx + radius, vn, vol0, rho0 ) * nx;
         }
         if ( ry - radius < 0.0 )
         {
             double ny = y( p, 1 ) >= 0.0 ? -1.0 : 1.0;
             double vn = v( p, 1 ) * ny;
             f( p, 1 ) +=
-                -contact_model.forceCoeff( ry + radius, vn, vol0, rho0 ) * ny;
+                -contact_model.normalForce( ry + radius, vn, vol0, rho0 ) * ny;
         }
     }
 };
@@ -149,9 +149,10 @@ void addParticles( SolverType& solver, CabanaPD::Inputs inputs, const int seed )
         return false;
     };
     using exec_space = Kokkos::DefaultExecutionSpace;
-    solver.particles.createParticles( exec_space{}, Cabana::InitRandom{},
-                                      create, solver.particles.localOffset(),
-                                      false, seed );
+    solver.particles.create( exec_space{}, Cabana::InitRandom{}, create,
+                             solver.particles.localOffset(), false, seed );
+    // Neighbors are always out of date if particles are added.
+    solver.update( true );
 }
 
 template <class SolverType>
@@ -176,8 +177,7 @@ void updateParticles( SolverType& solver, CabanaPD::Inputs inputs,
         return true;
     };
     using exec_space = Kokkos::DefaultExecutionSpace;
-    solver.particles.updateParticles( exec_space{}, num_previous,
-                                      init_functor );
+    solver.particles.update( exec_space{}, num_previous, init_functor );
 }
 
 // Simulate powder settling for angle of repose calculation.
@@ -204,6 +204,7 @@ void angleOfReposeExample( const std::string filename )
     double E = inputs["elastic_modulus"];
     double e = inputs["restitution"];
     double gamma = inputs["surface_adhesion"];
+    double mu = inputs["sliding_friction"];
 
     // ====================================================
     //                  Mesh Discretization
@@ -217,7 +218,7 @@ void angleOfReposeExample( const std::string filename )
     //                    Force model
     // ====================================================
     using model_type = CabanaPD::HertzianJKRModel;
-    model_type contact_model( radius, radius_extend, nu, E, e, gamma );
+    model_type contact_model( radius, radius_extend, nu, E, e, gamma, mu );
 
     double min_height = inputs["min_height"];
     double max_height = inputs["max_height"];
@@ -229,6 +230,9 @@ void angleOfReposeExample( const std::string filename )
     // ====================================================
     //                   Creation
     // ====================================================
+    CabanaPD::Particles particles( memory_space{}, model_type{},
+                                   CabanaPD::BaseOutput{} );
+
     auto create = KOKKOS_LAMBDA( const int, const double x[3] )
     {
         // Only create particles inside cylinder.
@@ -238,10 +242,8 @@ void angleOfReposeExample( const std::string filename )
             return true;
         return false;
     };
-    CabanaPD::Particles particles(
-        memory_space{}, model_type{}, CabanaPD::BaseOutput{}, low_corner,
-        high_corner, num_cells, halo_width, Cabana::InitRandom{}, create,
-        exec_space{}, false );
+    particles.domain( low_corner, high_corner, num_cells, halo_width );
+    particles.create( exec_space{}, Cabana::InitRandom{}, create );
 
     // ====================================================
     //                   Create solver

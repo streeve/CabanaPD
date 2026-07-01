@@ -329,6 +329,11 @@ class Solver
         _other_time += _total_timer.lastTime();
     }
 
+    void update( const bool require_update = false )
+    {
+        neighbor->update( particles, force_model, require_update );
+    }
+
     template <typename BoundaryType>
     void runStep( const int step, BoundaryType boundary_condition )
     {
