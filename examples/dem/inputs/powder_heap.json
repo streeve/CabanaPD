@@ -2,6 +2,11 @@
     "dx"                       : {"value": [0.0075, 0.0075, 0.0075], "unit": "m"},
     "system_size"              : {"value": [0.5, 0.5, 0.5], "unit": "m"},
     "density"                : {"value": 2.0e3,  "unit": "kg/m^3"},
+    "final_time"               : {"value": 2.0, "unit": "s"},
+    "timestep"                 : {"value": 4e-6, "unit": "s"},
+    "timestep_safety_factor"   : {"value": 0.9},
+    "output_frequency"         : {"value": 400},
+    "output_reference"         : {"value": false},
     "volume"                 : {"value": 6.544985e-8,  "unit": "m^3"},
     "elastic_modulus"        : {"value": 1.0e5, "unit": "Pa"},
     "poisson_ratio"          : {"value": 0.25, "unit": ""},
@@ -15,10 +20,5 @@
     "min_height"               : {"value": 0.1, "unit": "m"},
     "max_height"               : {"value": 0.45, "unit": "m"},
     "velocity_init"               : {"value": -2.0, "unit": "m/s"},
-    "feed_frequency"         : {"value": 9000},
-    "final_time"               : {"value": 2.0, "unit": "s"},
-    "timestep"                 : {"value": 4e-6, "unit": "s"},
-    "timestep_safety_factor"   : {"value": 0.9},
-    "output_frequency"         : {"value": 400},
-    "output_reference"         : {"value": false}
+    "feed_frequency"         : {"value": 9000}
 }
