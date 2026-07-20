@@ -395,25 +395,16 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
     }
 
     template <class ExecSpace, class UserFunctor>
-    void
-    create( const ExecSpace exec_space, UserFunctor user_create,
-            const std::size_t num_previous = 0,
-            const bool create_frozen = false,
-            typename std::enable_if<(Kokkos::is_execution_space_v<ExecSpace>),
-                                    int>::type* = 0 )
+    void create( const ExecSpace exec_space, UserFunctor user_create,
+                 const std::size_t num_previous = 0,
+                 const bool create_frozen = false,
+                 typename std::enable_if<
+                     (Kokkos::is_execution_space_v<
+                         ExecSpace>)&&!is_particle_init<UserFunctor>::value,
+                     int>::type* = 0 )
     {
         create( exec_space, Cabana::InitUniform{}, user_create, num_previous,
                 create_frozen );
-    }
-
-    template <class ExecSpace, class InitType>
-    void create(
-        const ExecSpace exec_space, InitType init_type,
-        const std::size_t num_previous = 0, const bool create_frozen = false,
-        typename std::enable_if<is_particle_init<InitType>::value, int>::type* =
-            0 )
-    {
-        create( exec_space, init_type, *this, num_previous, create_frozen );
     }
 
     template <class ExecSpace, class InitType, class UserFunctor>
