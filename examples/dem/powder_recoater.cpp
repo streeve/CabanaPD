@@ -74,7 +74,7 @@ struct CustomBodyTerm
 
         // Interact with a horizontal wall (floor).
         double rz = y( p, 2 );
-        if ( rz - radius < 0.0 )
+        if ( rz - radius < low_corner[2] )
         {
             double vz = v( p, 2 );
             double vn = rz * vz;
@@ -133,7 +133,7 @@ struct CustomBodyTerm
 
         // If signed distance < radius => overlap/contact (plane considered
         // infinitely thin)
-        if ( signed_dist < radius )
+        if ( signed_dist < radius && y( p, 2 ) > low_corner[2] + rake_gap )
         {
             // Relative normal velocity: particle vel dot n - rake_velocity dot
             // n
@@ -227,7 +227,7 @@ void rakePileExample( const std::string filename )
     double E = inputs["elastic_modulus"];
     double e = inputs["restitution"];
     double gamma = inputs["surface_adhesion"];
-    double mu = inputs["coulomb_friction"];
+    double mu = inputs["sliding_friction"];
 
     // ====================================================
     //                  Mesh Discretization
