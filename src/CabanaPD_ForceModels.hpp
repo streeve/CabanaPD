@@ -491,9 +491,10 @@ struct BaseDynamicTemperatureModel
     }
 
     KOKKOS_INLINE_FUNCTION double
-    microconductivity_function( const double r, const int p ) const
+    microconductivity_function( const double r, const int i, const int j ) const
     {
-        const double microconductivity = thermal_coeff * kappa( p );
+        const double kappa_avg = 0.5 * ( kappa( i ) + kappa( j ) );
+        const double microconductivity = thermal_coeff * kappa_avg;
         if ( constant_microconductivity )
             return microconductivity;
         else

@@ -345,7 +345,7 @@ class Solver
         if constexpr ( is_heat_transfer<
                            typename ForceModelType::thermal_tag>::value )
         {
-            if ( step % thermal_subcycle_steps == 0 )
+            if ( static_cast<int>( time / dt ) % thermal_subcycle_steps == 0 )
                 computeHeatTransfer( force_model, *heat_transfer, particles,
                                      *neighbor, thermal_subcycle_steps * dt );
         }

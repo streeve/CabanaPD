@@ -297,8 +297,8 @@ class Inputs
                                                    thermal_tag>::value )
                             {
                                 // FIXME: need an interface to get the min
-                                double coeff =
-                                    model.microconductivity_function( xi, 0 );
+                                double coeff = model.microconductivity_function(
+                                    xi, 0, 0 );
                                 sum_ht += v_p * coeff / r2;
                             }
                         }
