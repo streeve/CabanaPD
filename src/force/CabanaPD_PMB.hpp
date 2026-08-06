@@ -108,7 +108,8 @@ class Force<MemorySpace, PMB, NoFracture> : public BaseForce<MemorySpace>
 
             s = model( ThermalStretchTag{}, i, j, s );
 
-            const double coeff = model( ForceCoeffTag{}, i, j, s, vol( j ) );
+            const double coeff =
+                model( ForceCoeffTag{}, i, j, s, vol( j ), time );
             fx_i = coeff * rx / r;
             fy_i = coeff * ry / r;
             fz_i = coeff * rz / r;
@@ -142,7 +143,7 @@ class Force<MemorySpace, PMB, NoFracture> : public BaseForce<MemorySpace>
 
             s = model( ThermalStretchTag{}, i, j, s );
 
-            double w = model( EnergyTag{}, i, j, s, xi, vol( j ) );
+            double w = model( EnergyTag{}, i, j, s, xi, vol( j ), time );
             W( i ) += w;
             Phi += w * vol( i );
         };
@@ -266,7 +267,7 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
                 else if ( mu( i, n ) > 0 )
                 {
                     const double coeff =
-                        model( ForceCoeffTag{}, i, j, s, vol( j ), n, time );
+                        model( ForceCoeffTag{}, i, j, s, vol( j ), time, n );
 
                     double muij = mu( i, n );
                     fx_i = muij * coeff * rx / r;
@@ -319,7 +320,7 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
                 s = model( ThermalStretchTag{}, i, j, s );
 
                 double w = mu( i, n ) *
-                           model( EnergyTag{}, i, j, s, xi, vol( j ), n, time );
+                           model( EnergyTag{}, i, j, s, xi, vol( j ), time, n );
                 W( i ) += w;
 
                 phi_i += mu( i, n ) * vol( j );
@@ -340,7 +341,7 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
 
     template <class ModelType, class ParticleType, class NeighborType>
     void computeStressFull( const ModelType& model, ParticleType& particles,
-                            NeighborType& neighbor )
+                            NeighborType& neighbor, const double time = 0.0 )
     {
         _stress_timer.start();
         using neighbor_list_type = typename NeighborType::list_type;
@@ -373,7 +374,7 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
                 s = model( ThermalStretchTag{}, i, j, s );
 
                 const double coeff =
-                    0.5 * model( ForceCoeffTag{}, i, j, s, vol( j ), n );
+                    0.5 * model( ForceCoeffTag{}, i, j, s, vol( j ), time, n );
                 const double muij = mu( i, n );
                 const double fx_i = muij * coeff * rx / r;
                 const double fy_i = muij * coeff * ry / r;
@@ -424,7 +425,7 @@ class Force<MemorySpace, LinearPMB, NoFracture> : public BaseForce<MemorySpace>
     void computeForceFull( const ModelType& model, ForceType& f,
                            const PosType& x, const PosType& u,
                            ParticleType& particles, NeighborType& neighbor,
-                           const double time = 0.0 )
+                           const double = 0.0 )
     {
         _timer.start();
 
@@ -463,7 +464,7 @@ class Force<MemorySpace, LinearPMB, NoFracture> : public BaseForce<MemorySpace>
               class NeighborType>
     void computeEnergyFull( const ModelType& model, WType& W, const PosType& x,
                             const PosType& u, ParticleType& particles,
-                            NeighborType& neighbor, const double time = 0.0 )
+                            NeighborType& neighbor, const double = 0.0 )
     {
         _energy_timer.start();
 

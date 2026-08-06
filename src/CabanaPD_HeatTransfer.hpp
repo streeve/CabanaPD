@@ -56,7 +56,7 @@ class HeatTransfer<MemorySpace, NoFracture>
             double xi, r, s;
             getDistance( x, u, i, j, xi, r, s );
 
-            const double coeff = model.microconductivity_function( xi, i );
+            const double coeff = model.microconductivity_function( xi, i, j );
             conduction( i ) +=
                 coeff * ( temp( j ) - temp( i ) ) / xi / xi * vol( j );
         };
@@ -138,7 +138,7 @@ class HeatTransfer<MemorySpace, Fracture>
                 if ( mu( i, n ) > 0 )
                 {
                     const double coeff =
-                        model.microconductivity_function( xi, i );
+                        model.microconductivity_function( xi, i, j );
                     conduction( i ) +=
                         coeff * ( temp( j ) - temp( i ) ) / xi / xi * vol( j );
                 }

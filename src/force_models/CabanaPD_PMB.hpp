@@ -70,25 +70,29 @@ struct MechanicsModel<PMB, Elastic, FunctorType> : public BaseForceModel
     }
 
     KOKKOS_FUNCTION
-    auto c( const int i ) const { return K( i ) * c_factor; }
+    auto c( const int i, const int j ) const
+    {
+        return 0.5 * ( K( i ) + K( j ) ) * c_factor;
+    }
 
     KOKKOS_FUNCTION
     int influenceType() const { return 1; }
 
     KOKKOS_INLINE_FUNCTION
-    auto operator()( ForceCoeffTag, const int i, const int, const double s,
-                     const double vol, const int = -1 ) const
+    auto operator()( ForceCoeffTag, const int i, const int j, const double s,
+                     const double vol, const double, const int = -1 ) const
     {
-        return c( i ) * s * vol;
+        return c( i, j ) * s * vol;
     }
 
     KOKKOS_INLINE_FUNCTION
-    auto operator()( EnergyTag, const int i, const int, const double s,
-                     const double xi, const double vol, const int = -1 ) const
+    auto operator()( EnergyTag, const int i, const int j, const double s,
+                     const double xi, const double vol, const double,
+                     const int = -1 ) const
     {
         // 0.25 factor is due to 1/2 from outside the integral and 1/2 from
         // the integrand (pairwise potential).
-        return 0.25 * c( i ) * s * s * xi * vol;
+        return 0.25 * c( i, j ) * s * s * xi * vol;
     }
 };
 
@@ -150,8 +154,8 @@ struct MechanicsModel<PMB, ElasticPerfectlyPlastic, FunctorModulus,
     }
 
     KOKKOS_INLINE_FUNCTION
-    auto operator()( ForceCoeffTag, const int i, const int, const double s,
-                     const double vol, const int n, const double time ) const
+    auto operator()( ForceCoeffTag, const int i, const int j, const double s,
+                     const double vol, const double time, const int n ) const
     {
         // Update bond plastic stretch.
         auto s_p = _s_p( i, n );
@@ -165,15 +169,15 @@ struct MechanicsModel<PMB, ElasticPerfectlyPlastic, FunctorModulus,
 
         // Must extract again if in the plastic regime.
         s_p = _s_p( i, n );
-        return base_type::c( i ) * ( s - s_p ) * vol;
+        return base_type::c( i, j ) * ( s - s_p ) * vol;
     }
 
     // This energy calculation is only valid for pure tension or pure
     // compression.
     KOKKOS_INLINE_FUNCTION
-    auto operator()( EnergyTag, const int i, const int, const double s,
-                     const double xi, const double vol, const int n,
-                     const double time ) const
+    auto operator()( EnergyTag, const int i, const int j, const double s,
+                     const double xi, const double vol, const double time,
+                     const int n ) const
     {
         auto s_p = _s_p( i, n );
         double stretch_term;
@@ -189,7 +193,7 @@ struct MechanicsModel<PMB, ElasticPerfectlyPlastic, FunctorModulus,
 
         // 0.25 factor is due to 1/2 from outside the integral and 1/2 from
         // the integrand (pairwise potential).
-        return 0.25 * base_type::c( i ) * stretch_term * xi * vol;
+        return 0.25 * base_type::c( i, j ) * stretch_term * xi * vol;
     }
 };
 

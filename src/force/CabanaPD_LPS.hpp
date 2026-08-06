@@ -145,7 +145,7 @@ class Force<MemorySpace, LPS, NoFracture> : public BaseForce<MemorySpace>
     void computeForceFull( const ModelType& model, ForceType& f,
                            const PosType& x, const PosType& u,
                            const ParticleType& particles,
-                           NeighborType& neighbor, const double time = 0.0 )
+                           NeighborType& neighbor, const double = 0.0 )
     {
         _timer.start();
 
@@ -184,7 +184,7 @@ class Force<MemorySpace, LPS, NoFracture> : public BaseForce<MemorySpace>
               class NeighborType>
     void computeEnergyFull( const ModelType& model, WType& W, const PosType& x,
                             const PosType& u, const ParticleType& particles,
-                            NeighborType& neighbor, const double time = 0.0 )
+                            NeighborType& neighbor, const double = 0.0 )
     {
         _energy_timer.start();
 
@@ -382,7 +382,7 @@ class Force<MemorySpace, LPS, Fracture> : public BaseForce<MemorySpace>
     void computeForceFull( const ModelType& model, ForceType& f,
                            const PosType& x, const PosType& u,
                            const ParticleType& particles,
-                           NeighborType& neighbor, const double time = 0.0 )
+                           NeighborType& neighbor, const double = 0.0 )
     {
         _timer.start();
         using neighbor_list_type = typename NeighborType::list_type;
@@ -450,8 +450,7 @@ class Force<MemorySpace, LPS, Fracture> : public BaseForce<MemorySpace>
               class NeighborType>
     void computeEnergyFull( const ModelType& model, WType& W, const PosType& x,
                             const PosType& u, ParticleType& particles,
-                            const NeighborType& neighbor,
-                            const double time = 0.0 )
+                            const NeighborType& neighbor, const double = 0.0 )
     {
         _energy_timer.start();
         using neighbor_list_type = typename NeighborType::list_type;
@@ -597,7 +596,7 @@ class Force<MemorySpace, LinearLPS, NoFracture>
     void computeForceFull( const ModelType& model, ForceType& f,
                            const PosType& x, const PosType& u,
                            const ParticleType& particles,
-                           NeighborType& neighbor, const double time = 0.0 )
+                           NeighborType& neighbor, const double = 0.0 )
     {
         _timer.start();
 
@@ -639,7 +638,7 @@ class Force<MemorySpace, LinearLPS, NoFracture>
               class NeighborType>
     void computeEnergyFull( const ModelType& model, WType& W, const PosType& x,
                             const PosType& u, const ParticleType& particles,
-                            NeighborType& neighbor, const double time = 0.0 )
+                            NeighborType& neighbor, const double = 0.0 )
     {
         _energy_timer.start();
 
