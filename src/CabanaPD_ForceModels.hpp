@@ -422,9 +422,10 @@ struct ThermalModel<TemperatureDependent, TemperatureType, CriticalStretch,
                      const double time = 0.0 ) const
     {
         double temp_avg = 0.5 * ( temperature( i ) + temperature( j ) ) - temp0;
-        double bond_break_coeff =
-            ( 1.0 + s0( i, time ) + alpha( i ) * temp_avg ) *
-            ( 1.0 + s0( i, time ) + alpha( i ) * temp_avg );
+        const double alpha_avg = 0.5 * ( alpha( i ) + alpha( j ) );
+        const double s0_avg = 0.5 * ( s0( i, time ) + s0( j, time ) );
+        double bond_break_coeff = ( 1.0 + s0_avg + alpha_avg * temp_avg ) *
+                                  ( 1.0 + s0_avg + alpha_avg * temp_avg );
         return r * r >= bond_break_coeff * xi * xi;
     }
 };
