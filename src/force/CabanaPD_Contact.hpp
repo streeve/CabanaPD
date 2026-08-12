@@ -52,7 +52,7 @@ class Force<MemorySpace, NormalRepulsionModel, NoFracture>
     void computeForceFull( const ModelType& model, ForceType& fc,
                            const PosType& x, const PosType& u,
                            ParticleType& particles, NeighborType& neighbor,
-                           const double time = 0.0 )
+                           const double = 0.0 )
     {
         const auto vol = particles.sliceVolume();
 
@@ -120,7 +120,7 @@ class Force<MemorySpace, HertzianModel, NoFracture>
     void computeForceFull( const ModelType& model, ForceType& fc,
                            const PosType& x, const PosType& u,
                            const ParticleType& particles,
-                           NeighborType& neighbor, const double time = 0.0 )
+                           NeighborType& neighbor, const double = 0.0 )
     {
         const auto vol = particles.sliceVolume();
         const auto rho = particles.sliceDensity();

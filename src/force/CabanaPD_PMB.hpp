@@ -351,7 +351,6 @@ class Force<MemorySpace, PMB, Fracture> : public BaseForce<MemorySpace>
         const auto x = particles.sliceReferencePosition();
         const auto u = particles.sliceDisplacement();
         const auto vol = particles.sliceVolume();
-        const auto f = particles.sliceForce();
         auto stress = particles.sliceStress();
 
         auto stress_full = KOKKOS_LAMBDA( const int i )
