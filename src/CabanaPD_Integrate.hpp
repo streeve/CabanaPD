@@ -746,14 +746,16 @@ void runStepWithExternalIntegrator( ExecutionSpace const& exec_space,
 
     // Add force boundary condition.
     if ( boundary_condition.forceUpdate() )
-        boundary_condition.apply( exec_space, solver.particles, time );
+        boundary_condition.apply( exec_space, solver.particles, time, true,
+                                  false );
 
     integrator.middleSubStep( exec_space, solver.particles );
-    integrator.finalSubStep( exec_space, solver.particles );
 
     // Add non-force boundary condition.
-    if ( !boundary_condition.forceUpdate() )
-        boundary_condition.apply( exec_space, solver.particles, time );
+    if ( boundary_condition.nonforceUpdate() )
+        boundary_condition.apply( exec_space, particles, time, false, true );
+
+    integrator.finalSubStep( exec_space, solver.particles );
 }
 
 template <typename ExecutionSpace, typename SolverType, typename IntegratorType,
