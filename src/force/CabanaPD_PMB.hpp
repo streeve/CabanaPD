@@ -587,7 +587,7 @@ class Force<MemorySpace, PMBDensity, Fracture>
                 double xi, r, s;
                 getDistance( x, u, i, j, xi, r, s );
                 theta( i ) += mu( i, n ) * model( DilatationTag{}, i, j, s, xi,
-                                                  vol( j ), -1, n );
+                                                  vol( j ), 0.0, n );
             }
         };
         neighbor.iterateLinear( exec_space{}, dilatation, particles,
@@ -599,10 +599,10 @@ class Force<MemorySpace, PMBDensity, Fracture>
 
     template <class ModelType, class ForceType, class PosType,
               class ParticleType, class NeighborType>
-    void computeForceFull( const ModelType& model, ForceType& f,
-                           const PosType& x, const PosType& u,
-                           const ParticleType& particles,
-                           const NeighborType& neighbor )
+    void
+    computeForceFull( const ModelType& model, ForceType& f, const PosType& x,
+                      const PosType& u, const ParticleType& particles,
+                      const NeighborType& neighbor, const double time = 0.0 )
     {
         _timer.start();
         using neighbor_list_type = typename NeighborType::list_type;
@@ -647,7 +647,7 @@ class Force<MemorySpace, PMBDensity, Fracture>
                 else if ( mu( i, n ) > 0 )
                 {
                     const double coeff =
-                        model( ForceCoeffTag{}, i, j, s, vol( j ), n );
+                        model( ForceCoeffTag{}, i, j, s, vol( j ), time, n );
 
                     double muij = mu( i, n );
                     fx_i = muij * coeff * rx / r;

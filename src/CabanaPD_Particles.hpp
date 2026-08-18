@@ -634,7 +634,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput,
         Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
             h5_config, "particles", MPI_COMM_WORLD, output_step, output_time,
             localOffset(), getPosition( use_reference ), sliceForce(),
-            sliceDisplacement(), sliceVelocity(), sliceType(),
+            sliceDisplacement(), sliceVelocity(), sliceType(), sliceDensity(),
             std::forward<OtherFields>( other )... );
 #else
 #ifdef Cabana_ENABLE_SILO

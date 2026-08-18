@@ -50,6 +50,11 @@ template <typename PDModelType, typename MechanicsType, typename FunctorType,
           typename... DataTypes>
 struct MechanicsModel;
 
+template <typename PDType, typename MechanicsType, typename DensityType,
+          typename CurrentDensityType, typename FunctorModulus,
+          typename FunctorYield>
+struct MechanicsDensityModel;
+
 template <typename T>
 struct is_mechanics_model : public std::false_type
 {
@@ -58,6 +63,12 @@ template <typename PDModelType, typename MechanicsType, typename FunctorType,
           typename... DataTypes>
 struct is_mechanics_model<
     MechanicsModel<PDModelType, MechanicsType, FunctorType, DataTypes...>>
+    : public std::true_type
+{
+};
+template <typename PDModelType, typename MechanicsType, typename... DataTypes>
+struct is_mechanics_model<
+    MechanicsDensityModel<PDModelType, MechanicsType, DataTypes...>>
     : public std::true_type
 {
 };
@@ -99,6 +110,11 @@ struct BaseForceModel
 
     auto cutoff() const { return force_horizon; }
     auto extend() const { return 0.0; }
+
+    template <typename ParticleType>
+    void update( const ParticleType& )
+    {
+    }
 
     // Only needed for models which store bond properties.
     void updateBonds( const int, const int ) {}
@@ -721,6 +737,13 @@ struct ThermalForceModel : public MechanicsType, ThermalType
         : MechanicsType( model1, model2 )
         , ThermalType( model1, model2 )
     {
+    }
+
+    template <typename ParticleType>
+    void update( const ParticleType& particles )
+    {
+        MechanicsType::update( particles );
+        ThermalType::update( particles );
     }
 };
 
