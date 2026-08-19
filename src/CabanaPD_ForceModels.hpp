@@ -213,6 +213,11 @@ struct FractureModel<NoFracture>
     {
         return false;
     }
+
+    template <typename ParticleType>
+    void update( const ParticleType& )
+    {
+    }
 };
 
 template <typename FunctorType>
@@ -259,6 +264,12 @@ struct FractureModel<CriticalStretch, FunctorType>
         const double break_coeff =
             ( 1.0 + s0( i, time ) ) * ( 1.0 + s0( i, time ) );
         return r * r >= break_coeff * xi * xi;
+    }
+
+    template <typename ParticleType>
+    void update( const ParticleType& particles )
+    {
+        s0.update( particles );
     }
 
     KOKKOS_FUNCTION
@@ -428,6 +439,13 @@ struct ThermalModel<TemperatureDependent, TemperatureType, CriticalStretch,
                                   ( 1.0 + s0_avg + alpha_avg * temp_avg );
         return r * r >= bond_break_coeff * xi * xi;
     }
+
+    template <typename ParticleType>
+    void update( const ParticleType& particles )
+    {
+        base_type::update( particles );
+        s0.update( particles );
+    }
 };
 
 template <typename TemperatureType>
@@ -501,6 +519,13 @@ struct BaseDynamicTemperatureModel
         else
             return 4.0 * microconductivity * ( 1.0 - r / thermal_horizon );
     }
+
+    template <typename ParticleType>
+    void update( const ParticleType& particles )
+    {
+        kappa.update( particles );
+        cp.update( particles );
+    }
 };
 
 template <typename TemperatureType, typename FunctorCTE,
@@ -545,6 +570,13 @@ struct ThermalModel<DynamicTemperature, TemperatureType, NoFracture, FunctorCTE,
         : base_heattransfer_type( model1, model2 )
         , base_type( model1, model2 )
     {
+    }
+
+    template <typename ParticleType>
+    void update( const ParticleType& particles )
+    {
+        base_type::update( particles );
+        base_heattransfer_type::update( particles );
     }
 };
 
@@ -608,6 +640,13 @@ struct ThermalModel<DynamicTemperature, TemperatureType, CriticalStretch,
         : base_heattransfer_type( model1, model2 )
         , base_type( model1, model2 )
     {
+    }
+
+    template <typename ParticleType>
+    void update( const ParticleType& particles )
+    {
+        base_type::update( particles );
+        base_heattransfer_type::update( particles );
     }
 };
 
@@ -674,6 +713,13 @@ struct ForceModel : public MechanicsType,
         , FractureType( model1, model2 )
     {
     }
+
+    template <typename ParticleType>
+    void update( const ParticleType& particles )
+    {
+        MechanicsType::update( particles );
+        FractureType::update( particles );
+    }
 };
 
 template <typename MechanicsType, typename PhysicsType>
@@ -718,6 +764,13 @@ struct ThermalForceModel : public MechanicsType, ThermalType
         : MechanicsType( model1, model2 )
         , ThermalType( model1, model2 )
     {
+    }
+
+    template <typename ParticleType>
+    void update( const ParticleType& particles )
+    {
+        MechanicsType::update( particles );
+        ThermalType::update( particles );
     }
 };
 

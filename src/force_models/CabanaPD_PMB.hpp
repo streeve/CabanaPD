@@ -94,6 +94,12 @@ struct MechanicsModel<PMB, Elastic, FunctorType> : public BaseForceModel
         // the integrand (pairwise potential).
         return 0.25 * c( i, j ) * s * s * xi * vol;
     }
+
+    template <typename ParticleType>
+    void update( const ParticleType& particles )
+    {
+        K.update( particles );
+    }
 };
 
 template <typename ModelType>
@@ -194,6 +200,13 @@ struct MechanicsModel<PMB, ElasticPerfectlyPlastic, FunctorModulus,
         // 0.25 factor is due to 1/2 from outside the integral and 1/2 from
         // the integrand (pairwise potential).
         return 0.25 * base_type::c( i, j ) * stretch_term * xi * vol;
+    }
+
+    template <typename ParticleType>
+    void update( const ParticleType& particles )
+    {
+        base_type::update( particles );
+        s_Y.update( particles );
     }
 };
 
