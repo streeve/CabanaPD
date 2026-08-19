@@ -274,13 +274,12 @@ struct ADRIntegrator
     }
 
     template <typename ForceType>
-    void initialSubStep( ExecutionSpace, const int start,
+    void initialSubStep( ExecutionSpace, const int start, const int end,
                          ForceType const& forces ) const
     {
         Kokkos::parallel_for(
             "ADRIntegrator::initialStep",
-            Kokkos::RangePolicy<ExecutionSpace>(
-                start, _forces_last_step.extent( 0 ) ),
+            Kokkos::RangePolicy<ExecutionSpace>( start, end ),
             KOKKOS_CLASS_LAMBDA( int64_t index ) {
                 for ( int i = 0; i < dim; ++i )
                     _forces_last_step( index, i ) = forces( index, i );
@@ -733,13 +732,13 @@ void runStepWithExternalIntegrator( ExecutionSpace const& exec_space,
 
     // Update ghost particles.
     // TODO not public
-    // solver.comm->gatherDisplacement();
+    solver.comm->gatherDisplacement();
 
     if constexpr ( is_heat_transfer<typename SolverType::force_model_type::
                                         thermal_type>::value )
     {
         computeHeatTransfer( solver.force_model, *solver.heat_transfer,
-                             particles, *solver.neighbor,
+                             solver.particles, *solver.neighbor,
                              solver.thermal_subcycle_steps * solver.dt );
     }
 
@@ -752,14 +751,14 @@ void runStepWithExternalIntegrator( ExecutionSpace const& exec_space,
     //                   solver.contact_neighbor, false );
 
     // TODO comm not public
-    // if constexpr ( is_temperature_dependent<
-    //                   typename
-    //                   SolverType::ForceModelType::thermal_type>::value )
-    //    solver.comm->gatherTemperature();
+    if constexpr ( is_temperature_dependent<
+                       typename SolverType::force_model_type::thermal_type>::
+                       value )
+        solver.comm->gatherTemperature();
 
     // Add force boundary condition.
     if ( boundary_condition.forceUpdate() )
-        boundary_condition.apply( exec_space, particles, time );
+        boundary_condition.apply( exec_space, solver.particles, time );
 
     integrator.middleSubStep( exec_space, particles );
     integrator.finalSubStep( exec_space, particles );
