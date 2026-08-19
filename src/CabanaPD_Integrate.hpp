@@ -466,17 +466,17 @@ void runStepWithExternalIntegrator( ExecutionSpace const& exec_space,
                                     BoundaryType boundary_condition,
                                     double time, ARGS... args )
 {
-    integrator.initialSubStep( exec_space, particles, args... );
+    integrator.initialSubStep( exec_space, solver.particles, args... );
 
     // Update ghost particles.
     // TODO not public
-    // solver.comm->gatherDisplacement();
+    solver.comm->gatherDisplacement();
 
     if constexpr ( is_heat_transfer<typename SolverType::force_model_type::
                                         thermal_type>::value )
     {
         computeHeatTransfer( solver.force_model, *solver.heat_transfer,
-                             particles, *solver.neighbor,
+                             solver.particles, *solver.neighbor,
                              solver.thermal_subcycle_steps * solver.dt );
     }
 
@@ -489,22 +489,22 @@ void runStepWithExternalIntegrator( ExecutionSpace const& exec_space,
     //                   solver.contact_neighbor, false );
 
     // TODO comm not public
-    // if constexpr ( is_temperature_dependent<
-    //                   typename
-    //                   SolverType::ForceModelType::thermal_type>::value )
-    //    solver.comm->gatherTemperature();
+    if constexpr ( is_temperature_dependent<
+                       typename SolverType::force_model_type::thermal_type>::
+                       value )
+        solver.comm->gatherTemperature();
 
     // Add force boundary condition.
     if ( boundary_condition.forceUpdate() )
-        boundary_condition.apply( exec_space, particles, time );
+        boundary_condition.apply( exec_space, solver.particles, time );
 
-    integrator.middleSubStep( exec_space, particles, args... );
+    integrator.middleSubStep( exec_space, solver.particles, args... );
 
     // Add non-force boundary condition.
     if ( !boundary_condition.forceUpdate() )
-        boundary_condition.apply( exec_space, particles, time );
+        boundary_condition.apply( exec_space, solver.particles, time );
 
-    integrator.finalSubStep( exec_space, particles, args... );
+    integrator.finalSubStep( exec_space, solver.particles, args... );
 }
 
 template <typename ExecutionSpace, typename SolverType, typename IntegratorType,
