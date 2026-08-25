@@ -173,14 +173,15 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
 
     void domain( std::array<double, dim> low_corner,
                  std::array<double, dim> high_corner,
-                 const std::array<int, dim> num_cells,
-                 const int max_halo_width )
+                 const std::array<int, dim> num_cells, const int max_halo_width,
+                 const std::array<int, dim> partition = { 0, 0, 0 } )
     {
         _init_timer.start();
         halo_width = max_halo_width;
 
         // Create the MPI partitions.
-        Cabana::Grid::DimBlockPartitioner<dim> partitioner;
+
+        Cabana::Grid::ManualBlockPartitioner<dim> partitioner( partition );
 
         // Create global mesh of MPI partitions.
         auto global_mesh = Cabana::Grid::createUniformGlobalMesh(
