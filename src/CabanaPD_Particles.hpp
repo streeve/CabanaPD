@@ -63,6 +63,7 @@
 #include <memory>
 
 #include "mpi.h"
+#include <hdf5.h>
 
 #include <Kokkos_Core.hpp>
 
@@ -632,7 +633,7 @@ class Particles<MemorySpace, PMB, TemperatureIndependent, BaseOutput, Dimension>
         Cabana::Experimental::HDF5ParticleOutput::writeTimeStep(
             h5_config, "particles", MPI_COMM_WORLD, output_step, output_time,
             localOffset(), getPosition( use_reference ), sliceForce(),
-            sliceDisplacement(), sliceVelocity(), sliceType(),
+            sliceDisplacement(), sliceVelocity(), sliceType(), sliceVolume(),
             std::forward<OtherFields>( other )... );
 #else
 #ifdef Cabana_ENABLE_SILO
@@ -1398,6 +1399,72 @@ Particles( MemorySpace, ModelType, ThermalType, OutputType,
                                    int>::type* = 0 )
     -> Particles<MemorySpace, typename ModelType::model_tag,
                  typename ThermalType::base_type, OutputType>;
+
+/******************************************************************************
+  Read from file.
+******************************************************************************/
+template <class ParticleType>
+void read( ParticleType& particles, const std::string& filename, int& step,
+           double& time )
+{
+    Cabana::Experimental::HDF5ParticleOutput::HDF5Config h5_config;
+
+    // Parse HDF5 details. Should be moved into Cabana in the future.
+    std::string hdfname = filename + ".h5";
+    std::cout << hdfname << "\n";
+    hid_t plist_id = H5Pcreate( H5P_FILE_ACCESS );
+    hid_t file_id = H5Fopen( hdfname.c_str(), H5F_ACC_RDONLY, plist_id );
+
+    // Get file iteration step. Use time since step isn't stored.
+    hid_t attr_id = H5Aopen( file_id, "Time", H5P_DEFAULT );
+    H5Aread( attr_id, H5T_NATIVE_DOUBLE, &time );
+    H5Aclose( attr_id );
+
+    // Get file number of points.
+    hid_t dset_id = H5Dopen( file_id, "reference_positions", H5P_DEFAULT );
+    hid_t filespace_id = H5Dget_space( dset_id );
+    hsize_t dimsf[3] = { 0, 0, 0 };
+    H5Sget_simple_extent_dims( filespace_id, dimsf, nullptr );
+
+    std::string delim = "particles_";
+    std::size_t pos = filename.find( delim );
+    std::string substring = filename.substr( pos + delim.length() );
+    pos = filename.find( "." );
+    std::string stepstring = substring.substr( 0, pos );
+    step = std::stoi( stepstring );
+
+    H5Sclose( filespace_id );
+    H5Dclose( dset_id );
+    H5Fclose( file_id );
+    std::size_t n_local = dimsf[0];
+    particles.resize( n_local, 0 );
+
+    auto x = particles.getPosition( true );
+    std::cout << x.size() << " " << n_local << " " << time << "\n";
+    Cabana::Experimental::HDF5ParticleOutput::readTimeStep(
+        h5_config, "particles", MPI_COMM_WORLD, step, n_local,
+        "reference_positions", time, x );
+
+    auto f = particles.sliceForce();
+    Cabana::Experimental::HDF5ParticleOutput::readTimeStep(
+        h5_config, "particles", MPI_COMM_WORLD, step, n_local, "forces", time,
+        f );
+
+    auto u = particles.sliceDisplacement();
+    Cabana::Experimental::HDF5ParticleOutput::readTimeStep(
+        h5_config, "particles", MPI_COMM_WORLD, step, n_local, "displacements",
+        time, u );
+
+    auto v = particles.sliceVelocity();
+    Cabana::Experimental::HDF5ParticleOutput::readTimeStep(
+        h5_config, "particles", MPI_COMM_WORLD, step, n_local, "velocities",
+        time, v );
+
+    auto vol = particles.sliceVolume();
+    Cabana::Experimental::HDF5ParticleOutput::readTimeStep(
+        h5_config, "particles", MPI_COMM_WORLD, step, n_local, "volume", time,
+        vol );
+}
 
 } // namespace CabanaPD
 
