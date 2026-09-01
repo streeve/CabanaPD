@@ -107,29 +107,36 @@ class BasePlasticity
   protected:
     using memory_space = MemorySpace;
     using neighbor_view = typename Kokkos::View<double**, memory_space>;
-    neighbor_view _s_p;
+    neighbor_view _s_p_t;
+    neighbor_view _s_p_c;
 
   public:
     // Must update later because number of neighbors not known at construction.
     void updateBonds( const int num_local, const int max_neighbors )
     {
-        Kokkos::realloc( _s_p, num_local, max_neighbors );
-        Kokkos::deep_copy( _s_p, 0.0 );
+        Kokkos::realloc( _s_p_t, num_local, max_neighbors );
+        Kokkos::deep_copy( _s_p_t, 0.0 );
+        Kokkos::realloc( _s_p_c, num_local, max_neighbors );
+        Kokkos::deep_copy( _s_p_c, 0.0 );
     }
 
     template <typename SliceType>
     auto output( SliceType& per_particle )
     {
-        auto s_p = _s_p;
+        auto s_p_t = _s_p_t;
+        auto s_p_c = _s_p_c;
         Kokkos::parallel_for(
             "CabanaPD::outputPlasticity",
             Kokkos::RangePolicy<typename memory_space::execution_space>(
                 0, per_particle.size() ),
             KOKKOS_LAMBDA( const int i ) {
                 // Store maximum plasticity per bond.
-                for ( std::size_t j = 0; j < s_p.extent( 1 ); ++j )
-                    if ( Kokkos::abs( s_p( i, j ) ) > per_particle( i ) )
-                        per_particle( i ) = Kokkos::abs( s_p( i, j ) );
+                for ( std::size_t j = 0; j < s_p_t.extent( 1 ); ++j )
+                {
+                    auto s_p = s_p_t( i, j ) - s_p_c( i, j );
+                    if ( s_p > per_particle( i ) )
+                        per_particle( i ) = s_p;
+                }
             } );
         Kokkos::fence();
     }
@@ -137,15 +144,16 @@ class BasePlasticity
     auto total() const
     {
         double total_p;
-        auto s_p = _s_p;
+        auto s_p_t = _s_p_t;
+        auto s_p_c = _s_p_c;
         Kokkos::parallel_reduce(
             "CabanaPD::outputTotalPlasticity",
             Kokkos::RangePolicy<typename memory_space::execution_space>(
-                0, s_p.extent( 0 ) ),
+                0, s_p_t.extent( 0 ) ),
             KOKKOS_LAMBDA( const int i, double& v ) {
-                // Store maximum plasticity per bond.
-                for ( std::size_t j = 0; j < s_p.extent( 1 ); ++j )
-                    v += 0.5 * Kokkos::abs( s_p( i, j ) );
+                // Store total plasticity.
+                for ( std::size_t j = 0; j < s_p_t.extent( 1 ); ++j )
+                    v += 0.5 * ( s_p_t( i, j ) - s_p_c( i, j ) );
             },
             Kokkos::Sum<double>( total_p ) );
         Kokkos::fence();
