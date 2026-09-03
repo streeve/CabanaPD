@@ -1174,6 +1174,20 @@ class Particles<MemorySpace, ModelType, ThermalType, EnergyOutput, Dimension>
     {
         return Cabana::slice<1>( _aosoa_output, "damage" );
     }
+    auto maxDamage() {
+      double damage_max;
+      auto d = sliceDamage();
+      Kokkos::parallel_reduce(
+			      "CabanaPD::outputMaxDamage",
+			      Kokkos::RangePolicy<typename base_type::execution_space>(
+										       0, d.size() ),
+			      KOKKOS_LAMBDA( const int i, double& max ) {
+				if ( d( i ) > max )
+				  max = d(i );
+			      }, Kokkos::Max<double>( damage_max ) );
+  Kokkos::fence();
+  return damage_max;
+    }
 
     template <typename... Args>
     void create( Args&&... args )

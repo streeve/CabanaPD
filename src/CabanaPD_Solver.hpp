@@ -154,7 +154,7 @@ class Solver
     {
         // This timestep is not valid for DEM-only.
         if constexpr ( !is_contact<ForceModelType>::value )
-            inputs.computeCriticalTimeStep( force_model );
+	  inputs.computeCriticalTimeStep( typename memory_space::execution_space{}, force_model );
 
         num_steps = inputs["num_steps"];
         output_frequency = inputs["output_frequency"];
@@ -345,7 +345,7 @@ class Solver
         if constexpr ( is_heat_transfer<
                            typename ForceModelType::thermal_tag>::value )
         {
-            if ( static_cast<int>( time / dt ) % thermal_subcycle_steps == 0 )
+	    if ( static_cast<int>( time / dt ) % thermal_subcycle_steps == 0 )
                 computeHeatTransfer( force_model, *heat_transfer, particles,
                                      *neighbor, thermal_subcycle_steps * dt );
         }

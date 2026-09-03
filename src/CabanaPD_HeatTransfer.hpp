@@ -78,8 +78,10 @@ class HeatTransfer<MemorySpace, NoFracture>
         auto euler_func = KOKKOS_LAMBDA( const int i )
         {
             temp( i ) += dt / rho( i ) / model.cp( i ) * conduction( i );
+	    if ( temp(i) < model.temp0 )
+	        temp(i) = model.temp0;
         };
-        Kokkos::RangePolicy<exec_space> policy( particles.frozenOffset(),
+        Kokkos::RangePolicy<exec_space> policy( 0,
                                                 particles.localOffset() );
         Kokkos::parallel_for( "CabanaPD::HeatTransfer::forwardEuler", policy,
                               euler_func );

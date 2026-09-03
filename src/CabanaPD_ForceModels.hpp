@@ -517,7 +517,7 @@ struct BaseDynamicTemperatureModel
         thermal_coeff = ( model1.thermal_coeff + model2.thermal_coeff ) / 2.0;
     }
 
-    KOKKOS_INLINE_FUNCTION double
+    KOKKOS_FUNCTION double
     microconductivity_function( const double r, const int i, const int j ) const
     {
         const double kappa_avg = 0.5 * ( kappa( i ) + kappa( j ) );

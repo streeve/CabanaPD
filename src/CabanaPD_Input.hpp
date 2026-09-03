@@ -205,8 +205,9 @@ class Inputs
             log_err( std::cout, "Units for dx do not match system units." );
     }
 
-    template <class ForceModel>
-    void computeCriticalTimeStep( [[maybe_unused]] const ForceModel model )
+    template <class ExecSpace, class ForceModel>
+    void computeCriticalTimeStep( [[maybe_unused]] const ExecSpace,
+				  [[maybe_unused]] const ForceModel model )
     {
         // Reference: Silling & Askari, Computers & Structures 83(17–18) (2005):
         // 1526-1535.
@@ -297,8 +298,14 @@ class Inputs
                                                    thermal_tag>::value )
                             {
                                 // FIXME: need an interface to get the min
-                                double coeff = model.microconductivity_function(
-                                    xi, 0, 0 );
+			      double coeff;
+			      Kokkos::parallel_reduce(
+            "CabanaPD::getMicroconductivity",
+            Kokkos::RangePolicy<ExecSpace>(
+					     0, 1 ),
+            KOKKOS_LAMBDA( const int, double& mc ) {
+	      mc = model.microconductivity_function(
+						    xi, 0, 0 ); }, Kokkos::Max<double>(coeff) );
                                 sum_ht += v_p * coeff / r2;
                             }
                         }
@@ -359,6 +366,13 @@ class Inputs
     auto operator[]( std::string label )
     {
         return inputs.at( label ).at( "value" );
+    }
+
+    // Set a single input.
+    template <typename T>
+    void set( std::string label, const T value )
+    {
+        inputs[label]["value"] = value;
     }
 
     // Get input units. Not currently enforced to be consistent.
