@@ -60,6 +60,8 @@
 #ifndef INTEGRATOR_H
 #define INTEGRATOR_H
 
+#include <mpi.h>
+
 #include <Kokkos_Core.hpp>
 
 #include <CabanaPD_Particles.hpp>
@@ -783,28 +785,32 @@ void runStepWithExternalIntegratorAndOutput( ExecutionSpace const& exec_space,
 }
 
 template <typename ExecutionSpace, typename SolverType, typename IntegratorType,
-          typename ParticleType, typename BoundaryType>
+          typename BoundaryType>
 bool runUntilConvergedWithExternalIntegrator(
     ExecutionSpace const& exec_space, SolverType& solver,
-    IntegratorType& integrator, ParticleType const& particles,
-    BoundaryType boundary_condition, double time, bool noFail,
-    double forceTolerance, double displacementTolerance, int maxSteps )
+    IntegratorType& integrator, BoundaryType boundary_condition, double time,
+    bool noFail, double forceTolerance, double displacementTolerance,
+    int maxSteps )
 {
     NoFailSwitch<typename ExecutionSpace::memory_space> noFailSwitch;
     if ( noFail )
     {
-        noFailSwitch.enableNoFail( exec_space, particles );
+        noFailSwitch.enableNoFail( exec_space, solver.particles );
     }
 
+    auto grid_size = solver.particles.gridSize();
     int step = 0;
+    int local_done = 0;
+    int global_done = 0;
     // TODO this will need to be adapted for MPI
     while ( step < maxSteps )
     {
-        integrator.initialSubStep( exec_space, particles );
+        integrator.initialSubStep( exec_space, solver.particles );
 
         // Update ghost particles.
         // TODO not public
-        // solver.comm->gatherDisplacement();
+        solver.comm->gatherDisplacement();
+
         // Compute internal forces.
         solver.updateForce();
 
@@ -815,61 +821,65 @@ bool runUntilConvergedWithExternalIntegrator(
         //                   solver.contact_neighbor, false );
 
         // TODO comm not public
-        // if constexpr ( is_temperature_dependent<
-        //                   typename
-        //                   SolverType::ForceModelType::thermal_type>::value )
-        //    solver.comm->gatherTemperature();
+        if constexpr ( is_temperature_dependent<
+                           typename SolverType::force_model_type::thermal_tag>::
+                           value )
+            solver.comm->gatherTemperature();
 
         // Add force boundary condition.
         if ( boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space, particles, time );
+            boundary_condition.apply( exec_space, solver.particles, time );
 
-        integrator.middleSubStep( exec_space, particles );
+        integrator.middleSubStep( exec_space, solver.particles );
         // check if we are not-converged, if so do update
         // always do 2 steps as we might start with a force residual of 0 but
         // that originates from displacement boundaries only being applied after
         // we did the first step
-        if ( step < 2 || !( integrator.getForceResidual() <
-                                forceTolerance * particles.gridSize() ||
-                            integrator.getDisplacementResidual() <
-                                displacementTolerance * particles.gridSize() ) )
+        if ( step < 2 ||
+             !( integrator.getForceResidual() < forceTolerance * grid_size ||
+                integrator.getDisplacementResidual() <
+                    displacementTolerance * grid_size ) )
         {
-            integrator.finalSubStep( exec_space, particles );
+            integrator.finalSubStep( exec_space, solver.particles );
         }
         else
         {
-            break;
+            local_done = 1;
         }
         // Add non-force boundary condition.
         if ( !boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space, particles, time );
+            boundary_condition.apply( exec_space, solver.particles, time );
+
+        MPI_Allreduce( &local_done, &global_done, 1, MPI_INT, MPI_MAX,
+                       MPI_COMM_WORLD );
+        if ( global_done )
+            break;
+
         ++step;
-        if ( step % 1000 == 0 )
+        if ( step % 1000 == 0 && print_rank() )
         {
             std::cout << "Finished " << step << " ADR steps, forceResidual "
-                      << integrator.getForceResidual() / particles.gridSize()
+                      << integrator.getForceResidual() / grid_size
                       << ", displacementResidual "
-                      << integrator.getDisplacementResidual() /
-                             particles.gridSize()
+                      << integrator.getDisplacementResidual() / grid_size
                       << "\n";
         }
-        if ( step == maxSteps )
+        if ( step == maxSteps && print_rank() )
         {
             std::cerr << "Warning: maximum number of steps reached without "
                          "convergence.\n";
         }
     }
 
-    if ( step < maxSteps )
+    if ( step < maxSteps && print_rank() )
         std::cout << "Converged after " << step << " steps, forceResidual "
-                  << integrator.getForceResidual() / particles.gridSize()
+                  << integrator.getForceResidual() / grid_size
                   << ", displacementResidual "
-                  << integrator.getDisplacementResidual() / particles.gridSize()
-                  << "\n";
+                  << integrator.getDisplacementResidual() / grid_size << "\n";
 
     if ( noFail )
     {
-        noFailSwitch.disableNoFail( exec_space, particles );
+        noFailSwitch.disableNoFail( exec_space, solver.particles );
     }
 
     return step < maxSteps;
