@@ -126,8 +126,7 @@ struct MechanicsModel<PMB, ElasticPerfectlyPlastic, FunctorModulus,
 
     using mechanics_type = ElasticPerfectlyPlastic;
 
-    using base_plasticity_type::_s_p_c;
-    using base_plasticity_type::_s_p_t;
+    using base_plasticity_type::_s_p;
     FunctorYield s_Y;
 
     using base_plasticity_type::updateBonds;
@@ -160,20 +159,22 @@ struct MechanicsModel<PMB, ElasticPerfectlyPlastic, FunctorModulus,
     {
     }
 
-    // Update bond plastic tensile/compressive stretch.
     KOKKOS_INLINE_FUNCTION
     auto operator()( ForceCoeffTag, const int i, const int j, const double s,
                      const double vol, const double time, const int n ) const
     {
+        // Update bond plastic stretch.
+        auto s_p = _s_p( i, n );
         // Yield in tension.
-        if ( s >= _s_p_t( i, n ) + s_Y( i, time ) )
-            _s_p_t( i, n ) = s - s_Y( i, time );
+        if ( s >= s_p + s_Y( i, time ) )
+            _s_p( i, n ) = s - s_Y( i, time );
         // Yield in compression.
-        else if ( s <= _s_p_c( i, n ) - s_Y( i, time ) )
-            _s_p_c( i, n ) = s + s_Y( i, time );
+        else if ( s <= s_p - s_Y( i, time ) )
+            _s_p( i, n ) = s + s_Y( i, time );
         // else: Elastic (in between), do not modify.
 
-        auto s_p = _s_p_t( i, n ) - _s_p_c( i, n );
+        // Must extract again if in the plastic regime.
+        s_p = _s_p( i, n );
         return base_type::c( i, j ) * ( s - s_p ) * vol;
     }
 
@@ -184,12 +185,13 @@ struct MechanicsModel<PMB, ElasticPerfectlyPlastic, FunctorModulus,
                      const double xi, const double vol, const double time,
                      const int n ) const
     {
+        auto s_p = _s_p( i, n );
         double stretch_term;
         // Yield in tension.
-        if ( s >= _s_p_t( i, n ) + s_Y( i, time ) )
+        if ( s >= s_p + s_Y( i, time ) )
             stretch_term = s_Y( i, time ) * ( 2.0 * s - s_Y( i, time ) );
         // Yield in compression.
-        else if ( s <= _s_p_c( i, n ) - s_Y( i, time ) )
+        else if ( s <= s_p - s_Y( i, time ) )
             stretch_term = s_Y( i, time ) * ( -2.0 * s - s_Y( i, time ) );
         else
             // Elastic (in between).
