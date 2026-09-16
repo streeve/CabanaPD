@@ -736,14 +736,6 @@ void runStepWithExternalIntegrator( ExecutionSpace const& exec_space,
     // TODO not public
     solver.comm->gatherDisplacement();
 
-    if constexpr ( is_heat_transfer<typename SolverType::force_model_type::
-                                        thermal_type>::value )
-    {
-        computeHeatTransfer( solver.force_model, *solver.heat_transfer,
-                             solver.particles, *solver.neighbor,
-                             solver.thermal_subcycle_steps * solver.dt );
-    }
-
     // Compute internal forces.
     solver.updateForce( time );
 
@@ -856,7 +848,7 @@ bool runUntilConvergedWithExternalIntegrator(
             break;
 
         ++step;
-        if ( step % 1000 == 0 && print_rank() )
+        if ( ( step == 2 || step % 1000 == 0 ) && print_rank() )
         {
             std::cout << "Finished " << step << " ADR steps, forceResidual "
                       << integrator.getForceResidual() / grid_size
