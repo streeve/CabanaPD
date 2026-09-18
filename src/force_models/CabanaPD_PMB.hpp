@@ -165,12 +165,12 @@ struct MechanicsModel<PMB, ElasticPerfectlyPlastic, FunctorModulus,
     {
         // Update bond plastic stretch.
         auto s_p = _s_p( i, n );
-        // Yield in tension. Incremental due to property dependence.
+        // Yield in tension.
         if ( s >= s_p + s_Y( i, time ) )
-            _s_p( i, n ) += s - s_p - s_Y( i, time );
-        // Yield in compression. We need to keep the plastic stretch positive.
+            _s_p( i, n ) = s - s_Y( i, time );
+        // Yield in compression.
         else if ( s <= s_p - s_Y( i, time ) )
-            _s_p( i, n ) += -s - s_p - s_Y( i, time );
+            _s_p( i, n ) = s + s_Y( i, time );
         // else: Elastic (in between), do not modify.
 
         // Must extract again if in the plastic regime.
