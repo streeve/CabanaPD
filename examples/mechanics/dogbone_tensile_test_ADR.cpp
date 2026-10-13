@@ -182,7 +182,8 @@ void dogboneTensileTestExample( const std::string filename )
     auto x = solver.particles.sliceReferencePosition();
     auto u = solver.particles.sliceDisplacement();
     auto f = solver.particles.sliceForce();
-    auto disp_func = KOKKOS_LAMBDA( const int pid, const double t )
+    auto disp_func =
+        KOKKOS_LAMBDA( const int pid, const double t, const bool, const bool )
     {
         if ( right_grip.inside( x, pid ) )
         {
@@ -198,7 +199,7 @@ void dogboneTensileTestExample( const std::string filename )
         }
     };
     auto bc = CabanaPD::createBoundaryCondition( disp_func, exec_space{},
-                                                 solver.particles, false,
+                                                 solver.particles, false, true,
                                                  left_grip, right_grip );
 
     // ====================================================
@@ -294,8 +295,7 @@ void dogboneTensileTestExample( const std::string filename )
             exec_space{}, solver, particleADRIntegator, bc, time, false, 5e0,
             1e-10, 100'000, MPI_COMM_WORLD );
         CabanaPD::runStepWithExternalIntegratorAndOutput(
-            exec_space{}, solver, particleADRIntegator, particles,
-            bc, time, time, adrTimeStep );
+            exec_space{}, solver, particleADRIntegator, bc, time, adrTimeStep );
     }
 
     // switch to verlet integration for the rest of the simulation (when we

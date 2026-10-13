@@ -103,9 +103,9 @@ void HIPREVExample( const std::string filename )
 
     using pool_type = Kokkos::Random_XorShift64_Pool<exec_space>;
     using random_type = Kokkos::Random_XorShift64<exec_space>;
-    pool_type pool;
     int seed = 456854;
-    pool.init( seed, particles.numLocal() );
+    pool_type pool( seed, particles.numLocal() );
+
     // Use time to seed random number generator
     // std::srand( std::time( nullptr ) );
     double rho_perturb_factor = 0.02;

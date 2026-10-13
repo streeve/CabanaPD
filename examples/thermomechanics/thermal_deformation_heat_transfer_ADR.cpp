@@ -91,9 +91,10 @@ void thermalDeformationHeatTransferExample( const std::string filename )
     // ====================================================
     //                    Force model
     // ====================================================
-    CabanaPD::ForceModel force_model( model_type{}, CabanaPD::NoFracture{},
-                                      horizon, K, temp, kappa, cp, alpha,
-                                      temp0 );
+    CabanaPD::MechanicsModel mechanics_model( model_type{}, horizon, K );
+    CabanaPD::ThermalModel thermal_model( horizon, temp, alpha, kappa, cp,
+                                          temp0 );
+    CabanaPD::ThermalForceModel force_model( mechanics_model, thermal_model );
 
     // ====================================================
     //                   Create solver
@@ -118,13 +119,14 @@ void thermalDeformationHeatTransferExample( const std::string filename )
     // This is purposely delayed until after solver init so that ghosted
     // particles are correctly taken into account for lambda capture here.
     temp = solver.particles.sliceTemperature();
-    auto temp_bc = KOKKOS_LAMBDA( const int pid, const double )
+    auto temp_bc =
+        KOKKOS_LAMBDA( const int pid, const double, const bool, const bool )
     {
         temp( pid ) = 0.0;
     };
 
     auto bc = CabanaPD::createBoundaryCondition(
-        temp_bc, exec_space{}, solver.particles, false, plane1, plane2 );
+        temp_bc, exec_space{}, solver.particles, false, true, plane1, plane2 );
 
     // ====================================================
     //                   ADR Integrator
@@ -183,7 +185,7 @@ void thermalDeformationHeatTransferExample( const std::string filename )
     for ( unsigned i = 1; i < numVerletSteps; i++ )
     {
         int step = ( time / solver.dt ) + i;
-        solver.runStep( step, bc );
+        solver.runStep( step, time, bc );
     }
 
     // ====================================================

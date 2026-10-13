@@ -753,7 +753,8 @@ void runStepWithExternalIntegrator( ExecutionSpace const& exec_space,
 
     // Add non-force boundary condition.
     if ( boundary_condition.nonforceUpdate() )
-        boundary_condition.apply( exec_space, particles, time, false, true );
+        boundary_condition.apply( exec_space, solver.particles, time, false,
+                                  true );
 
     integrator.finalSubStep( exec_space, solver.particles );
 }
@@ -796,6 +797,11 @@ bool runUntilConvergedWithExternalIntegrator(
         // Update ghost particles.
         solver.comm->gatherDisplacement();
 
+        // Add non-force boundary condition.
+        if ( boundary_condition.nonforceUpdate() )
+            boundary_condition.apply( exec_space, solver.particles, time, false,
+                                      true );
+
         // Compute internal forces.
         solver.updateForce();
         if constexpr ( is_temperature_dependent<
@@ -805,7 +811,8 @@ bool runUntilConvergedWithExternalIntegrator(
 
         // Add force boundary condition.
         if ( boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space, solver.particles, time );
+            boundary_condition.apply( exec_space, solver.particles, time, true,
+                                      false );
 
         integrator.middleSubStep( exec_space, solver.particles );
         // check if we are not-converged, if so do update
@@ -823,16 +830,13 @@ bool runUntilConvergedWithExternalIntegrator(
         {
             local_done = 1;
         }
-        // Add non-force boundary condition.
-        if ( !boundary_condition.forceUpdate() )
-            boundary_condition.apply( exec_space, solver.particles, time );
 
         MPI_Allreduce( &local_done, &global_done, 1, MPI_INT, MPI_MAX, comm );
         if ( global_done )
             break;
 
         ++step;
-        if ( step % 1000 == 0 && print_rank() )
+        if ( step % 100 == 0 && print_rank() )
         {
             std::cout << "Finished " << step << " ADR steps, forceResidual "
                       << integrator.getForceResidual() / grid_size
